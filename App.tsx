@@ -119,7 +119,7 @@ const App: React.FC = () => {
               return (
                 <Settings 
                   tickerMessages={tickerMessages} 
-                  onUpdateMessages={async (newMessages) => {
+                  onUpdateMessages={async () => {
                     // Les messages sont gérés via Supabase dans Settings.tsx
                   }} 
                 />

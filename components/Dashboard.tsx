@@ -13,15 +13,10 @@ import {
   Cell,
   LineChart,
   Line,
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis
 } from 'recharts';
 import { MOCK_DASHBOARD_DATA, COLORS } from '../constants';
 import { Period, Site, Transaction, Intervention } from '../types';
-import { Activity, TrendingUp, TrendingDown, DollarSign, ChevronDown, ChevronUp, Filter, Layers, Target, PieChart as PieIcon, Calendar } from 'lucide-react';
+import { Activity, TrendingUp, TrendingDown, DollarSign, ChevronDown, ChevronUp, Layers, Target, PieChart as PieIcon, Calendar } from 'lucide-react';
 
 interface DashboardProps {
   site: Site;
@@ -81,14 +76,7 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
     return [{ name: 'Opérations', value: 60 }, { name: 'Administration', value: 20 }, { name: 'Commercial', value: 20 }];
   };
 
-  const getRadarData = () => {
-    if (synthesisFilter === 'finance') return [{ subject: 'Rentabilité', A: 120, B: 110, fullMark: 150 }, { subject: 'Trésorerie', A: 98, B: 130, fullMark: 150 }, { subject: 'Recouvrement', A: 86, B: 130, fullMark: 150 }, { subject: 'Marges', A: 99, B: 100, fullMark: 150 }, { subject: 'Invest.', A: 85, B: 90, fullMark: 150 }];
-    if (synthesisFilter === 'tech') return [{ subject: 'Vitesse', A: 130, B: 100, fullMark: 150 }, { subject: 'Qualité', A: 110, B: 130, fullMark: 150 }, { subject: 'Sécurité', A: 140, B: 110, fullMark: 150 }, { subject: 'Satisfaction', A: 100, B: 90, fullMark: 150 }, { subject: 'Respect Délais', A: 95, B: 85, fullMark: 150 }];
-    return [{ subject: 'Vitesse', A: 120, B: 110, fullMark: 150 }, { subject: 'Qualité', A: 98, B: 130, fullMark: 150 }, { subject: 'Coût', A: 86, B: 130, fullMark: 150 }, { subject: 'Client', A: 99, B: 100, fullMark: 150 }, { subject: 'Sécurité', A: 85, B: 90, fullMark: 150 }, { subject: 'Rentabilité', A: 65, B: 85, fullMark: 150 }];
-  };
-
   const pieData = getPieData();
-  const radarData = getRadarData();
   const PIE_COLORS = [COLORS.primary, COLORS.secondary, '#eab308', '#3b82f6'];
 
   return (
@@ -219,7 +207,7 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" animationBegin={200}>
-                        {pieData.map((entry, index) => (
+                        {pieData.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                         ))}
                       </Pie>

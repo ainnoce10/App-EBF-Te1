@@ -1,27 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { StockItem } from '../types';
-import ShowcaseMode from './ShowcaseMode';
 import { supabase } from '../lib/supabase';
 import { 
-  Box, 
-  Search, 
-  SlidersHorizontal, 
-  X, 
-  FileText, 
-  ShoppingCart,
-  Save,
-  Edit3,
-  ImageIcon,
-  BarChart,
-  ZoomIn,
-  ChevronLeft,
-  ChevronRight,
-  Maximize,
-  Move,
   Plus,
   Settings2,
-  Check,
-  MonitorPlay
 } from 'lucide-react';
 
 interface HardwareStoreProps {
