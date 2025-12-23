@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import Technicians from './components/Technicians';
@@ -7,26 +7,83 @@ import Secretariat from './components/Secretariat';
 import HardwareStore from './components/HardwareStore';
 import Settings from './components/Settings';
 import ShowcaseMode from './components/ShowcaseMode';
-import { Site, Period } from './types';
+import { Site, Period, StockItem, Intervention, Transaction, Employee } from './types';
 import { TICKER_MESSAGES } from './constants';
+import { supabase, subscribeToTable } from './lib/supabase';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  // États de filtrage globaux
+  // Filtres globaux
   const [site, setSite] = useState<Site>('Global');
   const [period, setPeriod] = useState<Period>('Semaine');
-  
-  // États pour la plage de dates personnalisée
   const [customStartDate, setCustomStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // État pour les messages du ticker (Flash Info)
+  // États de données Live
   const [tickerMessages, setTickerMessages] = useState<string[]>(TICKER_MESSAGES);
+  const [stock, setStock] = useState<StockItem[]>([]);
+  const [interventions, setInterventions] = useState<Intervention[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [isLive, setIsLive] = useState(false);
 
-  // Si on est en mode Diffusion TV, on affiche UNIQUEMENT le mode TV (Plein écran total)
+  // Fonction de chargement globale
+  const fetchAllData = async () => {
+    try {
+      const [
+        { data: msgData },
+        { data: stkData },
+        { data: intData },
+        { data: trxData },
+        { data: empData }
+      ] = await Promise.all([
+        supabase.from('ticker_messages').select('content').order('created_at', { ascending: true }),
+        supabase.from('stock').select('*').order('name', { ascending: true }),
+        supabase.from('interventions').select('*').order('date', { ascending: false }),
+        supabase.from('transactions').select('*').order('date', { ascending: false }),
+        supabase.from('employees').select('*').order('name', { ascending: true })
+      ]);
+
+      if (msgData) setTickerMessages(msgData.map(m => m.content));
+      if (stkData) setStock(stkData);
+      if (intData) setInterventions(intData);
+      if (trxData) setTransactions(trxData);
+      if (empData) setEmployees(empData);
+      setIsLive(true);
+    } catch (error) {
+      console.error("Erreur de synchronisation Supabase:", error);
+      setIsLive(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllData();
+
+    // Abonnements temps réel pour toutes les tables critiques
+    const tables = ['ticker_messages', 'stock', 'interventions', 'transactions', 'employees'];
+    const channels = tables.map(table => 
+      subscribeToTable(table, () => {
+        console.log(`Changement détecté dans ${table}`);
+        fetchAllData();
+      })
+    );
+
+    return () => {
+      channels.forEach(ch => supabase.removeChannel(ch));
+    };
+  }, []);
+
+  // Mode TV (Plein écran total)
   if (activeTab === 'showcase') {
-    return <ShowcaseMode onClose={() => setActiveTab('hardware')} />;
+    return (
+      <ShowcaseMode 
+        onClose={() => setActiveTab('hardware')} 
+        liveStock={stock}
+        liveInterventions={interventions}
+        liveMessages={tickerMessages}
+      />
+    );
   }
 
   const renderContent = () => {
@@ -41,32 +98,34 @@ const App: React.FC = () => {
                   period={period} 
                   customStartDate={customStartDate}
                   customEndDate={customEndDate}
+                  liveTransactions={transactions}
+                  liveInterventions={interventions}
                 />
               );
             case 'technicians':
-              return <Technicians />;
+              return <Technicians initialData={interventions} />;
             case 'accounting':
-              return <Accounting />;
+              return (
+                <Accounting 
+                  liveTransactions={transactions} 
+                  liveEmployees={employees} 
+                />
+              );
             case 'secretariat':
-              return <Secretariat />;
+              return <Secretariat liveInterventions={interventions} />;
             case 'hardware':
-              return <HardwareStore />;
+              return <HardwareStore initialData={stock} />;
             case 'settings':
               return (
                 <Settings 
                   tickerMessages={tickerMessages} 
-                  onUpdateMessages={setTickerMessages} 
+                  onUpdateMessages={async (newMessages) => {
+                    // Les messages sont gérés via Supabase dans Settings.tsx
+                  }} 
                 />
               );
             default:
-              return (
-                <Dashboard 
-                  site={site} 
-                  period={period}
-                  customStartDate={customStartDate}
-                  customEndDate={customEndDate}
-                />
-              );
+              return <Dashboard site={site} period={period} customStartDate={customStartDate} customEndDate={customEndDate} />;
           }
         })()}
       </div>
@@ -86,6 +145,7 @@ const App: React.FC = () => {
       customEndDate={customEndDate}
       onCustomEndDateChange={setCustomEndDate}
       tickerMessages={tickerMessages}
+      isLive={isLive}
     >
       {renderContent()}
     </Layout>

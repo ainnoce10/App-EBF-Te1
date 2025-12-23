@@ -1,28 +1,22 @@
 import React, { useState } from 'react';
 import { NAV_ITEMS, Logo } from '../constants';
 import ScrollingTicker from './ScrollingTicker';
-import { Menu, X, LogOut, Bell, User, Calendar as CalendarIcon, Filter } from 'lucide-react';
-import { Period } from '../types';
+import { Menu, X, LogOut, Bell, User, Wifi, WifiOff } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
   activeTab: string;
   onTabChange: (id: string) => void;
-  
-  // Filtres
   site: string;
   onSiteChange: (site: string) => void;
   period: string;
   onPeriodChange: (period: string) => void;
-  
-  // Dates personnalisées
   customStartDate: string;
   onCustomStartDateChange: (date: string) => void;
   customEndDate: string;
   onCustomEndDateChange: (date: string) => void;
-  
-  // Flash Info
   tickerMessages: string[];
+  isLive?: boolean;
 }
 
 const Layout: React.FC<LayoutProps> = ({ 
@@ -37,13 +31,13 @@ const Layout: React.FC<LayoutProps> = ({
   onCustomStartDateChange,
   customEndDate,
   onCustomEndDateChange,
-  tickerMessages
+  tickerMessages,
+  isLive = false
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Sidebar - Desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200">
         <div className="p-6 flex justify-center border-b border-gray-100">
           <Logo />
@@ -79,12 +73,9 @@ const Layout: React.FC<LayoutProps> = ({
         </div>
       </aside>
 
-      {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0">
-        {/* Ticker */}
         <ScrollingTicker messages={tickerMessages} />
 
-        {/* Header */}
         <header className="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4 w-full md:w-auto">
                 <button 
@@ -93,19 +84,28 @@ const Layout: React.FC<LayoutProps> = ({
                 >
                   {mobileMenuOpen ? <X /> : <Menu />}
                 </button>
-                <h1 className="text-xl font-bold text-gray-800 hidden sm:block">
-                  {NAV_ITEMS.find(n => n.id === activeTab)?.label}
-                </h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-xl font-bold text-gray-800 hidden sm:block">
+                    {NAV_ITEMS.find(n => n.id === activeTab)?.label}
+                  </h1>
+                  {isLive ? (
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px] font-black uppercase tracking-tighter animate-fade-in">
+                      <Wifi size={10} /> Live
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-[10px] font-black uppercase tracking-tighter">
+                      <WifiOff size={10} /> Syncing
+                    </div>
+                  )}
+                </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
-                
-                {/* Site Filter */}
                 <div className="relative">
                    <select 
                     value={site} 
                     onChange={(e) => onSiteChange(e.target.value)}
-                    className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block p-2.5 pl-3 pr-8 shadow-sm font-medium"
+                    className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block p-2.5 pl-3 pr-8 shadow-sm font-medium outline-none"
                    >
                     <option value="Global">🌍 Global (Tous)</option>
                     <option value="Abidjan">📍 Abidjan</option>
@@ -113,12 +113,11 @@ const Layout: React.FC<LayoutProps> = ({
                    </select>
                 </div>
 
-                {/* Period Filter */}
                 <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-1">
                    <select 
                     value={period} 
                     onChange={(e) => onPeriodChange(e.target.value)}
-                    className="bg-transparent border-none text-gray-700 text-sm focus:ring-0 block p-1.5 font-medium"
+                    className="bg-transparent border-none text-gray-700 text-sm focus:ring-0 block p-1.5 font-medium outline-none"
                    >
                     <option value="Jour">📅 Jour</option>
                     <option value="Semaine">📅 Semaine</option>
@@ -128,7 +127,6 @@ const Layout: React.FC<LayoutProps> = ({
                    </select>
                 </div>
 
-                {/* Custom Date Range Pickers (Visible only if 'Personnalisé') */}
                 {period === 'Personnalisé' && (
                   <div className="flex items-center gap-2 animate-fade-in bg-white border border-orange-200 p-1 rounded-lg shadow-sm">
                     <div className="flex items-center gap-1">
@@ -161,7 +159,6 @@ const Layout: React.FC<LayoutProps> = ({
             </div>
         </header>
 
-        {/* Mobile Menu Overlay */}
         {mobileMenuOpen && (
            <div className="md:hidden absolute top-[130px] left-0 w-full bg-white border-b border-gray-200 z-50 shadow-lg">
               <nav className="p-4 space-y-2">
@@ -185,7 +182,6 @@ const Layout: React.FC<LayoutProps> = ({
            </div>
         )}
 
-        {/* Page Content */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
             <div className="max-w-7xl mx-auto">
                  {children}

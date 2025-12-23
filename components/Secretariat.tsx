@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Intervention } from '../types';
 import { 
   Calendar, 
   Clock, 
@@ -34,7 +35,11 @@ interface CaisseTransaction {
   date: string;
 }
 
-const Secretariat: React.FC = () => {
+interface SecretariatProps {
+  liveInterventions?: Intervention[];
+}
+
+const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions }) => {
   // --- STATES ---
   const [showClientModal, setShowClientModal] = useState(false);
   const [showCaisseModal, setShowCaisseModal] = useState(false);
@@ -117,25 +122,33 @@ const Secretariat: React.FC = () => {
             </div>
             
             <div className="space-y-4 flex-1">
-                {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex gap-4 p-3 hover:bg-gray-50 rounded-lg border border-transparent hover:border-gray-200 transition-all cursor-pointer group">
-                        <div className="flex flex-col items-center justify-center bg-orange-100 text-orange-700 w-14 h-14 rounded-lg shrink-0 group-hover:bg-orange-200 transition-colors">
-                            <span className="text-xs font-bold uppercase">Oct</span>
-                            <span className="text-xl font-bold">{24 + i}</span>
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex justify-between items-start">
-                                <h4 className="font-semibold text-gray-800">Intervention Site Bouaké</h4>
-                                <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">Confirmé</span>
+                {/* Fallback to mock if no live data, or slice of live data */}
+                {(liveInterventions && liveInterventions.length > 0 ? liveInterventions.slice(0, 3) : [1, 2, 3]).map((item, i) => {
+                    const isMock = typeof item === 'number';
+                    const date = isMock ? 24 + i : new Date((item as Intervention).date).getDate();
+                    const clientName = isMock ? 'Transport Express' : (item as Intervention).client;
+                    const desc = isMock ? 'Intervention Site Bouaké' : (item as Intervention).description;
+                    
+                    return (
+                        <div key={i} className="flex gap-4 p-3 hover:bg-gray-50 rounded-lg border border-transparent hover:border-gray-200 transition-all cursor-pointer group">
+                            <div className="flex flex-col items-center justify-center bg-orange-100 text-orange-700 w-14 h-14 rounded-lg shrink-0 group-hover:bg-orange-200 transition-colors">
+                                <span className="text-xs font-bold uppercase">Oct</span>
+                                <span className="text-xl font-bold">{date}</span>
                             </div>
-                            <p className="text-sm text-gray-500">Client: Transport Express</p>
-                            <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                                <span className="flex items-center gap-1"><Clock size={12} /> 09:00 - 12:00</span>
-                                <span className="flex items-center gap-1"><User size={12} /> Tech: Moussa</span>
+                            <div className="flex-1">
+                                <div className="flex justify-between items-start">
+                                    <h4 className="font-semibold text-gray-800">{desc}</h4>
+                                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">Confirmé</span>
+                                </div>
+                                <p className="text-sm text-gray-500">Client: {clientName}</p>
+                                <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                                    <span className="flex items-center gap-1"><Clock size={12} /> 09:00 - 12:00</span>
+                                    <span className="flex items-center gap-1"><User size={12} /> Tech: Moussa</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
 

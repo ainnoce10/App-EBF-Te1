@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EBF Management</title>
+    <!-- On garde Tailwind en CDN pour simplifier la configuration CSS sans fichier externe, 
+         mais en production idéale, on l'installerait via PostCSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -126,29 +128,6 @@
         50% { height: 40px; }
       }
 
-      /* Confetti Animation */
-      .confetti {
-        position: absolute;
-        width: 100px;
-        height: 100px;
-        animation: confetti-fall 3s ease-out forwards;
-      }
-      @keyframes confetti-fall {
-        0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
-        100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-      }
-
-      .stagger-1 { animation-delay: 0.1s; }
-      .stagger-2 { animation-delay: 0.15s; }
-      .stagger-3 { animation-delay: 0.2s; }
-      .stagger-4 { animation-delay: 0.25s; }
-
-      .glass {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-      }
-
       .scrollbar-hide::-webkit-scrollbar {
         display: none;
       }
@@ -162,8 +141,11 @@
   "imports": {
     "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
+    "vite": "https://esm.sh/vite@^7.3.0",
     "recharts": "https://esm.sh/recharts@^3.6.0"
   }
 }
@@ -171,5 +153,6 @@
 </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>

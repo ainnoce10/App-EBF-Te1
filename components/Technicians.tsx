@@ -28,9 +28,19 @@ import {
   Save
 } from 'lucide-react';
 
-const Technicians: React.FC = () => {
+interface TechniciansProps {
+  initialData?: Intervention[];
+}
+
+const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [interventions, setInterventions] = useState<Intervention[]>(MOCK_INTERVENTIONS);
+  const [interventions, setInterventions] = useState<Intervention[]>(initialData.length > 0 ? initialData : MOCK_INTERVENTIONS);
+
+  useEffect(() => {
+    if (initialData && initialData.length > 0) {
+      setInterventions(initialData);
+    }
+  }, [initialData]);
 
   // Modal States
   const [showReportModal, setShowReportModal] = useState(false);

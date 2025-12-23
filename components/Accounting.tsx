@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MOCK_TRANSACTIONS, MOCK_EMPLOYEES } from '../constants';
+import { Transaction, Employee } from '../types';
 import { 
   Download, 
   FileText, 
@@ -8,7 +9,7 @@ import {
   Printer, 
   Users, 
   CheckCircle,
-  X,
+  X, 
   Loader2,
   Calendar,
   Briefcase,
@@ -19,14 +20,25 @@ import {
   MapPin
 } from 'lucide-react';
 
-const Accounting: React.FC = () => {
+interface AccountingProps {
+  liveTransactions?: Transaction[];
+  liveEmployees?: Employee[];
+}
+
+const Accounting: React.FC<AccountingProps> = ({ liveTransactions, liveEmployees }) => {
   // --- STATES ---
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   
   // RH States
   const [showPayrollModal, setShowPayrollModal] = useState(false);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
-  const [employees, setEmployees] = useState(MOCK_EMPLOYEES);
+  const [employees, setEmployees] = useState<Employee[]>(liveEmployees && liveEmployees.length > 0 ? liveEmployees : MOCK_EMPLOYEES);
+
+  useEffect(() => {
+    if (liveEmployees && liveEmployees.length > 0) {
+      setEmployees(liveEmployees);
+    }
+  }, [liveEmployees]);
   
   // New Employee State
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
@@ -67,12 +79,12 @@ const Accounting: React.FC = () => {
       return;
     }
 
-    const newEmp = {
+    const newEmp: Employee = {
       id: `EMP-${Math.floor(Math.random() * 10000).toString().padStart(3, '0')}`,
       name: newEmployeeData.name,
       role: newEmployeeData.role,
       site: newEmployeeData.site,
-      status: 'Actif' as const,
+      status: 'Actif',
       entryDate: newEmployeeData.entryDate
     };
 
@@ -114,10 +126,17 @@ const Accounting: React.FC = () => {
     return `${months} mois`;
   };
 
+  const currentTransactions = (liveTransactions && liveTransactions.length > 0) ? liveTransactions : MOCK_TRANSACTIONS;
+
   // Filtrage visuel des transactions (limité ou complet)
   const displayedTransactions = showAllTransactions 
-    ? MOCK_TRANSACTIONS 
-    : MOCK_TRANSACTIONS.slice(0, 5);
+    ? currentTransactions 
+    : currentTransactions.slice(0, 5);
+
+  const totalRevenue = currentTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
+  const totalExpense = currentTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
+  const netMargin = totalRevenue - totalExpense;
+  const marginPercent = totalRevenue > 0 ? ((netMargin / totalRevenue) * 100).toFixed(0) : 0;
 
   return (
     <div className="space-y-6 relative">
@@ -148,23 +167,23 @@ const Accounting: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
           <p className="text-gray-500 text-sm font-medium">Recettes Totales</p>
-          <h3 className="text-2xl font-bold text-gray-800 mt-1">12,450,000 FCFA</h3>
+          <h3 className="text-2xl font-bold text-gray-800 mt-1">{totalRevenue.toLocaleString()} FCFA</h3>
           <p className="text-green-600 text-xs flex items-center gap-1 mt-2">
             <ArrowUpRight size={14} /> +12% vs mois dernier
           </p>
         </div>
         <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
           <p className="text-gray-500 text-sm font-medium">Dépenses Totales</p>
-          <h3 className="text-2xl font-bold text-gray-800 mt-1">8,230,000 FCFA</h3>
+          <h3 className="text-2xl font-bold text-gray-800 mt-1">{totalExpense.toLocaleString()} FCFA</h3>
           <p className="text-red-500 text-xs flex items-center gap-1 mt-2">
             <ArrowDownRight size={14} /> -5% vs mois dernier
           </p>
         </div>
         <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500">
           <p className="text-gray-500 text-sm font-medium">Marge Nette</p>
-          <h3 className="text-2xl font-bold text-gray-800 mt-1">4,220,000 FCFA</h3>
+          <h3 className="text-2xl font-bold text-gray-800 mt-1">{netMargin.toLocaleString()} FCFA</h3>
           <p className="text-orange-500 text-xs flex items-center gap-1 mt-2">
-            Marge: 34%
+            Marge: {marginPercent}%
           </p>
         </div>
       </div>

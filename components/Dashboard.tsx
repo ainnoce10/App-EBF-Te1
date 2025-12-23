@@ -20,7 +20,7 @@ import {
   PolarRadiusAxis
 } from 'recharts';
 import { MOCK_DASHBOARD_DATA, COLORS } from '../constants';
-import { Period, Site } from '../types';
+import { Period, Site, Transaction, Intervention } from '../types';
 import { Activity, TrendingUp, TrendingDown, DollarSign, ChevronDown, ChevronUp, Filter, Layers, Target, PieChart as PieIcon, Calendar } from 'lucide-react';
 
 interface DashboardProps {
@@ -28,9 +28,11 @@ interface DashboardProps {
   period: Period;
   customStartDate?: string;
   customEndDate?: string;
+  liveTransactions?: Transaction[];
+  liveInterventions?: Intervention[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, customEndDate }) => {
+const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, customEndDate, liveTransactions, liveInterventions }) => {
   const [showDetailed, setShowDetailed] = useState(false);
   
   // États filtres synthèse
@@ -48,10 +50,26 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
     return { ...d, turnover, profit, expense, interventions: Math.round(d.interventions * multiplier) };
   });
 
-  const totalTurnover = data.reduce((acc, curr) => acc + curr.turnover, 0);
-  const totalExpense = data.reduce((acc, curr) => acc + curr.expense, 0);
-  const totalProfit = data.reduce((acc, curr) => acc + curr.profit, 0);
-  const totalInterventions = data.reduce((acc, curr) => acc + curr.interventions, 0);
+  // Use live data if available for totals, otherwise use mock totals calculated above
+  const calculatedTotalTurnover = data.reduce((acc, curr) => acc + curr.turnover, 0);
+  const calculatedTotalExpense = data.reduce((acc, curr) => acc + curr.expense, 0);
+  const calculatedTotalProfit = data.reduce((acc, curr) => acc + curr.profit, 0);
+  const calculatedTotalInterventions = data.reduce((acc, curr) => acc + curr.interventions, 0);
+
+  // Override with live data if available
+  const totalTurnover = liveTransactions 
+    ? liveTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0)
+    : calculatedTotalTurnover;
+    
+  const totalExpense = liveTransactions
+    ? liveTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0)
+    : calculatedTotalExpense;
+
+  const totalProfit = liveTransactions 
+    ? totalTurnover - totalExpense
+    : calculatedTotalProfit;
+
+  const totalInterventions = liveInterventions ? liveInterventions.length : calculatedTotalInterventions;
 
   const periodLabel = period === 'Personnalisé' 
     ? `Du ${new Date(customStartDate || '').toLocaleDateString('fr-FR')} au ${new Date(customEndDate || '').toLocaleDateString('fr-FR')}`
