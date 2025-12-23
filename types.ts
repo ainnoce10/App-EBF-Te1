@@ -1,3 +1,4 @@
+
 export type Site = 'Abidjan' | 'Bouaké' | 'Global';
 export type Period = 'Jour' | 'Semaine' | 'Mois' | 'Année' | 'Personnalisé';
 
@@ -21,6 +22,7 @@ export interface Intervention {
 export interface StockItem {
   id: string;
   name: string;
+  description?: string; // Nouveau champ
   category: string;
   quantity: number;
   threshold: number;
@@ -28,6 +30,7 @@ export interface StockItem {
   supplier: string;
   site: Site | string;
   imageUrls?: string[]; // Changé de imageUrl?: string à imageUrls?: string[]
+  technicalSheetUrl?: string; // Nouveau champ
   specs?: Record<string, string>;
 }
 
