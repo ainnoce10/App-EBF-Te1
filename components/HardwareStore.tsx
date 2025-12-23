@@ -8,7 +8,10 @@ import {
   X,
   Image as ImageIcon,
   FileText,
-  Upload
+  Upload,
+  ShoppingCart,
+  Maximize2,
+  Edit
 } from 'lucide-react';
 
 interface HardwareStoreProps {
@@ -24,6 +27,9 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editForm, setEditForm] = useState<StockItem | null>(null);
   
+  // State for Image Zoom (Lightbox)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   // Filter States
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [siteFilter, setSiteFilter] = useState('All');
@@ -42,7 +48,8 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
     return matchesSearch && matchesCategory && matchesSite;
   });
 
-  const handleEditClick = (item: StockItem) => {
+  const handleEditClick = (e: React.MouseEvent, item: StockItem) => {
+    e.stopPropagation(); // Empêcher d'ouvrir le zoom ou autre
     const imageUrls = [...(item.imageUrls || [])];
     while (imageUrls.length < 4) imageUrls.push('');
     setEditForm({ ...item, imageUrls });
@@ -74,6 +81,10 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
     const newImages = [...(editForm.imageUrls || [])];
     newImages[index] = value;
     setEditForm({ ...editForm, imageUrls: newImages });
+  };
+
+  const handleAddToCart = (item: StockItem) => {
+    alert(`Article ajouté au panier : ${item.name}`);
   };
 
   const handleSave = async () => {
@@ -165,31 +176,91 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
 
       {/* Grid des articles */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        {filteredItems.map((item) => (
-          <div key={item.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-2xl transition-all group flex flex-col cursor-pointer relative">
-             {item.imageUrls && item.imageUrls[0] && (
-                 <div className="h-40 w-full overflow-hidden bg-gray-50 p-4">
-                     <img src={item.imageUrls[0]} alt={item.name} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500" />
-                 </div>
-             )}
-             <div className="p-4 flex-1 flex flex-col">
-                <p className="text-[10px] font-black text-gray-400 uppercase mb-1">{item.category}</p>
-                <h3 className="text-sm font-bold text-gray-800 line-clamp-2 mb-2">{item.name}</h3>
-                <div className="mt-auto">
-                   <p className="text-xl font-black text-orange-600">{item.unitPrice.toLocaleString()} F</p>
-                   {isManagementMode && (
-                       <button 
-                          onClick={() => handleEditClick(item)}
-                          className="w-full mt-4 bg-gray-900 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-500 transition-colors"
-                       >
-                         Modifier
-                       </button>
+        {filteredItems.map((item) => {
+          // Trouver la première image valide (non vide)
+          const displayImage = item.imageUrls?.find(url => url && url.length > 5);
+
+          return (
+            <div key={item.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-2xl transition-all group flex flex-col relative">
+               
+               {/* Bouton Modifier Flottant (Mode Gestion Uniquement) */}
+               {isManagementMode && (
+                   <button 
+                      onClick={(e) => handleEditClick(e, item)}
+                      className="absolute top-2 right-2 z-20 p-2 bg-white/90 backdrop-blur rounded-full shadow-md text-gray-600 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                      title="Modifier l'article"
+                   >
+                       <Edit size={16} />
+                   </button>
+               )}
+
+               {/* Image Container avec Zoom au clic */}
+               <div 
+                  className="h-48 w-full overflow-hidden bg-gray-50 p-6 relative cursor-zoom-in group-hover:bg-gray-100 transition-colors"
+                  onClick={() => displayImage && setSelectedImage(displayImage)}
+               >
+                   {displayImage ? (
+                       <img 
+                          src={displayImage} 
+                          alt={item.name} 
+                          className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500" 
+                          onError={(e) => {
+                              // Fallback si l'image ne charge pas
+                              (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/e2e8f0/94a3b8?text=No+Image';
+                          }}
+                       />
+                   ) : (
+                       <div className="w-full h-full flex items-center justify-center text-gray-300">
+                           <ImageIcon size={48} />
+                       </div>
                    )}
-                </div>
-             </div>
-          </div>
-        ))}
+                   {/* Overlay icône zoom */}
+                   {displayImage && (
+                       <div className="absolute inset-0 flex items-center justify-center bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                           <div className="bg-white/80 p-2 rounded-full backdrop-blur-sm shadow-sm">
+                               <Maximize2 size={20} className="text-gray-700"/>
+                           </div>
+                       </div>
+                   )}
+               </div>
+
+               <div className="p-4 flex-1 flex flex-col">
+                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">{item.category}</p>
+                  <h3 className="text-sm font-bold text-gray-800 line-clamp-2 mb-2 min-h-[2.5rem]">{item.name}</h3>
+                  <div className="mt-auto pt-2">
+                     <p className="text-xl font-black text-orange-600 mb-3">{item.unitPrice.toLocaleString()} F</p>
+                     
+                     <button 
+                        onClick={() => handleAddToCart(item)}
+                        className="w-full bg-gray-900 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 shadow-lg active:scale-95"
+                     >
+                       <ShoppingCart size={16} />
+                       Ajouter
+                     </button>
+                  </div>
+               </div>
+            </div>
+          );
+        })}
       </div>
+
+      {/* --- LIGHTBOX (ZOOM IMAGE) --- */}
+      {selectedImage && (
+        <div 
+            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in cursor-zoom-out"
+            onClick={() => setSelectedImage(null)}
+        >
+            <button className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors">
+                <X size={48} />
+            </button>
+            <img 
+                src={selectedImage} 
+                alt="Zoom" 
+                className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-scale-in"
+                onClick={(e) => e.stopPropagation()} // Empêche la fermeture si on clique sur l'image
+            />
+        </div>
+      )}
 
       {/* Add/Edit Modal */}
       {(isAdding || isEditing) && editForm && (
