@@ -14,8 +14,7 @@ import {
   ArrowDownRight, 
   Wallet,
   FileText,
-  MapPin,
-  Mail
+  MapPin
 } from 'lucide-react';
 
 interface SecretariatProps {
@@ -107,7 +106,7 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
   // --- HANDLERS ---
 
   const handleCall = (phone: string, name: string) => {
-    alert(`Appel simulé vers ${name}...`);
+    alert(`Appel simulé vers ${name} (${phone})...`);
   };
 
   const handleSaveTransaction = async () => {
@@ -164,7 +163,7 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
             </div>
             
             <div className="space-y-4 flex-1 overflow-y-auto max-h-[300px]">
-                {liveInterventions.length > 0 ? liveInterventions.slice(0, 5).map((item, i) => {
+                {liveInterventions.length > 0 ? liveInterventions.slice(0, 5).map((item) => {
                     const dateObj = new Date(item.date);
                     const day = dateObj.getDate();
                     const month = dateObj.toLocaleDateString('fr-FR', { month: 'short' });
