@@ -1,0 +1,8 @@
+{
+  "name": "EBF Management Suite",
+  "description": "Application de gestion centralisée pour EBF (Abidjan & Bouaké) - Interventions, Stocks, RH et Finance.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
