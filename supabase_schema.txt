@@ -1,6 +1,12 @@
--- 1. Activer le Temps Réel (Realtime)
--- Cela permet à l'application de recevoir les mises à jour instantanément
+-- 0. NETTOYAGE (ATTENTION : Supprime les tables existantes pour éviter les erreurs)
 drop publication if exists supabase_realtime;
+drop table if exists public.stock cascade;
+drop table if exists public.interventions cascade;
+drop table if exists public.transactions cascade;
+drop table if exists public.employees cascade;
+drop table if exists public.ticker_messages cascade;
+
+-- 1. Activer le Temps Réel (Realtime)
 create publication supabase_realtime for all tables;
 
 -- 2. Création de la table STOCK
@@ -10,10 +16,10 @@ create table public.stock (
   category text,
   quantity integer default 0,
   threshold integer default 5,
-  "unitPrice" numeric default 0, -- Guillemets pour respecter le camelCase du code TS
+  "unitPrice" numeric default 0,
   supplier text,
   site text,
-  "imageUrls" text[], -- Tableau de liens d'images
+  "imageUrls" text[],
   specs jsonb default '{}'::jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -49,7 +55,7 @@ create table public.employees (
   role text,
   site text,
   status text, -- 'Actif', 'Congés'
-  "entryDate" date, -- Guillemets pour respecter le camelCase
+  "entryDate" date,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -61,9 +67,6 @@ create table public.ticker_messages (
 );
 
 -- 7. Configuration de la sécurité (Row Level Security)
--- Pour cette démo, nous autorisons l'accès public (lecture/écriture)
--- En production, il faudrait configurer l'authentification.
-
 -- Stock
 alter table public.stock enable row level security;
 create policy "Public Access Stock" on public.stock for all using (true) with check (true);
@@ -83,3 +86,13 @@ create policy "Public Access Employees" on public.employees for all using (true)
 -- Messages TV
 alter table public.ticker_messages enable row level security;
 create policy "Public Access Ticker" on public.ticker_messages for all using (true) with check (true);
+
+-- 8. INSERTION DE DONNÉES DE DÉMARRAGE (Optionnel - pour ne pas avoir une app vide)
+insert into public.stock (id, name, category, quantity, threshold, "unitPrice", supplier, site, "imageUrls", specs)
+values 
+('STK-001', 'Câble R2V 3G2.5mm²', 'Électricité', 500, 100, 25000, 'ElecPro', 'Abidjan', ARRAY['https://images.unsplash.com/photo-1558402529-d2638a7023e9?auto=format&fit=crop&q=80&w=1200'], '{"Type": "R2V"}'::jsonb),
+('STK-002', 'Disjoncteur 16A', 'Électricité', 15, 20, 3500, 'ElecPro', 'Bouaké', ARRAY['https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=1200'], '{"Calibre": "16A"}'::jsonb);
+
+insert into public.ticker_messages (content) values 
+('Bienvenue chez EBF - Votre partenaire technique.'),
+('Promotion : -15% sur les câbles cette semaine !');
