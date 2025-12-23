@@ -93,7 +93,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                       key={currentProduct.id}
                       src={currentProduct.imageUrls?.[0] || 'https://placehold.co/800x800/1a1a1a/ffffff?text=EBF+Ivoire'} 
                       alt={currentProduct.name}
-                      className="max-w-[95%] max-h-[90%] object-contain rounded-[3rem] shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-scale-in border-[12px] border-white/5 bg-white p-6"
+                      className="w-[85%] aspect-square object-contain rounded-[3rem] shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-scale-in border-[12px] border-white/5 bg-white p-6"
                     />
                 </div>
                 

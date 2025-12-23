@@ -179,15 +179,16 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
                    </button>
                )}
 
+               {/* ZONE IMAGE - Format Carré Imposé (Aspect Square) */}
                <div 
-                  className="h-64 w-full overflow-hidden bg-gray-50 flex items-center justify-center relative cursor-zoom-in group-hover:bg-gray-100 transition-colors"
+                  className="w-full aspect-square overflow-hidden bg-white flex items-center justify-center relative cursor-zoom-in border-b border-gray-50 group-hover:bg-gray-50 transition-colors"
                   onClick={() => mainImage && setSelectedImage(mainImage)}
                >
                    {mainImage ? (
                        <img 
                           src={mainImage} 
                           alt={item.name} 
-                          className="w-full h-full object-contain p-6 group-hover:scale-110 transition-transform duration-700" 
+                          className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-700" 
                        />
                    ) : (
                        <div className="flex flex-col items-center justify-center text-gray-300 gap-2">
