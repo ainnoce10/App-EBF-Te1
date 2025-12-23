@@ -179,16 +179,16 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
                    </button>
                )}
 
-               {/* ZONE IMAGE - Format Carré Imposé (Aspect Square) */}
+               {/* ZONE IMAGE - Format Carré Strict et Unifié (Style TV) */}
                <div 
-                  className="w-full aspect-square overflow-hidden bg-white flex items-center justify-center relative cursor-zoom-in border-b border-gray-50 group-hover:bg-gray-50 transition-colors"
+                  className="w-full aspect-square overflow-hidden bg-white flex items-center justify-center relative cursor-zoom-in border-b border-gray-50 group-hover:bg-gray-50 transition-colors p-6"
                   onClick={() => mainImage && setSelectedImage(mainImage)}
                >
                    {mainImage ? (
                        <img 
                           src={mainImage} 
                           alt={item.name} 
-                          className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-700" 
+                          className="w-full h-full object-contain drop-shadow-xl group-hover:scale-110 transition-transform duration-700" 
                        />
                    ) : (
                        <div className="flex flex-col items-center justify-center text-gray-300 gap-2">
@@ -352,7 +352,7 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
                                    >
                                        {editForm.imageUrls?.[idx] ? (
                                            <>
-                                              <img src={editForm.imageUrls[idx]} alt="Preview" className="w-full h-full object-cover" />
+                                              <img src={editForm.imageUrls[idx]} alt="Preview" className="w-full h-full object-contain p-2" />
                                               <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                                   <Edit size={40} className="text-white" />
                                               </div>
