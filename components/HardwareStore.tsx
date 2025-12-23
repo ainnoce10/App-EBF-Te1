@@ -7,8 +7,6 @@ import {
   Search,
   X,
   Image as ImageIcon,
-  FileText,
-  Upload,
   ShoppingCart,
   Maximize2,
   Edit,
