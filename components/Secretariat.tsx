@@ -46,7 +46,7 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions }) => {
   const [clientSearch, setClientSearch] = useState('');
 
   // --- MOCK DATA ---
-  const [clients, setClients] = useState<Client[]>([
+  const [clients] = useState<Client[]>([
     { id: 'CL-001', name: 'Transport Express', phone: '+225 07 07 01 02', email: 'contact@trans-express.ci', location: 'Abidjan - Zone 4', lastInteraction: '24 Oct' },
     { id: 'CL-002', name: 'Mme. Koffi', phone: '+225 05 04 03 02', email: 'koffi.s@gmail.com', location: 'Bouaké - Commerce', lastInteraction: '22 Oct' },
     { id: 'CL-003', name: 'Imprimerie Moderne', phone: '+225 01 02 03 04', email: 'imprimerie@moderne.ci', location: 'Abidjan - Plateau', lastInteraction: '20 Oct' },
@@ -64,8 +64,6 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions }) => {
     amount: '',
     reason: ''
   });
-
-  const [newClientForm, setNewClientForm] = useState(false); // Toggle form inside client modal
 
   // --- HANDLERS ---
 

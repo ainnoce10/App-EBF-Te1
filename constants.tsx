@@ -1,5 +1,4 @@
-import React from 'react';
-import { LayoutDashboard, Wrench, Wallet, CalendarDays, ShoppingCart, Users, Settings, MonitorPlay } from 'lucide-react';
+import { LayoutDashboard, Wrench, Wallet, CalendarDays, ShoppingCart, Settings, MonitorPlay } from 'lucide-react';
 import { DashboardData, Intervention, StockItem, Transaction, Employee } from './types';
 
 // EBF Brand Colors references

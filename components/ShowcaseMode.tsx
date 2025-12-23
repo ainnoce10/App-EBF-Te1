@@ -5,7 +5,6 @@ import {
   QrCode, 
   Zap, 
   ShieldCheck,
-  Clock,
   Calendar,
   Megaphone,
   LayoutGrid,

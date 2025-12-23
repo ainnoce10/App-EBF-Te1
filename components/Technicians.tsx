@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MOCK_INTERVENTIONS, COLORS } from '../constants';
+import { MOCK_INTERVENTIONS } from '../constants';
 import { Intervention, Site } from '../types';
 import { 
-  Plus, 
   Search, 
   MapPin, 
   Calendar, 
@@ -13,19 +12,14 @@ import {
   Play, 
   Pause,
   Send,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Briefcase,
-  Wrench,
-  RotateCcw,
   Volume2,
   Trash2,
   PartyPopper,
   ChevronRight,
   ClipboardCheck,
   CalendarPlus,
-  Save
+  Save,
+  RotateCcw
 } from 'lucide-react';
 
 interface TechniciansProps {

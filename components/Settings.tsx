@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Bell, Globe, Lock, Shield, Megaphone, Trash2, Plus, Loader2 } from 'lucide-react';
+import { Bell, Globe, Megaphone, Trash2, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface SettingsProps {
