@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { MOCK_TRANSACTIONS, MOCK_EMPLOYEES } from '../constants';
+import { MOCK_EMPLOYEES } from '../constants';
 import { Transaction, Employee } from '../types';
+import { supabase } from '../lib/supabase';
 import { 
   Download, 
   FileText, 
@@ -25,18 +26,22 @@ interface AccountingProps {
   liveEmployees?: Employee[];
 }
 
-const Accounting: React.FC<AccountingProps> = ({ liveTransactions, liveEmployees }) => {
+const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmployees = [] }) => {
   // --- STATES ---
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   
   // RH States
   const [showPayrollModal, setShowPayrollModal] = useState(false);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
-  const [employees, setEmployees] = useState<Employee[]>(liveEmployees && liveEmployees.length > 0 ? liveEmployees : MOCK_EMPLOYEES);
+  const [employees, setEmployees] = useState<Employee[]>([]);
 
   useEffect(() => {
-    if (liveEmployees && liveEmployees.length > 0) {
+    // Priorité aux données live, sinon mock si vide au premier rendu
+    if (liveEmployees.length > 0) {
       setEmployees(liveEmployees);
+    } else if (employees.length === 0) {
+        // Optionnel: garder vide ou charger MOCK_EMPLOYEES si on veut une démo sans backend
+        setEmployees(MOCK_EMPLOYEES);
     }
   }, [liveEmployees]);
   
@@ -61,19 +66,27 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions, liveEmployees
     alert(msg + "\n(Le téléchargement démarrerait ici dans une version connectée)");
   };
 
-  const handleToggleStatus = (empId: string) => {
-    setEmployees(employees.map(emp => {
-      if (emp.id === empId) {
-        return {
-          ...emp,
-          status: emp.status === 'Actif' ? 'Congés' : 'Actif'
-        };
-      }
-      return emp;
-    }));
+  const handleToggleStatus = async (empId: string) => {
+    const emp = employees.find(e => e.id === empId);
+    if (!emp) return;
+
+    const newStatus = emp.status === 'Actif' ? 'Congés' : 'Actif';
+    
+    // Optimistic update
+    setEmployees(employees.map(e => e.id === empId ? { ...e, status: newStatus } : e));
+
+    // Update Supabase
+    const { error } = await supabase.from('employees').update({ status: newStatus }).eq('id', empId);
+    
+    if (error) {
+        console.error("Erreur mise à jour statut", error);
+        alert("Erreur lors de la mise à jour du statut");
+        // Rollback
+        setEmployees(employees.map(e => e.id === empId ? { ...e, status: emp.status } : e));
+    }
   };
 
-  const handleSaveEmployee = () => {
+  const handleSaveEmployee = async () => {
     if (!newEmployeeData.name || !newEmployeeData.role) {
       alert("Veuillez remplir le nom et le poste de l'employé.");
       return;
@@ -88,14 +101,20 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions, liveEmployees
       entryDate: newEmployeeData.entryDate
     };
 
-    setEmployees([newEmp, ...employees]);
-    setIsAddingEmployee(false);
-    setNewEmployeeData({
-      name: '',
-      role: '',
-      site: 'Abidjan',
-      entryDate: new Date().toISOString().split('T')[0]
-    });
+    const { error } = await supabase.from('employees').insert([newEmp]);
+
+    if (!error) {
+        setIsAddingEmployee(false);
+        setNewEmployeeData({
+        name: '',
+        role: '',
+        site: 'Abidjan',
+        entryDate: new Date().toISOString().split('T')[0]
+        });
+    } else {
+        alert("Erreur lors de l'enregistrement");
+        console.error(error);
+    }
   };
 
   const handleGeneratePaie = () => {
@@ -126,15 +145,13 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions, liveEmployees
     return `${months} mois`;
   };
 
-  const currentTransactions = (liveTransactions && liveTransactions.length > 0) ? liveTransactions : MOCK_TRANSACTIONS;
-
   // Filtrage visuel des transactions (limité ou complet)
   const displayedTransactions = showAllTransactions 
-    ? currentTransactions 
-    : currentTransactions.slice(0, 5);
+    ? liveTransactions 
+    : liveTransactions.slice(0, 5);
 
-  const totalRevenue = currentTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
-  const totalExpense = currentTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
+  const totalRevenue = liveTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
+  const totalExpense = liveTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
   const netMargin = totalRevenue - totalExpense;
   const marginPercent = totalRevenue > 0 ? ((netMargin / totalRevenue) * 100).toFixed(0) : 0;
 
@@ -169,14 +186,14 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions, liveEmployees
           <p className="text-gray-500 text-sm font-medium">Recettes Totales</p>
           <h3 className="text-2xl font-bold text-gray-800 mt-1">{totalRevenue.toLocaleString()} FCFA</h3>
           <p className="text-green-600 text-xs flex items-center gap-1 mt-2">
-            <ArrowUpRight size={14} /> +12% vs mois dernier
+            <ArrowUpRight size={14} /> Global
           </p>
         </div>
         <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
           <p className="text-gray-500 text-sm font-medium">Dépenses Totales</p>
           <h3 className="text-2xl font-bold text-gray-800 mt-1">{totalExpense.toLocaleString()} FCFA</h3>
           <p className="text-red-500 text-xs flex items-center gap-1 mt-2">
-            <ArrowDownRight size={14} /> -5% vs mois dernier
+            <ArrowDownRight size={14} /> Global
           </p>
         </div>
         <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-500">
@@ -212,7 +229,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions, liveEmployees
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {displayedTransactions.map((trx) => (
+              {displayedTransactions.length > 0 ? displayedTransactions.map((trx) => (
                 <tr key={trx.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm text-gray-600">{trx.date}</td>
                   <td className="px-6 py-4 text-sm font-medium text-gray-800">{trx.description}</td>
@@ -235,7 +252,11 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions, liveEmployees
                     )}
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">Aucune transaction enregistrée</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -423,6 +444,9 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions, liveEmployees
                                  ))}
                              </tbody>
                          </table>
+                         {employees.length === 0 && (
+                             <div className="p-8 text-center text-gray-500">Aucun employé trouvé.</div>
+                         )}
                      </div>
                    </>
                  ) : (

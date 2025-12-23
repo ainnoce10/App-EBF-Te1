@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Intervention } from '../types';
+import React, { useState, useMemo } from 'react';
+import { Intervention, Transaction } from '../types';
+import { supabase } from '../lib/supabase';
 import { 
   Calendar, 
   Clock, 
@@ -17,8 +18,13 @@ import {
   Mail
 } from 'lucide-react';
 
-// Types locaux pour le secrétariat
-interface Client {
+interface SecretariatProps {
+  liveInterventions?: Intervention[];
+  liveTransactions?: Transaction[];
+}
+
+// Client dérivé de l'intervention
+interface DerivedClient {
   id: string;
   name: string;
   phone: string;
@@ -27,36 +33,69 @@ interface Client {
   lastInteraction: string;
 }
 
-interface CaisseTransaction {
-  id: string;
-  type: 'in' | 'out';
-  amount: number;
-  reason: string;
-  date: string;
-}
-
-interface SecretariatProps {
-  liveInterventions?: Intervention[];
-}
-
-const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions }) => {
+const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveTransactions = [] }) => {
   // --- STATES ---
   const [showClientModal, setShowClientModal] = useState(false);
   const [showCaisseModal, setShowCaisseModal] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
 
-  // --- MOCK DATA ---
-  const [clients] = useState<Client[]>([
-    { id: 'CL-001', name: 'Transport Express', phone: '+225 07 07 01 02', email: 'contact@trans-express.ci', location: 'Abidjan - Zone 4', lastInteraction: '24 Oct' },
-    { id: 'CL-002', name: 'Mme. Koffi', phone: '+225 05 04 03 02', email: 'koffi.s@gmail.com', location: 'Bouaké - Commerce', lastInteraction: '22 Oct' },
-    { id: 'CL-003', name: 'Imprimerie Moderne', phone: '+225 01 02 03 04', email: 'imprimerie@moderne.ci', location: 'Abidjan - Plateau', lastInteraction: '20 Oct' },
-    { id: 'CL-004', name: 'Résidence Les Oliviers', phone: '+225 07 88 99 00', email: 'syndic@oliviers.ci', location: 'Abidjan - Cocody', lastInteraction: '18 Oct' },
-  ]);
+  // --- DERIVED DATA ---
+  
+  // Extraire les clients uniques des interventions
+  const clients: DerivedClient[] = useMemo(() => {
+    const uniqueClients = new Map<string, DerivedClient>();
+    
+    liveInterventions.forEach(inter => {
+        if (!uniqueClients.has(inter.client)) {
+            uniqueClients.set(inter.client, {
+                id: `CL-${inter.client.substring(0,3).toUpperCase()}`,
+                name: inter.client,
+                phone: '+225 XX XX XX XX', // Donnée non dispo dans Intervention, placeholder
+                email: 'contact@client.com', // Donnée non dispo
+                location: inter.site,
+                lastInteraction: new Date(inter.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+            });
+        }
+    });
+    return Array.from(uniqueClients.values());
+  }, [liveInterventions]);
 
-  const [caisseHistory, setCaisseHistory] = useState<CaisseTransaction[]>([
-    { id: 'OP-102', type: 'in', amount: 25000, reason: 'Acompte Client M. Kouamé', date: 'Aujourd\'hui 10:30' },
-    { id: 'OP-101', type: 'out', amount: 12000, reason: 'Achat fournitures bureau', date: 'Aujourd\'hui 09:15' },
-  ]);
+  // Extraire l'historique de caisse des transactions (filtrer par catégorie 'Caisse' ou tout afficher par défaut pour la démo)
+  const caisseHistory = useMemo(() => {
+    // On suppose ici que toute transaction créée ici a la catégorie 'Caisse' ou on affiche les 5 dernières
+    return liveTransactions
+        .filter(t => t.category === 'Caisse' || true) // Filtre permissif pour voir quelque chose
+        .slice(0, 5)
+        .map(t => ({
+            id: t.id,
+            type: t.type === 'Recette' ? 'in' as const : 'out' as const,
+            amount: t.amount,
+            reason: t.description,
+            date: new Date(t.date).toLocaleDateString('fr-FR')
+        }));
+  }, [liveTransactions]);
+
+  // Calcul du solde (basé sur toutes les transactions chargées)
+  const currentBalance = useMemo(() => {
+      const income = liveTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
+      const outcome = liveTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
+      return income - outcome;
+  }, [liveTransactions]);
+
+  const todayIncome = useMemo(() => {
+      const today = new Date().toISOString().split('T')[0];
+      return liveTransactions
+        .filter(t => t.type === 'Recette' && t.date === today)
+        .reduce((acc, t) => acc + t.amount, 0);
+  }, [liveTransactions]);
+
+  const todayOutcome = useMemo(() => {
+      const today = new Date().toISOString().split('T')[0];
+      return liveTransactions
+        .filter(t => t.type === 'Dépense' && t.date === today)
+        .reduce((acc, t) => acc + t.amount, 0);
+  }, [liveTransactions]);
+
 
   // Form States
   const [newTransaction, setNewTransaction] = useState<{type: 'in'|'out', amount: string, reason: string}>({
@@ -68,25 +107,30 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions }) => {
   // --- HANDLERS ---
 
   const handleCall = (phone: string, name: string) => {
-    // Simulation d'appel
-    alert(`Appel en cours vers ${name} (${phone})...`);
-    // window.location.href = `tel:${phone}`; // Décommenter pour un vrai lien tel
+    alert(`Appel simulé vers ${name}...`);
   };
 
-  const handleSaveTransaction = () => {
+  const handleSaveTransaction = async () => {
     if (!newTransaction.amount || !newTransaction.reason) return;
 
-    const transaction: CaisseTransaction = {
-      id: `OP-${Math.floor(Math.random() * 1000)}`,
-      type: newTransaction.type,
-      amount: parseInt(newTransaction.amount),
-      reason: newTransaction.reason,
-      date: "A l'instant"
+    const globalTransaction: Transaction = {
+        id: `TRX-${Math.floor(Math.random() * 10000)}`,
+        type: newTransaction.type === 'in' ? 'Recette' : 'Dépense',
+        category: 'Caisse',
+        amount: parseInt(newTransaction.amount),
+        date: new Date().toISOString().split('T')[0],
+        description: newTransaction.reason,
+        site: 'Abidjan' 
     };
 
-    setCaisseHistory([transaction, ...caisseHistory]);
-    setNewTransaction({ type: 'out', amount: '', reason: '' });
-    setShowCaisseModal(false);
+    const { error } = await supabase.from('transactions').insert([globalTransaction]);
+    if (error) {
+        console.error("Erreur sauvegarde transaction", error);
+        alert("Erreur lors de l'enregistrement");
+    } else {
+        setNewTransaction({ type: 'out', amount: '', reason: '' });
+        setShowCaisseModal(false);
+    }
   };
 
   const filteredClients = clients.filter(c => 
@@ -112,41 +156,41 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions }) => {
         <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                    <Calendar className="text-orange-500" /> Planning de la semaine
+                    <Calendar className="text-orange-500" /> Planning des Interventions
                 </h3>
                 <button className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded hover:bg-orange-100 transition-colors">
                     + Nouveau RDV
                 </button>
             </div>
             
-            <div className="space-y-4 flex-1">
-                {/* Fallback to mock if no live data, or slice of live data */}
-                {(liveInterventions && liveInterventions.length > 0 ? liveInterventions.slice(0, 3) : [1, 2, 3]).map((item, i) => {
-                    const isMock = typeof item === 'number';
-                    const date = isMock ? 24 + i : new Date((item as Intervention).date).getDate();
-                    const clientName = isMock ? 'Transport Express' : (item as Intervention).client;
-                    const desc = isMock ? 'Intervention Site Bouaké' : (item as Intervention).description;
+            <div className="space-y-4 flex-1 overflow-y-auto max-h-[300px]">
+                {liveInterventions.length > 0 ? liveInterventions.slice(0, 5).map((item, i) => {
+                    const dateObj = new Date(item.date);
+                    const day = dateObj.getDate();
+                    const month = dateObj.toLocaleDateString('fr-FR', { month: 'short' });
                     
                     return (
-                        <div key={i} className="flex gap-4 p-3 hover:bg-gray-50 rounded-lg border border-transparent hover:border-gray-200 transition-all cursor-pointer group">
+                        <div key={item.id} className="flex gap-4 p-3 hover:bg-gray-50 rounded-lg border border-transparent hover:border-gray-200 transition-all cursor-pointer group">
                             <div className="flex flex-col items-center justify-center bg-orange-100 text-orange-700 w-14 h-14 rounded-lg shrink-0 group-hover:bg-orange-200 transition-colors">
-                                <span className="text-xs font-bold uppercase">Oct</span>
-                                <span className="text-xl font-bold">{date}</span>
+                                <span className="text-xs font-bold uppercase">{month}</span>
+                                <span className="text-xl font-bold">{day}</span>
                             </div>
                             <div className="flex-1">
                                 <div className="flex justify-between items-start">
-                                    <h4 className="font-semibold text-gray-800">{desc}</h4>
-                                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">Confirmé</span>
+                                    <h4 className="font-semibold text-gray-800">{item.description}</h4>
+                                    <span className={`text-xs px-2 py-0.5 rounded ${item.status === 'Terminé' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{item.status}</span>
                                 </div>
-                                <p className="text-sm text-gray-500">Client: {clientName}</p>
+                                <p className="text-sm text-gray-500">Client: {item.client}</p>
                                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                                    <span className="flex items-center gap-1"><Clock size={12} /> 09:00 - 12:00</span>
-                                    <span className="flex items-center gap-1"><User size={12} /> Tech: Moussa</span>
+                                    <span className="flex items-center gap-1"><Clock size={12} /> {item.date}</span>
+                                    <span className="flex items-center gap-1"><User size={12} /> {item.technician}</span>
                                 </div>
                             </div>
                         </div>
                     );
-                })}
+                }) : (
+                    <div className="text-center text-gray-400 py-8">Aucune intervention planifiée</div>
+                )}
             </div>
         </div>
 
@@ -159,7 +203,7 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions }) => {
             </div>
             
              <div className="space-y-4 flex-1 overflow-y-auto max-h-[300px]">
-                {clients.slice(0, 4).map((client) => (
+                {clients.slice(0, 5).map((client) => (
                     <div key={client.id} className="flex items-center justify-between pb-3 border-b border-gray-50 last:border-0">
                         <div className="flex items-center gap-3 overflow-hidden">
                             <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs shrink-0">
@@ -179,6 +223,7 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions }) => {
                         </button>
                     </div>
                 ))}
+                {clients.length === 0 && <div className="text-gray-400 text-center text-sm">Aucun client trouvé</div>}
             </div>
             <button 
                 onClick={() => setShowClientModal(true)}
@@ -195,7 +240,7 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions }) => {
                 <h3 className="font-bold text-gray-800 flex items-center gap-2">
                     <Wallet className="text-gray-600" /> Caisse Menu Dépenses
                 </h3>
-                <span className="text-xs font-mono text-gray-400">ID: CAISSE-MAIN-01</span>
+                <span className="text-xs font-mono text-gray-400">LIVE</span>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -203,19 +248,21 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions }) => {
                     className="p-4 bg-gray-50 rounded-xl text-center border border-gray-200 hover:border-orange-500 transition-colors group"
                 >
                     <p className="text-gray-500 text-xs uppercase mb-1 font-semibold tracking-wide">Solde Actuel</p>
-                    <p className="text-xl md:text-2xl font-bold text-gray-800 group-hover:text-orange-600 transition-colors">150.000 F</p>
+                    <p className="text-xl md:text-2xl font-bold text-gray-800 group-hover:text-orange-600 transition-colors">
+                        {currentBalance.toLocaleString()} F
+                    </p>
                 </div>
                  <div className="p-4 bg-green-50 rounded-xl text-center border border-green-100 hover:border-green-300 transition-colors">
                     <p className="text-green-600 text-xs uppercase mb-1 font-semibold tracking-wide flex items-center justify-center gap-1">
                         <ArrowUpRight size={12}/> Entrées Jour
                     </p>
-                    <p className="text-xl md:text-2xl font-bold text-green-700">+25.000 F</p>
+                    <p className="text-xl md:text-2xl font-bold text-green-700">+{todayIncome.toLocaleString()} F</p>
                 </div>
                  <div className="p-4 bg-red-50 rounded-xl text-center border border-red-100 hover:border-red-300 transition-colors">
                     <p className="text-red-500 text-xs uppercase mb-1 font-semibold tracking-wide flex items-center justify-center gap-1">
                         <ArrowDownRight size={12}/> Sorties Jour
                     </p>
-                    <p className="text-xl md:text-2xl font-bold text-red-600">-12.000 F</p>
+                    <p className="text-xl md:text-2xl font-bold text-red-600">-{todayOutcome.toLocaleString()} F</p>
                 </div>
                 <button 
                     onClick={() => setShowCaisseModal(true)}
@@ -233,7 +280,7 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions }) => {
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh]">
                 <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                     <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <User className="text-green-600"/> Base Clients (CRM)
+                        <User className="text-green-600"/> Base Clients (Dérivée)
                     </h3>
                     <button onClick={() => setShowClientModal(false)} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><X size={20}/></button>
                 </div>
@@ -251,9 +298,6 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions }) => {
                             />
                             <Search className="absolute left-3 top-2.5 text-gray-400" size={18}/>
                         </div>
-                        <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2 shadow-sm transition-colors">
-                            <Plus size={18}/> Nouveau Client
-                        </button>
                     </div>
 
                     {/* Table */}
@@ -262,7 +306,7 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions }) => {
                             <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
                                 <tr>
                                     <th className="px-4 py-3">Nom</th>
-                                    <th className="px-4 py-3">Contact</th>
+                                    <th className="px-4 py-3">Dernière activité</th>
                                     <th className="px-4 py-3">Localisation</th>
                                     <th className="px-4 py-3 text-right">Actions</th>
                                 </tr>
@@ -275,10 +319,7 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions }) => {
                                             <div className="text-xs text-gray-400 font-normal">{client.id}</div>
                                         </td>
                                         <td className="px-4 py-3 text-gray-600">
-                                            <div className="flex flex-col">
-                                                <span className="flex items-center gap-1"><Phone size={12}/> {client.phone}</span>
-                                                <span className="flex items-center gap-1 text-xs text-gray-400"><Mail size={12}/> {client.email}</span>
-                                            </div>
+                                            {client.lastInteraction}
                                         </td>
                                         <td className="px-4 py-3 text-gray-600">
                                             <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs">

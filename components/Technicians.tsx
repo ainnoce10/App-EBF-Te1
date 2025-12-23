@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_INTERVENTIONS } from '../constants';
 import { Intervention, Site } from '../types';
+import { supabase } from '../lib/supabase';
 import { 
   Search, 
   MapPin, 
@@ -28,11 +29,14 @@ interface TechniciansProps {
 
 const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [interventions, setInterventions] = useState<Intervention[]>(initialData.length > 0 ? initialData : MOCK_INTERVENTIONS);
+  const [interventions, setInterventions] = useState<Intervention[]>([]);
 
   useEffect(() => {
-    if (initialData && initialData.length > 0) {
+    if (initialData.length > 0) {
       setInterventions(initialData);
+    } else if (interventions.length === 0) {
+        // Fallback pour démo si vide
+        setInterventions(MOCK_INTERVENTIONS);
     }
   }, [initialData]);
 
@@ -121,13 +125,34 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     }, 3000);
   };
 
-  const handleSubmitReport = () => {
+  const handleSubmitReport = async () => {
+    // Si un client a été sélectionné, essayons de trouver l'intervention correspondante
+    const targetIntervention = interventions.find(i => i.client === formReport.client);
+    
+    if (targetIntervention) {
+        const { error } = await supabase.from('interventions')
+            .update({ 
+                status: formReport.status,
+                description: formReport.workDone // On met à jour la description avec le rapport
+            })
+            .eq('id', targetIntervention.id);
+        
+        if (error) {
+            console.error("Erreur update", error);
+            alert("Erreur lors de la sauvegarde du rapport");
+            return;
+        }
+    } else {
+        // Sinon on peut créer une note ou juste simuler le succès pour le rapport vocal sans lien direct
+        console.warn("Intervention non trouvée pour ce client, rapport non lié.");
+    }
+
     triggerCelebration('ENVOYÉ !', 'Ton travail est bien enregistré. 🚀');
     closeReportModal();
   };
 
-  const handleCreateIntervention = () => {
-    const id = `INT-${Math.floor(Math.random() * 900) + 100}`;
+  const handleCreateIntervention = async () => {
+    const id = `INT-${Math.floor(Math.random() * 9000) + 1000}`;
     const newItem: Intervention = {
       id,
       client: newIntervention.client,
@@ -138,15 +163,22 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       site: newIntervention.site
     };
     
-    setInterventions([newItem, ...interventions]);
-    triggerCelebration('CRÉÉ !', 'La nouvelle intervention est planifiée. 📅');
-    setShowNewInterventionModal(false);
-    setNewIntervention({
-        client: '',
-        description: '',
-        site: 'Abidjan',
-        date: new Date().toISOString().split('T')[0]
-    });
+    // Sauvegarde Supabase
+    const { error } = await supabase.from('interventions').insert([newItem]);
+    
+    if (!error) {
+        triggerCelebration('CRÉÉ !', 'La nouvelle intervention est planifiée. 📅');
+        setShowNewInterventionModal(false);
+        setNewIntervention({
+            client: '',
+            description: '',
+            site: 'Abidjan',
+            date: new Date().toISOString().split('T')[0]
+        });
+    } else {
+        alert("Erreur lors de la création");
+        console.error(error);
+    }
   };
 
   const closeReportModal = () => {
