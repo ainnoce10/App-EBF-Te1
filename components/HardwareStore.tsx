@@ -8,8 +8,7 @@ import {
   X,
   Image as ImageIcon,
   FileText,
-  Upload,
-  Trash2
+  Upload
 } from 'lucide-react';
 
 interface HardwareStoreProps {
