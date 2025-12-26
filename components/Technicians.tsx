@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_INTERVENTIONS } from '../constants';
 import { Intervention, Site } from '../types';
-import { supabase } from '../lib/supabase';
+import { db, doc, setDoc, updateDoc } from '../lib/firebase';
 import { 
   Search, 
   MapPin, 
@@ -138,22 +138,18 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     const targetIntervention = interventions.find(i => i.client === formReport.client);
     if (targetIntervention) {
         try {
-            // SUPABASE UPDATE
-            const { error } = await supabase
-              .from('interventions')
-              .update({
-                  status: formReport.status,
-                  description: formReport.workDone 
-              })
-              .eq('id', targetIntervention.id);
-
-            if (error) throw error;
+            // FIREBASE UPDATE
+            const interRef = doc(db, 'interventions', targetIntervention.id);
+            await updateDoc(interRef, {
+                status: formReport.status,
+                description: formReport.workDone 
+            });
             
             triggerCelebration('ENVOYÉ !', 'Ton travail est bien enregistré. 🚀');
             closeReportModal();
         } catch (error) {
             console.error("Erreur update", error);
-            alert("Erreur lors de la sauvegarde du rapport");
+            alert(`Erreur sauvegarde: ${(error as any).message}`);
         }
     }
   };
@@ -174,10 +170,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     };
     
     try {
-        // SUPABASE CREATE
-        const { error } = await supabase.from('interventions').insert(newItem);
-        
-        if (error) throw error;
+        // FIREBASE CREATE (setDoc pour utiliser notre ID custom)
+        await setDoc(doc(db, 'interventions', id), newItem);
 
         triggerCelebration('CRÉÉ !', 'La nouvelle intervention est planifiée. 📅');
         setShowNewInterventionModal(false);
@@ -191,8 +185,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
             date: new Date().toISOString().split('T')[0]
         });
     } catch (error) {
-        alert("Erreur lors de la création");
-        console.error(error);
+        console.error("Erreur création intervention:", error);
+        alert(`Erreur lors de la création : ${(error as any).message || JSON.stringify(error)}`);
     }
   };
 

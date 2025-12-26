@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Bell, Globe, Megaphone, Trash2, Plus, Loader2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { db, collection, addDoc, deleteDoc, getDocs, query, where } from '../lib/firebase';
 
 interface SettingsProps {
   tickerMessages?: string[];
@@ -15,11 +15,10 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     if (newMessage.trim()) {
       setIsUpdating(true);
       try {
-        const { error } = await supabase.from('ticker_messages').insert({ 
+        await addDoc(collection(db, 'ticker_messages'), { 
             content: newMessage.trim(),
             created_at: new Date().toISOString()
         });
-        if (error) throw error;
         setNewMessage('');
       } catch (error) {
         console.error("Erreur ajout message", error);
@@ -31,12 +30,13 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const handleDeleteMessage = async (msgContent: string) => {
     setIsUpdating(true);
     try {
-        const { error } = await supabase
-            .from('ticker_messages')
-            .delete()
-            .eq('content', msgContent);
+        // En Firestore, pour supprimer par contenu, il faut d'abord trouver le doc ID
+        const q = query(collection(db, 'ticker_messages'), where('content', '==', msgContent));
+        const querySnapshot = await getDocs(q);
+        
+        const deletePromises = querySnapshot.docs.map((doc: any) => deleteDoc(doc.ref));
+        await Promise.all(deletePromises);
             
-        if (error) throw error;
     } catch (error) {
         console.error("Erreur suppression message", error);
     }

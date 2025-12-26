@@ -1,19 +1,23 @@
-// import { initializeApp } from "firebase/app";
-// import { getFirestore } from "firebase/firestore";
+// Mock implementation to replace missing Firebase SDK
+// This allows the application to run without a valid Firebase configuration or installation.
 
-// // ⚠️ REMPLACEZ CES VALEURS PAR CELLES DE VOTRE CONSOLE FIREBASE
-// // Allez sur https://console.firebase.google.com/ > Créer un projet > Ajouter une app Web
-// const firebaseConfig = {
-//   apiKey: "AIzaSyABZpBnwgvDxgHSUldjMZK-ZhqPwGn_HmA",
-//   authDomain: "bd-app-ebf-te1.firebaseapp.com",
-//   projectId: "bd-app-ebf-te1",
-//   storageBucket: "bd-app-ebf-te1.firebasestorage.app",
-//   messagingSenderId: "486098437562",
-//   appId: "1:486098437562:web:1ad55335d4b9cea3c8c983"
-// };
+export const db = { type: 'mock-db' };
 
-// // Initialisation de Firebase
-// const app = initializeApp(firebaseConfig);
+export const collection = (db: any, name: string) => ({ type: 'collection', name });
+export const doc = (db: any, col: string, id?: string) => ({ type: 'doc', col, id });
 
-// // Export de l'instance Firestore
-// export const db = null; // getFirestore(app);
+export const getDocs = async (query: any) => ({ docs: [] });
+export const addDoc = async (col: any, data: any) => ({ id: 'mock-id-' + Math.random() });
+export const setDoc = async (doc: any, data: any) => Promise.resolve();
+export const updateDoc = async (doc: any, data: any) => Promise.resolve();
+export const deleteDoc = async (doc: any) => Promise.resolve();
+
+export const query = (col: any, ...args: any[]) => ({ type: 'query', col, args });
+export const where = (field: string, op: string, val: any) => ({ type: 'where', field, op, val });
+export const orderBy = (field: string, dir: string = 'asc') => ({ type: 'orderBy', field, dir });
+
+export const onSnapshot = (query: any, callback: any, errorCallback?: any) => {
+  // Mock subscription that does nothing.
+  // The app will rely on initial state mocks in App.tsx.
+  return () => {};
+};

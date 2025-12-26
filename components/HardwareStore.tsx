@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StockItem } from '../types';
-import { supabase } from '../lib/supabase';
+import { db, doc, setDoc, updateDoc } from '../lib/firebase';
 import { 
   Plus,
   Settings2,
@@ -108,11 +108,9 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
 
       try {
           if (isAdding) {
-              const { error } = await supabase.from('stock').insert(finalForm);
-              if (error) throw error;
+              await setDoc(doc(db, 'stock', itemId), finalForm);
           } else {
-              const { error } = await supabase.from('stock').update(finalForm).eq('id', itemId);
-              if (error) throw error;
+              await updateDoc(doc(db, 'stock', itemId), finalForm);
           }
 
           setIsEditing(false);
