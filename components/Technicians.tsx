@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_INTERVENTIONS } from '../constants';
 import { Intervention, Site } from '../types';
@@ -13,21 +12,16 @@ import {
   Square, 
   Play, 
   Pause,
-  Send,
-  Volume2,
   Trash2,
   PartyPopper,
   ChevronRight,
-  ClipboardCheck,
   CalendarPlus,
   Save,
-  RotateCcw,
   Zap,
   Home,
   Snowflake,
   Phone,
   Tag,
-  // Added User icon to fix "Cannot find name 'User'" error
   User
 } from 'lucide-react';
 

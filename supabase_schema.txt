@@ -30,6 +30,9 @@ create table public.stock (
 create table public.interventions (
   id text primary key,
   client text,
+  "clientPhone" text, -- Nouveau champ: numéro du client
+  domain text, -- Nouveau champ: 'Électricité', 'Bâtiment', 'Froid'
+  "interventionType" text, -- Nouveau champ: 'Dépannage', 'Expertise', etc.
   description text,
   technician text,
   status text, -- 'En cours', 'Terminé', etc.
