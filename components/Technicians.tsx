@@ -55,7 +55,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     status: 'Terminé'
   });
 
-  // Form State for New Intervention (Updated with new requirements)
+  // Form State for New Intervention
   const [newIntervention, setNewIntervention] = useState<{
     client: string;
     clientPhone: string;
@@ -74,7 +74,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     date: new Date().toISOString().split('T')[0]
   });
 
-  // Voice Recording States (omitted for brevity but kept in logic)
+  // Voice Recording States (omitted for brevity)
   const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'review'>('idle');
   const [recordingDuration, setRecordingDuration] = useState(0);
   const timerRef = useRef<number | null>(null);
@@ -137,21 +137,25 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const handleSubmitReport = async () => {
     const targetIntervention = interventions.find(i => i.client === formReport.client);
     if (targetIntervention) {
-        const { error } = await supabase.from('interventions')
-            .update({ 
-                status: formReport.status,
-                description: formReport.workDone 
-            })
-            .eq('id', targetIntervention.id);
-        
-        if (error) {
+        try {
+            // SUPABASE UPDATE
+            const { error } = await supabase
+              .from('interventions')
+              .update({
+                  status: formReport.status,
+                  description: formReport.workDone 
+              })
+              .eq('id', targetIntervention.id);
+
+            if (error) throw error;
+            
+            triggerCelebration('ENVOYÉ !', 'Ton travail est bien enregistré. 🚀');
+            closeReportModal();
+        } catch (error) {
             console.error("Erreur update", error);
             alert("Erreur lors de la sauvegarde du rapport");
-            return;
         }
     }
-    triggerCelebration('ENVOYÉ !', 'Ton travail est bien enregistré. 🚀');
-    closeReportModal();
   };
 
   const handleCreateIntervention = async () => {
@@ -169,9 +173,12 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       site: newIntervention.site
     };
     
-    const { error } = await supabase.from('interventions').insert([newItem]);
-    
-    if (!error) {
+    try {
+        // SUPABASE CREATE
+        const { error } = await supabase.from('interventions').insert(newItem);
+        
+        if (error) throw error;
+
         triggerCelebration('CRÉÉ !', 'La nouvelle intervention est planifiée. 📅');
         setShowNewInterventionModal(false);
         setNewIntervention({
@@ -183,7 +190,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
             site: 'Abidjan',
             date: new Date().toISOString().split('T')[0]
         });
-    } else {
+    } catch (error) {
         alert("Erreur lors de la création");
         console.error(error);
     }

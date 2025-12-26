@@ -40,7 +40,6 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
     if (liveEmployees.length > 0) {
       setEmployees(liveEmployees);
     } else if (employees.length === 0) {
-        // Optionnel: garder vide ou charger MOCK_EMPLOYEES si on veut une démo sans backend
         setEmployees(MOCK_EMPLOYEES);
     }
   }, [liveEmployees]);
@@ -72,13 +71,18 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
 
     const newStatus = emp.status === 'Actif' ? 'Congés' : 'Actif';
     
-    // Optimistic update
-    setEmployees(employees.map(e => e.id === empId ? { ...e, status: newStatus } : e));
+    try {
+        // Optimistic update
+        setEmployees(employees.map(e => e.id === empId ? { ...e, status: newStatus } : e));
 
-    // Update Supabase
-    const { error } = await supabase.from('employees').update({ status: newStatus }).eq('id', empId);
-    
-    if (error) {
+        // Update Supabase
+        const { error } = await supabase
+          .from('employees')
+          .update({ status: newStatus })
+          .eq('id', empId);
+
+        if (error) throw error;
+    } catch (error) {
         console.error("Erreur mise à jour statut", error);
         alert("Erreur lors de la mise à jour du statut");
         // Rollback
@@ -92,8 +96,9 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
       return;
     }
 
+    const newId = `EMP-${Math.floor(Math.random() * 10000).toString().padStart(3, '0')}`;
     const newEmp: Employee = {
-      id: `EMP-${Math.floor(Math.random() * 10000).toString().padStart(3, '0')}`,
+      id: newId,
       name: newEmployeeData.name,
       role: newEmployeeData.role,
       site: newEmployeeData.site,
@@ -101,9 +106,11 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
       entryDate: newEmployeeData.entryDate
     };
 
-    const { error } = await supabase.from('employees').insert([newEmp]);
-
-    if (!error) {
+    try {
+        // Supabase Insert
+        const { error } = await supabase.from('employees').insert(newEmp);
+        if (error) throw error;
+        
         setIsAddingEmployee(false);
         setNewEmployeeData({
         name: '',
@@ -111,7 +118,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
         site: 'Abidjan',
         entryDate: new Date().toISOString().split('T')[0]
         });
-    } else {
+    } catch (error) {
         alert("Erreur lors de l'enregistrement");
         console.error(error);
     }

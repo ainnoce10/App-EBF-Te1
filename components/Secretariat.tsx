@@ -59,11 +59,10 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
     return Array.from(uniqueClients.values());
   }, [liveInterventions]);
 
-  // Extraire l'historique de caisse des transactions (filtrer par catégorie 'Caisse' ou tout afficher par défaut pour la démo)
+  // Extraire l'historique de caisse des transactions
   const caisseHistory = useMemo(() => {
-    // On suppose ici que toute transaction créée ici a la catégorie 'Caisse' ou on affiche les 5 dernières
     return liveTransactions
-        .filter(t => t.category === 'Caisse' || true) // Filtre permissif pour voir quelque chose
+        .filter(t => t.category === 'Caisse' || true) 
         .slice(0, 5)
         .map(t => ({
             id: t.id,
@@ -74,7 +73,7 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
         }));
   }, [liveTransactions]);
 
-  // Calcul du solde (basé sur toutes les transactions chargées)
+  // Calcul du solde
   const currentBalance = useMemo(() => {
       const income = liveTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
       const outcome = liveTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
@@ -112,8 +111,9 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
   const handleSaveTransaction = async () => {
     if (!newTransaction.amount || !newTransaction.reason) return;
 
+    const newId = `TRX-${Math.floor(Math.random() * 10000)}`;
     const globalTransaction: Transaction = {
-        id: `TRX-${Math.floor(Math.random() * 10000)}`,
+        id: newId,
         type: newTransaction.type === 'in' ? 'Recette' : 'Dépense',
         category: 'Caisse',
         amount: parseInt(newTransaction.amount),
@@ -122,13 +122,15 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
         site: 'Abidjan' 
     };
 
-    const { error } = await supabase.from('transactions').insert([globalTransaction]);
-    if (error) {
-        console.error("Erreur sauvegarde transaction", error);
-        alert("Erreur lors de l'enregistrement");
-    } else {
+    try {
+        const { error } = await supabase.from('transactions').insert(globalTransaction);
+        if (error) throw error;
+
         setNewTransaction({ type: 'out', amount: '', reason: '' });
         setShowCaisseModal(false);
+    } catch (error) {
+        console.error("Erreur sauvegarde transaction", error);
+        alert("Erreur lors de l'enregistrement");
     }
   };
 
@@ -272,81 +274,6 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
                 </button>
             </div>
        </div>
-
-       {/* --- MODAL: CLIENT DATABASE (CRM) --- */}
-       {showClientModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh]">
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <User className="text-green-600"/> Base Clients (Dérivée)
-                    </h3>
-                    <button onClick={() => setShowClientModal(false)} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><X size={20}/></button>
-                </div>
-                
-                <div className="p-6 flex-1 overflow-y-auto">
-                    {/* Toolbar */}
-                    <div className="flex gap-4 mb-6">
-                        <div className="flex-1 relative">
-                            <input 
-                                type="text" 
-                                placeholder="Rechercher nom, zone..." 
-                                value={clientSearch}
-                                onChange={(e) => setClientSearch(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                            />
-                            <Search className="absolute left-3 top-2.5 text-gray-400" size={18}/>
-                        </div>
-                    </div>
-
-                    {/* Table */}
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
-                                <tr>
-                                    <th className="px-4 py-3">Nom</th>
-                                    <th className="px-4 py-3">Dernière activité</th>
-                                    <th className="px-4 py-3">Localisation</th>
-                                    <th className="px-4 py-3 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {filteredClients.map(client => (
-                                    <tr key={client.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-3 font-medium text-gray-800">
-                                            {client.name}
-                                            <div className="text-xs text-gray-400 font-normal">{client.id}</div>
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-600">
-                                            {client.lastInteraction}
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-600">
-                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs">
-                                                <MapPin size={10}/> {client.location}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <button onClick={() => handleCall(client.phone, client.name)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Appeler">
-                                                    <Phone size={16}/>
-                                                </button>
-                                                <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Dossier">
-                                                    <FileText size={16}/>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                        {filteredClients.length === 0 && (
-                            <div className="p-8 text-center text-gray-500">Aucun client trouvé.</div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-       )}
 
        {/* --- MODAL: CAISSE TRANSACTION --- */}
        {showCaisseModal && (

@@ -9,6 +9,8 @@ import Settings from './components/Settings';
 import ShowcaseMode from './components/ShowcaseMode';
 import { Site, Period, StockItem, Intervention, Transaction, Employee } from './types';
 import { TICKER_MESSAGES } from './constants';
+
+// Supabase Imports
 import { supabase, subscribeToTable } from './lib/supabase';
 
 const App: React.FC = () => {
@@ -28,49 +30,57 @@ const App: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLive, setIsLive] = useState(false);
 
-  // Fonction de chargement globale
-  const fetchAllData = async () => {
-    try {
-      const [
-        { data: msgData },
-        { data: stkData },
-        { data: intData },
-        { data: trxData },
-        { data: empData }
-      ] = await Promise.all([
-        supabase.from('ticker_messages').select('content').order('created_at', { ascending: true }),
-        supabase.from('stock').select('*').order('name', { ascending: true }),
-        supabase.from('interventions').select('*').order('date', { ascending: false }),
-        supabase.from('transactions').select('*').order('date', { ascending: false }),
-        supabase.from('employees').select('*').order('name', { ascending: true })
-      ]);
-
-      if (msgData) setTickerMessages(msgData.map(m => m.content));
-      if (stkData) setStock(stkData);
-      if (intData) setInterventions(intData);
-      if (trxData) setTransactions(trxData);
-      if (empData) setEmployees(empData);
-      setIsLive(true);
-    } catch (error) {
-      console.error("Erreur de synchronisation Supabase:", error);
-      setIsLive(false);
-    }
-  };
-
   useEffect(() => {
-    fetchAllData();
+    // Connexion temps réel aux collections Supabase
+    setIsLive(true); 
 
-    // Abonnements temps réel pour toutes les tables critiques
-    const tables = ['ticker_messages', 'stock', 'interventions', 'transactions', 'employees'];
-    const channels = tables.map(table => 
-      subscribeToTable(table, () => {
-        console.log(`Changement détecté dans ${table}`);
-        fetchAllData();
-      })
-    );
+    // Data fetchers
+    const fetchTicker = async () => {
+      const { data } = await supabase.from('ticker_messages').select('content').order('created_at', { ascending: false });
+      if (data && data.length > 0) setTickerMessages(data.map((d: any) => d.content));
+    };
 
+    const fetchStock = async () => {
+       const { data } = await supabase.from('stock').select('*').order('name');
+       if (data) setStock(data as StockItem[]);
+    };
+
+    const fetchInterventions = async () => {
+       const { data } = await supabase.from('interventions').select('*').order('date', { ascending: false });
+       if (data) setInterventions(data as Intervention[]);
+    };
+
+    const fetchTransactions = async () => {
+       const { data } = await supabase.from('transactions').select('*').order('date', { ascending: false });
+       if (data) setTransactions(data as Transaction[]);
+    };
+
+    const fetchEmployees = async () => {
+       const { data } = await supabase.from('employees').select('*').order('name');
+       if (data) setEmployees(data as Employee[]);
+    };
+
+    // Initial fetch
+    fetchTicker();
+    fetchStock();
+    fetchInterventions();
+    fetchTransactions();
+    fetchEmployees();
+
+    // Subscriptions
+    const subTicker = subscribeToTable('ticker_messages', fetchTicker);
+    const subStock = subscribeToTable('stock', fetchStock);
+    const subInter = subscribeToTable('interventions', fetchInterventions);
+    const subTrans = subscribeToTable('transactions', fetchTransactions);
+    const subEmp = subscribeToTable('employees', fetchEmployees);
+
+    // Cleanup function
     return () => {
-      channels.forEach(ch => supabase.removeChannel(ch));
+      subTicker.unsubscribe();
+      subStock.unsubscribe();
+      subInter.unsubscribe();
+      subTrans.unsubscribe();
+      subEmp.unsubscribe();
     };
   }, []);
 
@@ -112,16 +122,13 @@ const App: React.FC = () => {
                 />
               );
             case 'secretariat':
-              return <Secretariat liveInterventions={interventions} />;
+              return <Secretariat liveInterventions={interventions} liveTransactions={transactions} />;
             case 'hardware':
               return <HardwareStore initialData={stock} />;
             case 'settings':
               return (
                 <Settings 
                   tickerMessages={tickerMessages} 
-                  onUpdateMessages={async () => {
-                    // Les messages sont gérés via Supabase dans Settings.tsx
-                  }} 
                 />
               );
             default:

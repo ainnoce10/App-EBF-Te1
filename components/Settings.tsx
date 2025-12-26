@@ -14,15 +14,32 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const handleAddMessage = async () => {
     if (newMessage.trim()) {
       setIsUpdating(true);
-      await supabase.from('ticker_messages').insert([{ content: newMessage.trim() }]);
-      setNewMessage('');
+      try {
+        const { error } = await supabase.from('ticker_messages').insert({ 
+            content: newMessage.trim(),
+            created_at: new Date().toISOString()
+        });
+        if (error) throw error;
+        setNewMessage('');
+      } catch (error) {
+        console.error("Erreur ajout message", error);
+      }
       setIsUpdating(false);
     }
   };
 
   const handleDeleteMessage = async (msgContent: string) => {
     setIsUpdating(true);
-    await supabase.from('ticker_messages').delete().eq('content', msgContent);
+    try {
+        const { error } = await supabase
+            .from('ticker_messages')
+            .delete()
+            .eq('content', msgContent);
+            
+        if (error) throw error;
+    } catch (error) {
+        console.error("Erreur suppression message", error);
+    }
     setIsUpdating(false);
   };
 

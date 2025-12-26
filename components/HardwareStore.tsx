@@ -97,23 +97,29 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
 
   const handleSave = async () => {
     if (editForm) {
-      const cleanedUrls = (editForm.imageUrls || []).filter(url => url && url.length > 100); // Filtre pour ne garder que les vraies images base64/url
+      const cleanedUrls = (editForm.imageUrls || []).filter(url => url && url.length > 100); 
       const finalForm = { ...editForm, imageUrls: cleanedUrls };
       
-      if (isAdding && !finalForm.id) {
-         finalForm.id = `STK-${Math.floor(Math.random() * 100000)}`;
+      let itemId = finalForm.id;
+      if (isAdding && !itemId) {
+         itemId = `STK-${Math.floor(Math.random() * 100000)}`;
+         finalForm.id = itemId;
       }
 
-      const { error } = isAdding 
-        ? await supabase.from('stock').insert([finalForm])
-        : await supabase.from('stock').update(finalForm).eq('id', finalForm.id);
+      try {
+          if (isAdding) {
+              const { error } = await supabase.from('stock').insert(finalForm);
+              if (error) throw error;
+          } else {
+              const { error } = await supabase.from('stock').update(finalForm).eq('id', itemId);
+              if (error) throw error;
+          }
 
-      if (error) {
-        alert("Erreur lors de l'enregistrement : " + error.message);
-      } else {
-        setIsEditing(false);
-        setIsAdding(false);
-        setEditForm(null);
+          setIsEditing(false);
+          setIsAdding(false);
+          setEditForm(null);
+      } catch (error) {
+          alert("Erreur lors de l'enregistrement : " + (error as any).message);
       }
     }
   };
