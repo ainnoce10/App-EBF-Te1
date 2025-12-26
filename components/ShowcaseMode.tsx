@@ -31,6 +31,13 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const planning = liveInterventions.length > 0 ? liveInterventions : [];
   const flashes = liveMessages.length > 0 ? liveMessages : ["Bienvenue chez EBF Technical Center"];
 
+  // Date du jour dynamique pour le titre
+  const todayDate = new Date().toLocaleDateString('fr-FR', { 
+    weekday: 'long', 
+    day: 'numeric', 
+    month: 'long' 
+  });
+
   useEffect(() => {
     if (activeMode !== 'PUBLICITE' || products.length === 0) return;
     const interval = setInterval(() => {
@@ -135,8 +142,10 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           ) : activeMode === 'PLANNING' ? (
              <div className="flex w-full bg-gray-950 p-16 animate-fade-in flex-col h-full overflow-hidden">
                 <div className="flex items-center justify-between mb-16">
-                    <h2 className="text-7xl font-black tracking-tighter text-white uppercase italic">Planning Missions</h2>
-                    <Calendar size={100} className="text-blue-500 animate-pulse" />
+                    <h2 className="text-6xl lg:text-7xl font-black tracking-tighter text-white uppercase italic truncate">
+                        Planning du {todayDate}
+                    </h2>
+                    <Calendar size={100} className="text-blue-500 animate-pulse shrink-0 ml-4" />
                 </div>
                 <div className="grid grid-cols-2 gap-8 flex-1 overflow-hidden content-start">
                     {planning.slice(0, 4).map((inter, i) => (
