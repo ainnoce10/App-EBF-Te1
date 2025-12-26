@@ -41,11 +41,11 @@ export const initializeApp = (config: any) => {
   return {};
 };
 
-export const getFirestore = (app?: any) => ({ type: 'firestore-mock' });
+export const getFirestore = (_app?: any) => ({ type: 'firestore-mock' });
 
 export const db = { type: 'firestore-mock' };
 
-export const collection = (db: any, name: string) => {
+export const collection = (_db: any, name: string) => {
   return { type: 'collection', name };
 };
 
@@ -56,7 +56,7 @@ export const query = (col: any, ...constraints: any[]) => {
 export const where = (field: string, op: string, val: any) => ({ type: 'where', field, op, val });
 export const orderBy = (field: string, dir?: string) => ({ type: 'orderBy', field, dir });
 
-export const onSnapshot = (q: any, onNext: (snap: any) => void, onError?: (err: any) => void) => {
+export const onSnapshot = (q: any, onNext: (snap: any) => void, _onError?: (err: any) => void) => {
   const collectionName = q.col ? q.col.name : q.name;
   
   if (!listeners[collectionName]) {
@@ -72,7 +72,7 @@ export const onSnapshot = (q: any, onNext: (snap: any) => void, onError?: (err: 
   };
 };
 
-export const doc = (db: any, colName: string, id: string) => {
+export const doc = (_db: any, colName: string, id: string) => {
   return { type: 'doc', colName, id };
 };
 
