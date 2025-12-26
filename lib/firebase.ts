@@ -1,23 +1,127 @@
-// Mock implementation to replace missing Firebase SDK
-// This allows the application to run without a valid Firebase configuration or installation.
 
-export const db = { type: 'mock-db' };
+// Mock implementation of Firebase to bypass import errors and provide local persistence
+// This replaces the real firebase imports which were causing module resolution errors.
 
-export const collection = (_db: any, name: string) => ({ type: 'collection', name });
-export const doc = (_db: any, col: string, id?: string) => ({ type: 'doc', col, id });
+const LOCAL_STORAGE_KEY_PREFIX = 'ebf_mock_db_';
 
-export const getDocs = async (_query: any) => ({ docs: [] });
-export const addDoc = async (_col: any, _data: any) => ({ id: 'mock-id-' + Math.random() });
-export const setDoc = async (_doc: any, _data: any) => Promise.resolve();
-export const updateDoc = async (_doc: any, _data: any) => Promise.resolve();
-export const deleteDoc = async (_doc: any) => Promise.resolve();
+// Helper to get data from local storage
+const getCollectionData = (collectionName: string) => {
+  if (typeof window === 'undefined') return [];
+  const data = localStorage.getItem(LOCAL_STORAGE_KEY_PREFIX + collectionName);
+  return data ? JSON.parse(data) : [];
+};
 
-export const query = (col: any, ...args: any[]) => ({ type: 'query', col, args });
+// Helper to set data to local storage and trigger listeners
+const setCollectionData = (collectionName: string, data: any[]) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(LOCAL_STORAGE_KEY_PREFIX + collectionName, JSON.stringify(data));
+  triggerListeners(collectionName);
+};
+
+const listeners: Record<string, Function[]> = {};
+
+const createDocSnapshot = (d: any, collectionName: string) => ({
+  data: () => d,
+  id: d.id,
+  ref: { colName: collectionName, id: d.id },
+  ...d 
+});
+
+const triggerListeners = (collectionName: string) => {
+  if (listeners[collectionName]) {
+    const rawData = getCollectionData(collectionName);
+    const docs = rawData.map((d: any) => createDocSnapshot(d, collectionName));
+    const snapshot = { docs, empty: docs.length === 0 };
+    listeners[collectionName].forEach(cb => cb(snapshot));
+  }
+};
+
+export const initializeApp = (config: any) => {
+  console.log('Mock Firebase Initialized', config);
+  return {};
+};
+
+export const getFirestore = (app?: any) => ({ type: 'firestore-mock' });
+
+export const db = { type: 'firestore-mock' };
+
+export const collection = (db: any, name: string) => {
+  return { type: 'collection', name };
+};
+
+export const query = (col: any, ...constraints: any[]) => {
+  return { type: 'query', col, constraints };
+};
+
 export const where = (field: string, op: string, val: any) => ({ type: 'where', field, op, val });
-export const orderBy = (field: string, dir: string = 'asc') => ({ type: 'orderBy', field, dir });
+export const orderBy = (field: string, dir?: string) => ({ type: 'orderBy', field, dir });
 
-export const onSnapshot = (_query: any, _callback: any, _errorCallback?: any) => {
-  // Mock subscription that does nothing.
-  // The app will rely on initial state mocks in App.tsx.
-  return () => {};
+export const onSnapshot = (q: any, onNext: (snap: any) => void, onError?: (err: any) => void) => {
+  const collectionName = q.col ? q.col.name : q.name;
+  
+  if (!listeners[collectionName]) {
+    listeners[collectionName] = [];
+  }
+  listeners[collectionName].push(onNext);
+  
+  // Initial call
+  setTimeout(() => triggerListeners(collectionName), 0);
+  
+  return () => {
+    listeners[collectionName] = listeners[collectionName].filter(cb => cb !== onNext);
+  };
+};
+
+export const doc = (db: any, colName: string, id: string) => {
+  return { type: 'doc', colName, id };
+};
+
+export const addDoc = async (col: any, data: any) => {
+  const collectionName = col.name;
+  const currentData = getCollectionData(collectionName);
+  const newId = 'mock_id_' + Date.now() + Math.floor(Math.random() * 1000);
+  const newItem = { id: newId, ...data };
+  
+  setCollectionData(collectionName, [...currentData, newItem]);
+  return { id: newId };
+};
+
+export const setDoc = async (docRef: any, data: any) => {
+  const { colName, id } = docRef;
+  const currentData = getCollectionData(colName);
+  const existingIndex = currentData.findIndex((d: any) => d.id === id);
+  
+  if (existingIndex >= 0) {
+     currentData[existingIndex] = { ...data, id };
+  } else {
+     currentData.push({ ...data, id });
+  }
+  setCollectionData(colName, currentData);
+};
+
+export const updateDoc = async (docRef: any, data: any) => {
+  const { colName, id } = docRef;
+  const currentData = getCollectionData(colName);
+  const existingIndex = currentData.findIndex((d: any) => d.id === id);
+  
+  if (existingIndex >= 0) {
+     currentData[existingIndex] = { ...currentData[existingIndex], ...data };
+     setCollectionData(colName, currentData);
+  } else {
+    console.warn("Document not found for update:", colName, id);
+  }
+};
+
+export const deleteDoc = async (docRef: any) => {
+  const { colName, id } = docRef;
+  const currentData = getCollectionData(colName);
+  const newData = currentData.filter((d: any) => d.id !== id);
+  setCollectionData(colName, newData);
+};
+
+export const getDocs = async (q: any) => {
+  const collectionName = q.col ? q.col.name : q.name;
+  const rawData = getCollectionData(collectionName);
+  const docs = rawData.map((d: any) => createDocSnapshot(d, collectionName));
+  return { docs, empty: docs.length === 0 };
 };
