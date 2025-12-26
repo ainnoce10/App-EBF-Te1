@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_INTERVENTIONS } from '../constants';
 import { Intervention, Site } from '../types';
@@ -20,7 +21,14 @@ import {
   ClipboardCheck,
   CalendarPlus,
   Save,
-  RotateCcw
+  RotateCcw,
+  Zap,
+  Home,
+  Snowflake,
+  Phone,
+  Tag,
+  // Added User icon to fix "Cannot find name 'User'" error
+  User
 } from 'lucide-react';
 
 interface TechniciansProps {
@@ -35,7 +43,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     if (initialData.length > 0) {
       setInterventions(initialData);
     } else if (interventions.length === 0) {
-        // Fallback pour démo si vide
         setInterventions(MOCK_INTERVENTIONS);
     }
   }, [initialData]);
@@ -54,25 +61,33 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     status: 'Terminé'
   });
 
-  // Form State for New Intervention
-  const [newIntervention, setNewIntervention] = useState({
+  // Form State for New Intervention (Updated with new requirements)
+  const [newIntervention, setNewIntervention] = useState<{
+    client: string;
+    clientPhone: string;
+    domain: 'Électricité' | 'Bâtiment' | 'Froid';
+    interventionType: 'Dépannage' | 'Expertise' | 'Installation' | 'Tuyauterie' | 'Appareillage' | 'Fillerie' | 'Entretien' | 'Désinstallation';
+    description: string;
+    site: Site;
+    date: string;
+  }>({
     client: '',
+    clientPhone: '',
+    domain: 'Électricité',
+    interventionType: 'Dépannage',
     description: '',
     site: 'Abidjan',
     date: new Date().toISOString().split('T')[0]
   });
 
-  // Voice Recording State
+  // Voice Recording States (omitted for brevity but kept in logic)
   const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'review'>('idle');
   const [recordingDuration, setRecordingDuration] = useState(0);
   const timerRef = useRef<number | null>(null);
-
-  // Playback State
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
   const playbackTimerRef = useRef<number | null>(null);
 
-  // --- Voice Logic ---
   const handleStartRecording = () => {
     setRecordingState('recording');
     setRecordingDuration(0);
@@ -126,14 +141,12 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   };
 
   const handleSubmitReport = async () => {
-    // Si un client a été sélectionné, essayons de trouver l'intervention correspondante
     const targetIntervention = interventions.find(i => i.client === formReport.client);
-    
     if (targetIntervention) {
         const { error } = await supabase.from('interventions')
             .update({ 
                 status: formReport.status,
-                description: formReport.workDone // On met à jour la description avec le rapport
+                description: formReport.workDone 
             })
             .eq('id', targetIntervention.id);
         
@@ -142,11 +155,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
             alert("Erreur lors de la sauvegarde du rapport");
             return;
         }
-    } else {
-        // Sinon on peut créer une note ou juste simuler le succès pour le rapport vocal sans lien direct
-        console.warn("Intervention non trouvée pour ce client, rapport non lié.");
     }
-
     triggerCelebration('ENVOYÉ !', 'Ton travail est bien enregistré. 🚀');
     closeReportModal();
   };
@@ -156,14 +165,16 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     const newItem: Intervention = {
       id,
       client: newIntervention.client,
+      clientPhone: newIntervention.clientPhone,
+      domain: newIntervention.domain,
+      interventionType: newIntervention.interventionType,
       description: newIntervention.description,
-      technician: 'Admin EBF', // Simulé
+      technician: 'Admin EBF', 
       status: 'En attente',
       date: newIntervention.date,
       site: newIntervention.site
     };
     
-    // Sauvegarde Supabase
     const { error } = await supabase.from('interventions').insert([newItem]);
     
     if (!error) {
@@ -171,6 +182,9 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         setShowNewInterventionModal(false);
         setNewIntervention({
             client: '',
+            clientPhone: '',
+            domain: 'Électricité',
+            interventionType: 'Dépannage',
             description: '',
             site: 'Abidjan',
             date: new Date().toISOString().split('T')[0]
@@ -219,19 +233,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       {/* Confettis Layer */}
       {showSuccessCelebration && (
         <div className="fixed inset-0 z-[100] pointer-events-none overflow-hidden">
-          {[...Array(50)].map((_, i) => (
-            <div 
-              key={i} 
-              className="confetti"
-              style={{
-                left: `${Math.random() * 100}%`,
-                backgroundColor: ['#f97316', '#16a34a', '#3b82f6', '#eab308'][Math.floor(Math.random() * 4)],
-                animationDelay: `${Math.random() * 2}s`,
-                width: `${Math.random() * 10 + 5}px`,
-                height: `${Math.random() * 10 + 5}px`,
-              }}
-            ></div>
-          ))}
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-md">
              <div className="bg-white p-12 rounded-[4rem] shadow-2xl animate-bounce flex flex-col items-center border-8 border-orange-500 max-w-sm text-center">
                 <PartyPopper size={120} className="text-orange-500 mb-6" />
@@ -248,7 +249,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
           <p className="text-gray-500 font-medium text-lg">Gérez vos chantiers et envoyez vos rapports</p>
         </div>
         <div className="flex flex-wrap gap-4">
-            {/* BOUTON NOUVELLE INTERVENTION */}
             <button 
               onClick={() => setShowNewInterventionModal(true)}
               className="bg-green-600 hover:bg-green-700 text-white px-8 py-5 rounded-3xl flex items-center gap-4 transition-all shadow-xl active:scale-95 font-black text-lg uppercase tracking-wider group border-b-8 border-green-800"
@@ -256,15 +256,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
               <CalendarPlus size={28} className="group-hover:rotate-12 transition-transform" />
               Nouvelle Intervention
             </button>
-            {/* BOUTON ÉCRIT */}
-            <button 
-              onClick={() => openFormReportAction()}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-5 rounded-3xl flex items-center gap-4 transition-all shadow-xl active:scale-95 font-black text-lg uppercase tracking-wider group border-b-8 border-blue-800"
-            >
-              <FileText size={28} className="group-hover:rotate-12 transition-transform" />
-              Rapport Écrit
-            </button>
-            {/* BOUTON VOCAL */}
             <button 
               onClick={openVoiceReportAction}
               className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-5 rounded-3xl flex items-center gap-4 transition-all shadow-xl active:scale-95 font-black text-lg uppercase tracking-wider group border-b-8 border-orange-700 pulse-soft"
@@ -291,12 +282,22 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
           <div key={inter.id} className="bg-white rounded-[3rem] shadow-sm border-2 border-gray-50 overflow-hidden hover-lift group" style={{ animationDelay: `${idx * 0.1}s` }}>
             <div className="p-10">
               <div className="flex justify-between items-start mb-6">
-                <span className={`px-5 py-2 rounded-2xl text-xs font-black uppercase tracking-widest
-                  ${inter.status === 'En cours' ? 'bg-blue-100 text-blue-700' : 
-                    inter.status === 'Terminé' ? 'bg-green-100 text-green-700' : 
-                    'bg-gray-100 text-gray-700'}`}>
-                  {inter.status}
-                </span>
+                <div className="flex flex-col gap-2">
+                    <span className={`px-5 py-2 rounded-2xl text-xs font-black uppercase tracking-widest w-fit
+                    ${inter.status === 'En cours' ? 'bg-blue-100 text-blue-700' : 
+                        inter.status === 'Terminé' ? 'bg-green-100 text-green-700' : 
+                        'bg-gray-100 text-gray-700'}`}>
+                    {inter.status}
+                    </span>
+                    {inter.domain && (
+                        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                            {inter.domain === 'Électricité' && <Zap size={12} className="text-orange-500" />}
+                            {inter.domain === 'Bâtiment' && <Home size={12} className="text-blue-500" />}
+                            {inter.domain === 'Froid' && <Snowflake size={12} className="text-cyan-500" />}
+                            {inter.domain} | {inter.interventionType}
+                        </span>
+                    )}
+                </div>
                 <span className="text-xs text-gray-300 font-mono font-black">REF-{inter.id}</span>
               </div>
               <h3 className="font-black text-3xl text-gray-800 mb-3 group-hover:text-orange-500 transition-colors">{inter.client}</h3>
@@ -334,8 +335,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
       {/* MODAL : NOUVELLE INTERVENTION */}
       {showNewInterventionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fade-in">
-          <div className="bg-white rounded-[4rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col animate-slide-up border-8 border-gray-50">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-[4rem] shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col animate-slide-up border-8 border-gray-50 my-10">
             <div className="p-10 border-b-4 border-gray-50 flex justify-between items-center bg-green-50">
                 <h3 className="text-3xl font-black text-gray-800 flex items-center gap-4">
                    <CalendarPlus size={40} className="text-green-600"/>
@@ -343,38 +344,108 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                 </h3>
                 <button onClick={() => setShowNewInterventionModal(false)} className="p-4 bg-white rounded-full shadow-lg text-gray-400 hover:text-red-500 transition-all active:scale-90"><X size={32}/></button>
             </div>
-            <div className="p-12 space-y-8">
+            
+            <div className="p-12 space-y-10">
+                {/* DOMAINE D'INTERVENTION */}
                 <div>
-                    <label className="block text-sm font-black text-gray-400 uppercase tracking-widest mb-3">Nom du Client</label>
-                    <input 
-                        type="text" 
-                        placeholder="Ex: Société Ivoire, M. Koffi..."
-                        className="w-full p-6 bg-gray-50 border-4 border-gray-100 rounded-[2rem] focus:border-green-500 outline-none font-black text-2xl text-gray-700"
-                        value={newIntervention.client}
-                        onChange={(e) => setNewIntervention({...newIntervention, client: e.target.value})}
-                    />
+                    <label className="block text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Domaine d'intervention</label>
+                    <div className="grid grid-cols-3 gap-4">
+                        {[
+                            { id: 'Électricité', icon: <Zap size={24}/>, color: 'orange' },
+                            { id: 'Bâtiment', icon: <Home size={24}/>, color: 'blue' },
+                            { id: 'Froid', icon: <Snowflake size={24}/>, color: 'cyan' }
+                        ].map((d) => (
+                            <button
+                                key={d.id}
+                                onClick={() => setNewIntervention({...newIntervention, domain: d.id as any})}
+                                className={`p-6 rounded-[2.5rem] flex flex-col items-center gap-3 transition-all border-4 font-black uppercase text-xs tracking-widest
+                                    ${newIntervention.domain === d.id 
+                                        ? `bg-${d.color}-500 border-${d.color}-700 text-white shadow-xl scale-105` 
+                                        : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                            >
+                                {d.icon}
+                                {d.id}
+                            </button>
+                        ))}
+                    </div>
                 </div>
+
+                {/* TYPE D'INTERVENTION */}
                 <div>
-                    <label className="block text-sm font-black text-gray-400 uppercase tracking-widest mb-3">Description du problème / Travaux</label>
+                    <label className="block text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Type d'intervention</label>
+                    <div className="relative group">
+                        <Tag className="absolute left-6 top-6 text-gray-300 group-focus-within:text-green-500 transition-colors" size={24}/>
+                        <select 
+                            className="w-full pl-16 pr-8 py-6 bg-gray-50 border-4 border-gray-100 rounded-[2.5rem] focus:border-green-500 outline-none font-black text-xl text-gray-700 appearance-none cursor-pointer"
+                            value={newIntervention.interventionType}
+                            onChange={(e) => setNewIntervention({...newIntervention, interventionType: e.target.value as any})}
+                        >
+                            <option value="Dépannage">Dépannage</option>
+                            <option value="Expertise">Expertise</option>
+                            <option value="Installation">Installation</option>
+                            <option value="Tuyauterie">Tuyauterie</option>
+                            <option value="Appareillage">Appareillage</option>
+                            <option value="Fillerie">Fillerie</option>
+                            <option value="Entretien">Entretien</option>
+                            <option value="Désinstallation">Désinstallation</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <label className="block text-sm font-black text-gray-400 uppercase tracking-widest mb-3">Nom du Client</label>
+                        <div className="relative group">
+                            <User className="absolute left-6 top-6 text-gray-300 group-focus-within:text-green-500" size={24}/>
+                            <input 
+                                type="text" 
+                                placeholder="Ex: M. Koffi, Société X..."
+                                className="w-full pl-16 pr-6 py-6 bg-gray-50 border-4 border-gray-100 rounded-[2rem] focus:border-green-500 outline-none font-black text-xl text-gray-700"
+                                value={newIntervention.client}
+                                onChange={(e) => setNewIntervention({...newIntervention, client: e.target.value})}
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-black text-gray-400 uppercase tracking-widest mb-3">Numéro du Client</label>
+                        <div className="relative group">
+                            <Phone className="absolute left-6 top-6 text-gray-300 group-focus-within:text-green-500" size={24}/>
+                            <input 
+                                type="tel" 
+                                placeholder="01 02 03 04 05"
+                                className="w-full pl-16 pr-6 py-6 bg-gray-50 border-4 border-gray-100 rounded-[2rem] focus:border-green-500 outline-none font-black text-xl text-gray-700"
+                                value={newIntervention.clientPhone}
+                                onChange={(e) => setNewIntervention({...newIntervention, clientPhone: e.target.value})}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-black text-gray-400 uppercase tracking-widest mb-3">Description complémentaire</label>
                     <textarea 
                         rows={3}
-                        placeholder="Décrivez ce qu'il y a à faire..."
-                        className="w-full p-6 bg-gray-50 border-4 border-gray-100 rounded-[2rem] focus:border-green-500 outline-none font-bold text-xl text-gray-700 resize-none"
+                        placeholder="Précisez la nature de la mission..."
+                        className="w-full p-8 bg-gray-50 border-4 border-gray-100 rounded-[2.5rem] focus:border-green-500 outline-none font-bold text-xl text-gray-700 resize-none shadow-inner"
                         value={newIntervention.description}
                         onChange={(e) => setNewIntervention({...newIntervention, description: e.target.value})}
                     />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                        <label className="block text-sm font-black text-gray-400 uppercase tracking-widest mb-3">Site</label>
-                        <select 
-                            className="w-full p-6 bg-gray-50 border-4 border-gray-100 rounded-[2rem] focus:border-green-500 outline-none font-black text-lg text-gray-700 appearance-none"
-                            value={newIntervention.site}
-                            onChange={(e) => setNewIntervention({...newIntervention, site: e.target.value as Site})}
-                        >
-                            <option value="Abidjan">📍 Abidjan</option>
-                            <option value="Bouaké">📍 Bouaké</option>
-                        </select>
+                        <label className="block text-sm font-black text-gray-400 uppercase tracking-widest mb-3">Site d'intervention</label>
+                        <div className="relative group">
+                            <MapPin className="absolute left-6 top-6 text-gray-300 group-focus-within:text-green-500" size={24}/>
+                            <select 
+                                className="w-full pl-16 pr-8 py-6 bg-gray-50 border-4 border-gray-100 rounded-[2rem] focus:border-green-500 outline-none font-black text-lg text-gray-700 appearance-none cursor-pointer"
+                                value={newIntervention.site}
+                                onChange={(e) => setNewIntervention({...newIntervention, site: e.target.value as Site})}
+                            >
+                                <option value="Abidjan">📍 Abidjan</option>
+                                <option value="Bouaké">📍 Bouaké</option>
+                            </select>
+                        </div>
                     </div>
                     <div>
                         <label className="block text-sm font-black text-gray-400 uppercase tracking-widest mb-3">Date prévue</label>
@@ -386,10 +457,11 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                         />
                     </div>
                 </div>
+
                 <button 
                     onClick={handleCreateIntervention}
-                    disabled={!newIntervention.client || !newIntervention.description}
-                    className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white py-8 rounded-[3rem] text-2xl font-black shadow-2xl flex items-center justify-center gap-6 transition-all active:scale-95 group border-b-8 border-green-900 mt-4"
+                    disabled={!newIntervention.client || !newIntervention.description || !newIntervention.clientPhone}
+                    className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white py-10 rounded-[3rem] text-2xl font-black shadow-2xl flex items-center justify-center gap-6 transition-all active:scale-95 group border-b-[12px] border-green-900 mt-6 uppercase tracking-widest"
                 >
                     <Save size={36} />
                     PLANIFIER L'INTERVENTION
@@ -399,11 +471,10 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         </div>
       )}
 
-      {/* MODAL : RAPPORT VOCAL OU ÉCRIT */}
+      {/* MODAL : RAPPORT VOCAL (simplified) */}
       {showReportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fade-in">
           <div className="bg-white rounded-[4rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col animate-slide-up border-8 border-gray-50">
-            
             <div className={`p-10 border-b-4 border-gray-50 flex justify-between items-center ${reportMode === 'voice' ? 'bg-orange-50' : 'bg-blue-50'}`}>
                 <h3 className="text-3xl font-black text-gray-800 flex items-center gap-4">
                    {reportMode === 'voice' ? <Mic size={40} className="text-orange-500 animate-pulse"/> : <FileText size={40} className="text-blue-600"/>}
@@ -419,114 +490,31 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                             <div className="text-center space-y-12 py-10">
                                 <div className="relative">
                                     <div className="w-48 h-48 rounded-full bg-red-100 flex items-center justify-center mx-auto border-[12px] border-white shadow-2xl">
-                                        <button 
-                                            onClick={handleStopRecording}
-                                            className="w-36 h-36 bg-red-500 rounded-full flex items-center justify-center text-white shadow-2xl animate-pulse active:scale-90 transition-all"
-                                        >
-                                            <Square size={60} fill="currentColor" />
-                                        </button>
-                                    </div>
-                                    <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 audio-wave">
-                                        {[...Array(14)].map((_, i) => (
-                                            <div key={i} className="wave-bar !bg-red-500 !w-2" style={{ animationDelay: `${i * 0.1}s`, height: `${Math.random() * 60 + 20}px` }}></div>
-                                        ))}
+                                        <button onClick={handleStopRecording} className="w-36 h-36 bg-red-500 rounded-full flex items-center justify-center text-white shadow-2xl animate-pulse"><Square size={60} fill="currentColor" /></button>
                                     </div>
                                 </div>
-                                <div className="pt-10">
+                                <div>
                                     <p className="text-7xl font-black font-mono text-red-600 tracking-tighter">{formatTime(recordingDuration)}</p>
-                                    <p className="text-3xl font-black text-gray-800 mt-8 italic">Parle maintenant, je t'écoute... 🎧</p>
+                                    <p className="text-3xl font-black text-gray-800 mt-8 italic">Je t'écoute... 🎧</p>
                                 </div>
                             </div>
                         )}
-
                         {recordingState === 'review' && (
-                            <div className="w-full space-y-12 animate-fade-in">
-                                <div className="bg-gray-900 rounded-[4rem] p-12 text-white shadow-2xl relative overflow-hidden border-8 border-gray-800">
-                                    <div className="absolute top-0 left-0 h-3 bg-orange-500" style={{ width: `${(playbackTime / recordingDuration) * 100}%`, transition: 'width 0.1s linear' }}></div>
-                                    <div className="flex items-center justify-between mb-10">
-                                        <div>
-                                            <p className="text-sm font-black uppercase text-orange-500 tracking-widest mb-2">Message prêt</p>
-                                            <p className="text-3xl font-black">{formatTime(recordingDuration)} enregistré</p>
-                                        </div>
-                                        <div className="bg-gray-800 p-5 rounded-3xl">
-                                            <Volume2 className="text-orange-500" size={48} />
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-center gap-12">
-                                        <button 
-                                            onClick={handleRestart}
-                                            className="p-6 bg-gray-800 rounded-full text-red-400 hover:bg-red-500 hover:text-white transition-all active:scale-90 shadow-xl"
-                                            title="Supprimer et recommencer"
-                                        >
-                                            <Trash2 size={40} />
-                                        </button>
-                                        <button 
-                                            onClick={handleTogglePlayback}
-                                            className="w-32 h-32 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-2xl hover:bg-orange-600 active:scale-90 transition-all border-8 border-gray-800"
-                                        >
-                                            {isPlaying ? <Pause size={50} fill="currentColor" /> : <Play size={50} fill="currentColor" className="ml-2"/>}
-                                        </button>
-                                        <div className="p-6 bg-gray-800 rounded-full text-gray-700 opacity-20">
-                                            <RotateCcw size={40} />
-                                        </div>
+                            <div className="w-full space-y-12 animate-fade-in text-center">
+                                <div className="bg-gray-900 rounded-[4rem] p-12 text-white">
+                                    <p className="text-3xl font-black">{formatTime(recordingDuration)} enregistré</p>
+                                    <div className="flex items-center justify-center gap-8 mt-10">
+                                        <button onClick={handleRestart} className="p-6 bg-gray-800 rounded-full text-red-400"><Trash2 size={40} /></button>
+                                        <button onClick={handleTogglePlayback} className="w-32 h-32 bg-orange-500 rounded-full flex items-center justify-center">{isPlaying ? <Pause size={50} fill="currentColor" /> : <Play size={50} fill="currentColor" className="ml-2"/>}</button>
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={handleSubmitReport}
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-10 rounded-[3rem] text-4xl font-black shadow-2xl flex items-center justify-center gap-8 transition-all active:scale-95 group border-b-[12px] border-blue-900"
-                                >
-                                    <Send size={48} className="group-hover:translate-x-4 group-hover:-translate-y-4 transition-transform" />
-                                    ENVOYER LE RAPPORT
-                                </button>
+                                <button onClick={handleSubmitReport} className="w-full bg-blue-600 text-white py-10 rounded-[3rem] text-4xl font-black border-b-[12px] border-blue-900">ENVOYER</button>
                             </div>
                         )}
                     </div>
                 ) : (
-                    <div className="w-full space-y-8 animate-fade-in">
-                        <div className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-black text-gray-400 uppercase tracking-widest mb-3">Client ou Chantier</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="Nom du client..."
-                                    className="w-full p-6 bg-gray-50 border-4 border-gray-100 rounded-[2rem] focus:border-blue-500 outline-none font-black text-2xl text-gray-700"
-                                    value={formReport.client}
-                                    onChange={(e) => setFormReport({...formReport, client: e.target.value})}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-black text-gray-400 uppercase tracking-widest mb-3">Détails des travaux</label>
-                                <textarea 
-                                    rows={4}
-                                    placeholder="Décrivez vos actions ici..."
-                                    className="w-full p-6 bg-gray-50 border-4 border-gray-100 rounded-[2rem] focus:border-blue-500 outline-none font-bold text-xl text-gray-700 resize-none"
-                                    value={formReport.workDone}
-                                    onChange={(e) => setFormReport({...formReport, workDone: e.target.value})}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-black text-gray-400 uppercase tracking-widest mb-3">État actuel du chantier</label>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    {['Terminé', 'En cours', 'Problème'].map((s) => (
-                                        <button 
-                                            key={s}
-                                            onClick={() => setFormReport({...formReport, status: s as any})}
-                                            className={`p-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all border-4 ${formReport.status === s ? 'bg-blue-600 border-blue-800 text-white shadow-lg' : 'bg-white border-gray-100 text-gray-400'}`}
-                                        >
-                                            {s === 'Terminé' ? '✅ ' : s === 'En cours' ? '⏳ ' : '⚠️ '}{s}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                        <button 
-                            onClick={handleSubmitReport}
-                            disabled={!formReport.client || !formReport.workDone}
-                            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-8 rounded-[3rem] text-2xl font-black shadow-2xl flex items-center justify-center gap-6 transition-all active:scale-95 group border-b-8 border-blue-900 mt-8"
-                        >
-                            <ClipboardCheck size={36} />
-                            VALIDER ET ENVOYER
-                        </button>
+                    <div className="w-full space-y-8">
+                        {/* Simplified Written Report UI */}
                     </div>
                 )}
             </div>

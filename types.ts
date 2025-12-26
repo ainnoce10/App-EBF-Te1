@@ -12,25 +12,28 @@ export interface DashboardData {
 export interface Intervention {
   id: string;
   client: string;
+  clientPhone?: string; // Nouveau
+  domain?: 'Électricité' | 'Bâtiment' | 'Froid'; // Nouveau
+  interventionType?: 'Dépannage' | 'Expertise' | 'Installation' | 'Tuyauterie' | 'Appareillage' | 'Fillerie' | 'Entretien' | 'Désinstallation'; // Nouveau
   description: string;
   technician: string;
   status: 'En cours' | 'Terminé' | 'En attente';
   date: string;
-  site: Site | string; // string allowed for specific backend values
+  site: Site | string;
 }
 
 export interface StockItem {
   id: string;
   name: string;
-  description?: string; // Nouveau champ
+  description?: string;
   category: string;
   quantity: number;
   threshold: number;
   unitPrice: number;
   supplier: string;
   site: Site | string;
-  imageUrls?: string[]; // Changé de imageUrl?: string à imageUrls?: string[]
-  technicalSheetUrl?: string; // Nouveau champ
+  imageUrls?: string[];
+  technicalSheetUrl?: string;
   specs?: Record<string, string>;
 }
 
