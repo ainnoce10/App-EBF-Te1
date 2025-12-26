@@ -13,7 +13,6 @@ import {
   ArrowUpRight, 
   ArrowDownRight, 
   Wallet,
-  FileText,
   MapPin
 } from 'lucide-react';
 
@@ -359,6 +358,60 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
                     >
                         <Save size={18} /> Valider
                     </button>
+                </div>
+            </div>
+        </div>
+       )}
+
+       {/* --- MODAL: CLIENT LIST --- */}
+       {showClientModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[80vh]">
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-green-50">
+                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <User className="text-green-600"/> Base Clients
+                    </h3>
+                    <button onClick={() => setShowClientModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
+                </div>
+                
+                <div className="p-4 border-b border-gray-100">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        <input 
+                            type="text" 
+                            placeholder="Rechercher un client..."
+                            value={clientSearch}
+                            onChange={(e) => setClientSearch(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                    {filteredClients.map(client => (
+                        <div key={client.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg border border-transparent hover:border-gray-100 transition-all">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold">
+                                    {client.name.substring(0,2).toUpperCase()}
+                                </div>
+                                <div>
+                                    <p className="font-bold text-gray-800">{client.name}</p>
+                                    <p className="text-xs text-gray-500 flex items-center gap-1">
+                                        <MapPin size={12} /> {client.location}
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => handleCall(client.phone, client.name)}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-full"
+                            >
+                                <Phone size={18} />
+                            </button>
+                        </div>
+                    ))}
+                    {filteredClients.length === 0 && (
+                        <div className="text-center py-10 text-gray-400">Aucun client trouvé</div>
+                    )}
                 </div>
             </div>
         </div>
