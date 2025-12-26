@@ -4,12 +4,12 @@
 // // ⚠️ REMPLACEZ CES VALEURS PAR CELLES DE VOTRE CONSOLE FIREBASE
 // // Allez sur https://console.firebase.google.com/ > Créer un projet > Ajouter une app Web
 // const firebaseConfig = {
-//   apiKey: "AIzaSyD-XXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-//   authDomain: "ebf-management.firebaseapp.com",
-//   projectId: "ebf-management",
-//   storageBucket: "ebf-management.appspot.com",
-//   messagingSenderId: "000000000000",
-//   appId: "1:000000000000:web:000000000000000000"
+//   apiKey: "AIzaSyABZpBnwgvDxgHSUldjMZK-ZhqPwGn_HmA",
+//   authDomain: "bd-app-ebf-te1.firebaseapp.com",
+//   projectId: "bd-app-ebf-te1",
+//   storageBucket: "bd-app-ebf-te1.firebasestorage.app",
+//   messagingSenderId: "486098437562",
+//   appId: "1:486098437562:web:1ad55335d4b9cea3c8c983"
 // };
 
 // // Initialisation de Firebase
