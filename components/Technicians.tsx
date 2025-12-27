@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_INTERVENTIONS } from '../constants';
 import { Intervention, Site } from '../types';
-import { db, doc, setDoc, updateDoc } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { 
   Search, 
   MapPin, 
@@ -138,12 +139,16 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     const targetIntervention = interventions.find(i => i.client === formReport.client);
     if (targetIntervention) {
         try {
-            // FIREBASE UPDATE
-            const interRef = doc(db, 'interventions', targetIntervention.id);
-            await updateDoc(interRef, {
-                status: formReport.status,
-                description: formReport.workDone 
-            });
+            // SUPABASE UPDATE
+            const { error } = await supabase
+                .from('interventions')
+                .update({ 
+                    status: formReport.status,
+                    description: formReport.workDone 
+                })
+                .eq('id', targetIntervention.id);
+
+            if (error) throw error;
             
             triggerCelebration('ENVOYÉ !', 'Ton travail est bien enregistré. 🚀');
             closeReportModal();
@@ -170,8 +175,12 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     };
     
     try {
-        // FIREBASE CREATE (setDoc pour utiliser notre ID custom)
-        await setDoc(doc(db, 'interventions', id), newItem);
+        // SUPABASE INSERT
+        const { error } = await supabase
+            .from('interventions')
+            .insert([newItem]);
+
+        if (error) throw error;
 
         triggerCelebration('CRÉÉ !', 'La nouvelle intervention est planifiée. 📅');
         setShowNewInterventionModal(false);
@@ -186,7 +195,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         });
     } catch (error) {
         console.error("Erreur création intervention:", error);
-        alert(`Erreur lors de la création : ${(error as any).message || JSON.stringify(error)}`);
+        alert(`Erreur lors de la création : ${(error as any).message}`);
     }
   };
 
@@ -466,7 +475,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         </div>
       )}
 
-      {/* MODAL : RAPPORT VOCAL (simplified) */}
+      {/* MODAL : RAPPORT VOCAL */}
       {showReportModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fade-in">
           <div className="bg-white rounded-[4rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col animate-slide-up border-8 border-gray-50">

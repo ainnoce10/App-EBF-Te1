@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { MOCK_EMPLOYEES } from '../constants';
 import { Transaction, Employee } from '../types';
-import { db, doc, setDoc, updateDoc } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { 
   Download, 
   FileText, 
@@ -75,8 +76,13 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
         // Optimistic update
         setEmployees(employees.map(e => e.id === empId ? { ...e, status: newStatus } : e));
 
-        // Update Firebase
-        await updateDoc(doc(db, 'employees', empId), { status: newStatus });
+        // Supabase Update
+        const { error } = await supabase
+            .from('employees')
+            .update({ status: newStatus })
+            .eq('id', empId);
+            
+        if (error) throw error;
 
     } catch (error) {
         console.error("Erreur mise à jour statut", error);
@@ -103,8 +109,12 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
     };
 
     try {
-        // Firebase Insert
-        await setDoc(doc(db, 'employees', newId), newEmp);
+        // Supabase Insert
+        const { error } = await supabase
+            .from('employees')
+            .insert([newEmp]);
+
+        if (error) throw error;
         
         setIsAddingEmployee(false);
         setNewEmployeeData({

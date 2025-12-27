@@ -1,6 +1,7 @@
+
 import React, { useState, useMemo } from 'react';
 import { Intervention, Transaction } from '../types';
-import { db, doc, setDoc } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { 
   Calendar, 
   Clock, 
@@ -122,8 +123,12 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
     };
 
     try {
-        // FIREBASE CREATE (setDoc avec ID custom)
-        await setDoc(doc(db, 'transactions', newId), globalTransaction);
+        // SUPABASE INSERT
+        const { error } = await supabase
+            .from('transactions')
+            .insert([globalTransaction]);
+
+        if (error) throw error;
 
         setNewTransaction({ type: 'out', amount: '', reason: '' });
         setShowCaisseModal(false);

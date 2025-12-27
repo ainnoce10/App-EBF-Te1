@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { Bell, Globe, Megaphone, Trash2, Plus, Loader2, Database, AlertTriangle, CheckCircle } from 'lucide-react';
-import { db, collection, addDoc, deleteDoc, getDocs, query, where, writeBatch, doc } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { MOCK_INTERVENTIONS, MOCK_STOCK, MOCK_TRANSACTIONS, MOCK_EMPLOYEES } from '../constants';
 
 interface SettingsProps {
@@ -20,10 +21,11 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     if (newMessage.trim()) {
       setIsUpdating(true);
       try {
-        await addDoc(collection(db, 'ticker_messages'), { 
-            content: newMessage.trim(),
-            created_at: new Date().toISOString()
-        });
+        const { error } = await supabase
+            .from('ticker_messages')
+            .insert([{ content: newMessage.trim() }]);
+        
+        if (error) throw error;
         setNewMessage('');
       } catch (error) {
         console.error("Erreur ajout message", error);
@@ -35,12 +37,14 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const handleDeleteMessage = async (msgContent: string) => {
     setIsUpdating(true);
     try {
-        const q = query(collection(db, 'ticker_messages'), where('content', '==', msgContent));
-        const querySnapshot = await getDocs(q);
-        
-        const deletePromises = querySnapshot.docs.map((doc: any) => deleteDoc(doc.ref));
-        await Promise.all(deletePromises);
+        // Attention : Supabase requiert idéalement un ID unique pour la suppression.
+        // Ici on supprime par contenu (risque de supprimer des doublons si existants)
+        const { error } = await supabase
+            .from('ticker_messages')
+            .delete()
+            .eq('content', msgContent);
             
+        if (error) throw error;
     } catch (error) {
         console.error("Erreur suppression message", error);
     }
@@ -53,7 +57,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
 
   // Fonction pour créer les tables et injecter les données
   const handleInitializeDatabase = async () => {
-    if (!window.confirm("Attention : Cette action va tenter d'écrire les données par défaut dans Firebase. Continuer ?")) {
+    if (!window.confirm("Attention : Cette action va tenter d'écrire les données par défaut dans Supabase. Continuer ?")) {
       return;
     }
 
@@ -61,40 +65,32 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     setSeedStatus('idle');
 
     try {
-      const batch = writeBatch(db);
-
       // 1. Initialiser le Stock
-      MOCK_STOCK.forEach((item) => {
-        const ref = doc(db, 'stock', item.id);
-        batch.set(ref, item);
-      });
+      if (MOCK_STOCK.length > 0) {
+        const { error } = await supabase.from('stock').upsert(MOCK_STOCK, { onConflict: 'id' });
+        if (error) throw error;
+      }
 
       // 2. Initialiser les Interventions
-      MOCK_INTERVENTIONS.forEach((item) => {
-        const ref = doc(db, 'interventions', item.id);
-        batch.set(ref, item);
-      });
+      if (MOCK_INTERVENTIONS.length > 0) {
+        const { error } = await supabase.from('interventions').upsert(MOCK_INTERVENTIONS, { onConflict: 'id' });
+        if (error) throw error;
+      }
 
       // 3. Initialiser les Transactions
-      MOCK_TRANSACTIONS.forEach((item) => {
-        const ref = doc(db, 'transactions', item.id);
-        batch.set(ref, item);
-      });
+      if (MOCK_TRANSACTIONS.length > 0) {
+        const { error } = await supabase.from('transactions').upsert(MOCK_TRANSACTIONS, { onConflict: 'id' });
+        if (error) throw error;
+      }
 
       // 4. Initialiser les Employés
-      MOCK_EMPLOYEES.forEach((item) => {
-        const ref = doc(db, 'employees', item.id);
-        batch.set(ref, item);
-      });
+      if (MOCK_EMPLOYEES.length > 0) {
+        const { error } = await supabase.from('employees').upsert(MOCK_EMPLOYEES, { onConflict: 'id' });
+        if (error) throw error;
+      }
       
-      // 5. Initialiser les messages TV (sans ID fixe)
-      // Note: writeBatch ne supporte pas addDoc facilement sans générer d'ID avant, 
-      // on fait des sets manuels ou on laisse addDoc séparé. Pour simplifier, on ignore ici ou on fait un set simple.
-      // On ne reset pas les messages TV pour éviter les doublons complexes ici.
-
-      await batch.commit();
       setSeedStatus('success');
-      alert("Base de données initialisée avec succès ! Les collections 'stock', 'interventions', 'transactions' et 'employees' ont été créées.");
+      alert("Base de données initialisée avec succès ! Les données de démonstration ont été injectées.");
 
     } catch (error) {
       console.error("Erreur initialisation BDD:", error);
@@ -120,15 +116,15 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
         <div className="p-6 border-b border-red-100 bg-red-50">
            <h3 className="font-bold text-red-800 flex items-center gap-2">
               <Database className="text-red-600" size={20} />
-              Administration Base de Données
+              Administration Base de Données (Supabase)
            </h3>
-           <p className="text-sm text-red-600/80 mt-1">Zone technique pour configurer Firebase.</p>
+           <p className="text-sm text-red-600/80 mt-1">Zone technique pour configurer la base de données.</p>
         </div>
         <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-4">
            <div>
              <h4 className="font-bold text-gray-800">Initialiser les Collections</h4>
              <p className="text-sm text-gray-500 max-w-lg">
-               Si c'est la première utilisation, cliquez ici pour créer les tables (Collections) dans Firebase et y injecter les données de démonstration (Stock, Employés, Chantiers).
+               Si c'est la première utilisation, cliquez ici pour injecter les données de démonstration (Stock, Employés, Chantiers) dans vos tables Supabase.
              </p>
            </div>
            <button 
@@ -140,7 +136,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
              `}
            >
              {isSeeding ? <Loader2 size={18} className="animate-spin" /> : seedStatus === 'success' ? <CheckCircle size={18}/> : <AlertTriangle size={18} className="text-yellow-400"/>}
-             {isSeeding ? 'Création en cours...' : seedStatus === 'success' ? 'Données Injectées !' : 'Injecter Données Démo'}
+             {isSeeding ? 'Injection en cours...' : seedStatus === 'success' ? 'Données Injectées !' : 'Injecter Données Démo'}
            </button>
         </div>
       </div>

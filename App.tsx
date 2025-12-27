@@ -11,8 +11,8 @@ import ShowcaseMode from './components/ShowcaseMode';
 import { Site, Period, StockItem, Intervention, Transaction, Employee } from './types';
 import { TICKER_MESSAGES } from './constants';
 
-// Firebase Imports
-import { db, collection, query, orderBy, onSnapshot } from './lib/firebase';
+// Supabase Imports
+import { supabase } from './lib/supabase';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -23,7 +23,7 @@ const App: React.FC = () => {
   const [customStartDate, setCustomStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // États de données (Initialisés vides pour le temps réel, ou avec des placeholders visuels en attendant le chargement)
+  // États de données
   const [tickerMessages, setTickerMessages] = useState<string[]>(TICKER_MESSAGES);
   const [stock, setStock] = useState<StockItem[]>([]);
   const [interventions, setInterventions] = useState<Intervention[]>([]);
@@ -33,64 +33,82 @@ const App: React.FC = () => {
   // Indicateur de connexion
   const [isLive, setIsLive] = useState(false);
 
-  useEffect(() => {
-    // Connexion Temps Réel (Real-time Listeners)
-    // Ces fonctions (onSnapshot) ouvrent un WebSocket avec Firebase.
-    // Dès qu'une donnée change sur le serveur, les variables d'état (setStock, etc.) sont mises à jour instantanément.
-
+  // Fonction générique pour charger les données
+  const fetchData = async () => {
     try {
-        // 1. Écoute des Messages Défilants
-        const qTicker = query(collection(db, 'ticker_messages'), orderBy('created_at', 'desc'));
-        const unsubTicker = onSnapshot(qTicker, (snapshot) => {
-          setIsLive(true); // Si on reçoit une réponse, la connexion est active
-          if (snapshot && !snapshot.empty) {
-            const msgs = snapshot.docs.map((doc) => doc.data().content);
-            setTickerMessages(msgs);
-          }
-        }, (error) => {
-            console.error("Erreur connexion Firebase (Ticker):", error);
-            setIsLive(false);
-        });
+        // 1. Messages
+        const { data: tickerData } = await supabase
+            .from('ticker_messages')
+            .select('content')
+            .order('created_at', { ascending: false });
+        if (tickerData) setTickerMessages(tickerData.map(t => t.content));
 
-        // 2. Écoute du Stock
-        const qStock = query(collection(db, 'stock'), orderBy('name'));
-        const unsubStock = onSnapshot(qStock, (snapshot) => {
-          const items = snapshot.docs.map((doc) => doc.data() as StockItem);
-          setStock(items);
-        }, (error) => console.error("Erreur connexion Firebase (Stock):", error));
+        // 2. Stock
+        const { data: stockData } = await supabase
+            .from('stock')
+            .select('*')
+            .order('name');
+        if (stockData) setStock(stockData as StockItem[]);
 
-        // 3. Écoute des Interventions
-        const qInterventions = query(collection(db, 'interventions'), orderBy('date', 'desc'));
-        const unsubInterventions = onSnapshot(qInterventions, (snapshot) => {
-          const items = snapshot.docs.map((doc) => doc.data() as Intervention);
-          setInterventions(items);
-        }, (error) => console.error("Erreur connexion Firebase (Interventions):", error));
+        // 3. Interventions
+        const { data: intervData } = await supabase
+            .from('interventions')
+            .select('*')
+            .order('date', { ascending: false });
+        if (intervData) setInterventions(intervData as Intervention[]);
 
-        // 4. Écoute des Transactions
-        const qTransactions = query(collection(db, 'transactions'), orderBy('date', 'desc'));
-        const unsubTransactions = onSnapshot(qTransactions, (snapshot) => {
-          const items = snapshot.docs.map((doc) => doc.data() as Transaction);
-          setTransactions(items);
-        }, (error) => console.error("Erreur connexion Firebase (Transactions):", error));
+        // 4. Transactions
+        const { data: transData } = await supabase
+            .from('transactions')
+            .select('*')
+            .order('date', { ascending: false });
+        if (transData) setTransactions(transData as Transaction[]);
 
-        // 5. Écoute des Employés
-        const qEmployees = query(collection(db, 'employees'), orderBy('name'));
-        const unsubEmployees = onSnapshot(qEmployees, (snapshot) => {
-          const items = snapshot.docs.map((doc) => doc.data() as Employee);
-          setEmployees(items);
-        }, (error) => console.error("Erreur connexion Firebase (Employés):", error));
+        // 5. Employés
+        const { data: empData } = await supabase
+            .from('employees')
+            .select('*')
+            .order('name');
+        if (empData) setEmployees(empData as Employee[]);
 
-        // Nettoyage des écouteurs lors de la fermeture du composant
-        return () => {
-          unsubTicker();
-          unsubStock();
-          unsubInterventions();
-          unsubTransactions();
-          unsubEmployees();
-        };
-    } catch (e) {
-        console.error("Erreur critique d'initialisation Firebase:", e);
+        setIsLive(true);
+    } catch (error) {
+        console.error("Erreur chargement Supabase:", error);
+        setIsLive(false);
     }
+  };
+
+  useEffect(() => {
+    // Chargement initial
+    fetchData();
+
+    // Configuration Realtime (Écoute globale des changements)
+    const channel = supabase.channel('global-changes')
+        .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+            console.log('Change received!', payload);
+            // Recharger la table concernée (stratégie simple pour v1)
+            if (payload.table === 'ticker_messages') {
+                 supabase.from('ticker_messages').select('content').order('created_at', { ascending: false })
+                 .then(({ data }) => data && setTickerMessages(data.map(t => t.content)));
+            } else if (payload.table === 'stock') {
+                 supabase.from('stock').select('*').order('name')
+                 .then(({ data }) => data && setStock(data as StockItem[]));
+            } else if (payload.table === 'interventions') {
+                 supabase.from('interventions').select('*').order('date', { ascending: false })
+                 .then(({ data }) => data && setInterventions(data as Intervention[]));
+            } else if (payload.table === 'transactions') {
+                 supabase.from('transactions').select('*').order('date', { ascending: false })
+                 .then(({ data }) => data && setTransactions(data as Transaction[]));
+            } else if (payload.table === 'employees') {
+                 supabase.from('employees').select('*').order('name')
+                 .then(({ data }) => data && setEmployees(data as Employee[]));
+            }
+        })
+        .subscribe();
+
+    return () => {
+        supabase.removeChannel(channel);
+    };
   }, []);
 
   if (activeTab === 'showcase') {
@@ -121,7 +139,6 @@ const App: React.FC = () => {
                 />
               );
             case 'technicians':
-              // Utilisation directe des données live
               return <Technicians initialData={interventions} />;
             case 'accounting':
               return (
