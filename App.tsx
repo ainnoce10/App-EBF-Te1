@@ -10,10 +10,9 @@ import Settings from './components/Settings';
 import ShowcaseMode from './components/ShowcaseMode';
 import { Site, Period, StockItem, Intervention, Transaction, Employee } from './types';
 import { TICKER_MESSAGES, MOCK_STOCK, MOCK_INTERVENTIONS, MOCK_TRANSACTIONS, MOCK_EMPLOYEES } from './constants';
-import { WifiOff } from 'lucide-react';
 
 // Firebase Imports
-import { db, collection, query, orderBy, onSnapshot, isConfigured } from './lib/firebase';
+import { db, collection, query, orderBy, onSnapshot } from './lib/firebase';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -24,67 +23,64 @@ const App: React.FC = () => {
   const [customStartDate, setCustomStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // États de données Live
+  // États de données (Initialisés vides pour le temps réel, ou avec des placeholders visuels en attendant le chargement)
   const [tickerMessages, setTickerMessages] = useState<string[]>(TICKER_MESSAGES);
-  const [stock, setStock] = useState<StockItem[]>(MOCK_STOCK);
-  const [interventions, setInterventions] = useState<Intervention[]>(MOCK_INTERVENTIONS);
-  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
-  const [employees, setEmployees] = useState<Employee[]>(MOCK_EMPLOYEES);
+  const [stock, setStock] = useState<StockItem[]>([]);
+  const [interventions, setInterventions] = useState<Intervention[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   
-  // Indicateur de connexion réelle
+  // Indicateur de connexion
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
-    // Si Firebase n'est pas configuré, on ne tente pas de souscrire aux données
-    if (!isConfigured || !db) {
-        return;
-    }
+    // Connexion Temps Réel (Real-time Listeners)
+    // Ces fonctions (onSnapshot) ouvrent un WebSocket avec Firebase.
+    // Dès qu'une donnée change sur le serveur, les variables d'état (setStock, etc.) sont mises à jour instantanément.
 
     try {
+        // 1. Écoute des Messages Défilants
         const qTicker = query(collection(db, 'ticker_messages'), orderBy('created_at', 'desc'));
         const unsubTicker = onSnapshot(qTicker, (snapshot) => {
-          setIsLive(true);
+          setIsLive(true); // Si on reçoit une réponse, la connexion est active
           if (snapshot && !snapshot.empty) {
             const msgs = snapshot.docs.map((doc) => doc.data().content);
             setTickerMessages(msgs);
           }
         }, (error) => {
-            console.warn("Firebase Ticker error", error);
+            console.error("Erreur connexion Firebase (Ticker):", error);
             setIsLive(false);
         });
 
+        // 2. Écoute du Stock
         const qStock = query(collection(db, 'stock'), orderBy('name'));
         const unsubStock = onSnapshot(qStock, (snapshot) => {
-          if (snapshot && !snapshot.empty) {
-            const items = snapshot.docs.map((doc) => doc.data() as StockItem);
-            setStock(items);
-          }
-        }, (error) => console.warn("Firebase Stock error", error));
+          const items = snapshot.docs.map((doc) => doc.data() as StockItem);
+          setStock(items);
+        }, (error) => console.error("Erreur connexion Firebase (Stock):", error));
 
+        // 3. Écoute des Interventions
         const qInterventions = query(collection(db, 'interventions'), orderBy('date', 'desc'));
         const unsubInterventions = onSnapshot(qInterventions, (snapshot) => {
-          if (snapshot && !snapshot.empty) {
-            const items = snapshot.docs.map((doc) => doc.data() as Intervention);
-            setInterventions(items);
-          }
-        }, (error) => console.warn("Firebase Interventions error", error));
+          const items = snapshot.docs.map((doc) => doc.data() as Intervention);
+          setInterventions(items);
+        }, (error) => console.error("Erreur connexion Firebase (Interventions):", error));
 
+        // 4. Écoute des Transactions
         const qTransactions = query(collection(db, 'transactions'), orderBy('date', 'desc'));
         const unsubTransactions = onSnapshot(qTransactions, (snapshot) => {
-          if (snapshot && !snapshot.empty) {
-            const items = snapshot.docs.map((doc) => doc.data() as Transaction);
-            setTransactions(items);
-          }
-        }, (error) => console.warn("Firebase Transactions error", error));
+          const items = snapshot.docs.map((doc) => doc.data() as Transaction);
+          setTransactions(items);
+        }, (error) => console.error("Erreur connexion Firebase (Transactions):", error));
 
+        // 5. Écoute des Employés
         const qEmployees = query(collection(db, 'employees'), orderBy('name'));
         const unsubEmployees = onSnapshot(qEmployees, (snapshot) => {
-          if (snapshot && !snapshot.empty) {
-            const items = snapshot.docs.map((doc) => doc.data() as Employee);
-            setEmployees(items);
-          }
-        }, (error) => console.warn("Firebase Employees error", error));
+          const items = snapshot.docs.map((doc) => doc.data() as Employee);
+          setEmployees(items);
+        }, (error) => console.error("Erreur connexion Firebase (Employés):", error));
 
+        // Nettoyage des écouteurs lors de la fermeture du composant
         return () => {
           unsubTicker();
           unsubStock();
@@ -93,7 +89,7 @@ const App: React.FC = () => {
           unsubEmployees();
         };
     } catch (e) {
-        console.error("Erreur générale Firebase:", e);
+        console.error("Erreur critique d'initialisation Firebase:", e);
     }
   }, []);
 
@@ -125,6 +121,7 @@ const App: React.FC = () => {
                 />
               );
             case 'technicians':
+              // Utilisation directe des données live
               return <Technicians initialData={interventions} />;
             case 'accounting':
               return (
@@ -152,32 +149,24 @@ const App: React.FC = () => {
   };
 
   return (
-    <>
-      {!isConfigured && (
-        <div className="bg-gray-800 text-white text-xs py-1 px-4 flex items-center justify-center gap-2 font-bold uppercase tracking-widest fixed top-0 w-full z-[1000]">
-           <WifiOff size={12} className="text-orange-500" />
-           Mode Démonstration (Base de données non connectée)
-        </div>
-      )}
-      <div className={!isConfigured ? "pt-6 h-screen flex flex-col" : "h-screen flex flex-col"}>
-        <Layout
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          site={site}
-          onSiteChange={(s) => setSite(s as Site)}
-          period={period}
-          onPeriodChange={(p) => setPeriod(p as Period)}
-          customStartDate={customStartDate}
-          onCustomStartDateChange={setCustomStartDate}
-          customEndDate={customEndDate}
-          onCustomEndDateChange={setCustomEndDate}
-          tickerMessages={tickerMessages}
-          isLive={isLive}
-        >
-          {renderContent()}
-        </Layout>
-      </div>
-    </>
+    <div className="h-screen flex flex-col">
+      <Layout
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        site={site}
+        onSiteChange={(s) => setSite(s as Site)}
+        period={period}
+        onPeriodChange={(p) => setPeriod(p as Period)}
+        customStartDate={customStartDate}
+        onCustomStartDateChange={setCustomStartDate}
+        customEndDate={customEndDate}
+        onCustomEndDateChange={setCustomEndDate}
+        tickerMessages={tickerMessages}
+        isLive={isLive}
+      >
+        {renderContent()}
+      </Layout>
+    </div>
   );
 };
 
