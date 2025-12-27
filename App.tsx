@@ -9,7 +9,7 @@ import HardwareStore from './components/HardwareStore';
 import Settings from './components/Settings';
 import ShowcaseMode from './components/ShowcaseMode';
 import { Site, Period, StockItem, Intervention, Transaction, Employee } from './types';
-import { TICKER_MESSAGES, MOCK_STOCK, MOCK_INTERVENTIONS, MOCK_TRANSACTIONS, MOCK_EMPLOYEES } from './constants';
+import { TICKER_MESSAGES } from './constants';
 
 // Firebase Imports
 import { db, collection, query, orderBy, onSnapshot } from './lib/firebase';
