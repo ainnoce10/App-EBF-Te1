@@ -23,12 +23,12 @@ import {
 
 const firebaseConfig = {
   // REMPLACEZ CES VALEURS PAR CELLES DE VOTRE PROJET FIREBASE
-  apiKey: "VOTRE_API_KEY_ICI",
-  authDomain: "votre-projet.firebaseapp.com",
-  projectId: "votre-projet-id",
-  storageBucket: "votre-projet-id.firebasestorage.app",
-  messagingSenderId: "00000000000",
-  appId: "1:00000000000:web:xxxxxxxxx"
+  apiKey: "AIzaSyABZpBnwgvDxgHSUldjMZK-ZhqPwGn_HmA",
+  authDomain: "bd-app-ebf-te1.firebaseapp.com",
+  projectId: "bd-app-ebf-te1",
+  storageBucket: "bd-app-ebf-te1.firebasestorage.app",
+  messagingSenderId: "486098437562",
+  appId: "1:486098437562:web:1ad55335d4b9cea3c8c983"
 };
 
 // Initialisation de l'application Firebase
