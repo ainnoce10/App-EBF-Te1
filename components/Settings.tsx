@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Bell, Globe, Megaphone, Trash2, Plus, Loader2 } from 'lucide-react';
-import { db, collection, addDoc, deleteDoc, getDocs, query, where } from '../lib/firebase';
+import { Bell, Globe, Megaphone, Trash2, Plus, Loader2, Database, AlertTriangle, CheckCircle } from 'lucide-react';
+import { db, collection, addDoc, deleteDoc, getDocs, query, where, writeBatch, doc } from '../lib/firebase';
+import { MOCK_INTERVENTIONS, MOCK_STOCK, MOCK_TRANSACTIONS, MOCK_EMPLOYEES, TICKER_MESSAGES } from '../constants';
 
 interface SettingsProps {
   tickerMessages?: string[];
@@ -10,6 +11,10 @@ interface SettingsProps {
 const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const [newMessage, setNewMessage] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  
+  // États pour l'initialisation de la BDD
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [seedStatus, setSeedStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const handleAddMessage = async () => {
     if (newMessage.trim()) {
@@ -30,7 +35,6 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const handleDeleteMessage = async (msgContent: string) => {
     setIsUpdating(true);
     try {
-        // En Firestore, pour supprimer par contenu, il faut d'abord trouver le doc ID
         const q = query(collection(db, 'ticker_messages'), where('content', '==', msgContent));
         const querySnapshot = await getDocs(q);
         
@@ -47,14 +51,98 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     if (e.key === 'Enter') handleAddMessage();
   };
 
+  // Fonction pour créer les tables et injecter les données
+  const handleInitializeDatabase = async () => {
+    if (!window.confirm("Attention : Cette action va tenter d'écrire les données par défaut dans Firebase. Continuer ?")) {
+      return;
+    }
+
+    setIsSeeding(true);
+    setSeedStatus('idle');
+
+    try {
+      const batch = writeBatch(db);
+
+      // 1. Initialiser le Stock
+      MOCK_STOCK.forEach((item) => {
+        const ref = doc(db, 'stock', item.id);
+        batch.set(ref, item);
+      });
+
+      // 2. Initialiser les Interventions
+      MOCK_INTERVENTIONS.forEach((item) => {
+        const ref = doc(db, 'interventions', item.id);
+        batch.set(ref, item);
+      });
+
+      // 3. Initialiser les Transactions
+      MOCK_TRANSACTIONS.forEach((item) => {
+        const ref = doc(db, 'transactions', item.id);
+        batch.set(ref, item);
+      });
+
+      // 4. Initialiser les Employés
+      MOCK_EMPLOYEES.forEach((item) => {
+        const ref = doc(db, 'employees', item.id);
+        batch.set(ref, item);
+      });
+      
+      // 5. Initialiser les messages TV (sans ID fixe)
+      // Note: writeBatch ne supporte pas addDoc facilement sans générer d'ID avant, 
+      // on fait des sets manuels ou on laisse addDoc séparé. Pour simplifier, on ignore ici ou on fait un set simple.
+      // On ne reset pas les messages TV pour éviter les doublons complexes ici.
+
+      await batch.commit();
+      setSeedStatus('success');
+      alert("Base de données initialisée avec succès ! Les collections 'stock', 'interventions', 'transactions' et 'employees' ont été créées.");
+
+    } catch (error) {
+      console.error("Erreur initialisation BDD:", error);
+      setSeedStatus('error');
+      alert("Erreur lors de l'initialisation : " + (error as any).message);
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-10">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Paramètres de l'application</h2>
           <p className="text-gray-500">Gérez vos préférences et la configuration globale</p>
         </div>
         {isUpdating && <Loader2 size={24} className="text-orange-500 animate-spin" />}
+      </div>
+
+      {/* SECTION ADMINISTRATION BDD */}
+      <div className="bg-white rounded-xl shadow-sm border border-red-100 overflow-hidden">
+        <div className="p-6 border-b border-red-100 bg-red-50">
+           <h3 className="font-bold text-red-800 flex items-center gap-2">
+              <Database className="text-red-600" size={20} />
+              Administration Base de Données
+           </h3>
+           <p className="text-sm text-red-600/80 mt-1">Zone technique pour configurer Firebase.</p>
+        </div>
+        <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+           <div>
+             <h4 className="font-bold text-gray-800">Initialiser les Collections</h4>
+             <p className="text-sm text-gray-500 max-w-lg">
+               Si c'est la première utilisation, cliquez ici pour créer les tables (Collections) dans Firebase et y injecter les données de démonstration (Stock, Employés, Chantiers).
+             </p>
+           </div>
+           <button 
+             onClick={handleInitializeDatabase}
+             disabled={isSeeding}
+             className={`px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition-all shadow-md active:scale-95
+               ${seedStatus === 'success' ? 'bg-green-600 text-white' : 'bg-gray-900 text-white hover:bg-gray-800'}
+               ${isSeeding ? 'opacity-70 cursor-not-allowed' : ''}
+             `}
+           >
+             {isSeeding ? <Loader2 size={18} className="animate-spin" /> : seedStatus === 'success' ? <CheckCircle size={18}/> : <AlertTriangle size={18} className="text-yellow-400"/>}
+             {isSeeding ? 'Création en cours...' : seedStatus === 'success' ? 'Données Injectées !' : 'Injecter Données Démo'}
+           </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
