@@ -55,4 +55,4 @@ export {
 };
 
 // Variable utilitaire pour vérifier si la config est présente (optionnel, pour debug)
-export const isConfigured = firebaseConfig.apiKey !== "VOTRE_API_KEY_ICI";
+export const isConfigured = firebaseConfig.apiKey !== "AIzaSyABZpBnwgvDxgHSUldjMZK-ZhqPwGn_HmA";
