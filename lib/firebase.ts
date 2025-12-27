@@ -1,4 +1,4 @@
-import firebase from 'firebase/app';
+import * as firebaseApp from 'firebase/app';
 import { 
   getFirestore, 
   collection, 
@@ -31,7 +31,7 @@ const firebaseConfig = {
 };
 
 // Initialisation de l'application Firebase
-const app = firebase.initializeApp(firebaseConfig);
+const app = firebaseApp.initializeApp(firebaseConfig);
 
 // Initialisation de la base de données Firestore
 export const db = getFirestore(app);
