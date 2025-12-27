@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Bell, Globe, Megaphone, Trash2, Plus, Loader2, Database, AlertTriangle, CheckCircle } from 'lucide-react';
 import { db, collection, addDoc, deleteDoc, getDocs, query, where, writeBatch, doc } from '../lib/firebase';
-import { MOCK_INTERVENTIONS, MOCK_STOCK, MOCK_TRANSACTIONS, MOCK_EMPLOYEES, TICKER_MESSAGES } from '../constants';
+import { MOCK_INTERVENTIONS, MOCK_STOCK, MOCK_TRANSACTIONS, MOCK_EMPLOYEES } from '../constants';
 
 interface SettingsProps {
   tickerMessages?: string[];
