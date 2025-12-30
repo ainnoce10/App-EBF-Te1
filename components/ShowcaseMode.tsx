@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { StockItem, Intervention } from '../types';
 import { 
   X, 
-  QrCode, 
   Zap, 
   ShieldCheck,
   Calendar,
@@ -56,10 +55,10 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       <div className="bg-gray-950 px-4 py-4 md:px-10 md:h-28 flex flex-col md:flex-row items-center justify-between border-b-4 md:border-b-[8px] border-orange-600 shadow-2xl z-50 gap-4 md:gap-0 shrink-0">
           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 w-full md:w-auto">
               <div className="bg-orange-600 px-4 py-2 md:px-6 md:py-4 rounded-xl md:rounded-2xl shadow-[0_0_30px_rgba(234,88,12,0.4)] md:-rotate-1">
-                 <span className="font-black text-xl md:text-4xl tracking-tighter">
-                    <span className="text-green-900">E</span>
+                 <span className="font-black text-xl md:text-4xl tracking-tighter shadow-sm">
+                    <span className="text-green-300">E</span>
                     <span className="text-red-800">B</span>
-                    <span className="text-green-900">F</span>
+                    <span className="text-green-300">F</span>
                     <span className="text-white ml-3">TV</span>
                  </span>
               </div>
@@ -112,9 +111,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                 
                 {/* ZONE TEXTE - Bas sur mobile, Droite sur desktop */}
                 <div className="w-full lg:w-[60%] h-[60%] lg:h-full bg-white text-gray-950 flex flex-col p-6 md:p-16 justify-center shadow-[-20px_0_100px_rgba(0,0,0,0.4)] relative">
-                    <div className="absolute top-4 right-4 md:top-10 md:right-10 opacity-5">
-                       <Zap size={100} className="md:w-[250px] md:h-[250px]" />
-                    </div>
                     
                     <div className="space-y-4 md:space-y-12 animate-slide-up relative z-10 overflow-y-auto lg:overflow-visible no-scrollbar pb-20 lg:pb-0">
                         <div>
@@ -136,10 +132,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                 <p className="text-4xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-none text-white whitespace-nowrap">
                                   {currentProduct.unitPrice.toLocaleString()} <span className="text-xl md:text-4xl text-gray-600 font-bold ml-1">F</span>
                                 </p>
-                            </div>
-                            <div className="hidden md:flex w-48 h-48 bg-gray-50 border-[8px] border-gray-100 rounded-[2rem] flex-col items-center justify-center shrink-0 shadow-lg">
-                                <QrCode size={100} className="text-gray-950 mb-2" />
-                                <p className="text-lg font-black text-gray-400 uppercase tracking-[0.2em]">Scan</p>
                             </div>
                         </div>
                     </div>
