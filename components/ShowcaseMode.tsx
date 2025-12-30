@@ -56,7 +56,12 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       <div className="bg-gray-950 px-4 py-4 md:px-10 md:h-28 flex flex-col md:flex-row items-center justify-between border-b-4 md:border-b-[8px] border-orange-600 shadow-2xl z-50 gap-4 md:gap-0 shrink-0">
           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 w-full md:w-auto">
               <div className="bg-orange-600 px-4 py-2 md:px-6 md:py-4 rounded-xl md:rounded-2xl shadow-[0_0_30px_rgba(234,88,12,0.4)] md:-rotate-1">
-                 <span className="text-white font-black text-xl md:text-4xl tracking-tighter">EBF TV</span>
+                 <span className="font-black text-xl md:text-4xl tracking-tighter">
+                    <span className="text-green-900">E</span>
+                    <span className="text-red-800">B</span>
+                    <span className="text-green-900">F</span>
+                    <span className="text-white ml-3">TV</span>
+                 </span>
               </div>
               
               <div className="flex gap-2 md:gap-4 bg-white/5 p-1.5 md:p-2 rounded-2xl md:rounded-3xl border border-white/10 w-full md:w-auto justify-center">
