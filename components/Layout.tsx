@@ -12,10 +12,6 @@ interface LayoutProps {
   onSiteChange: (site: string) => void;
   period: string;
   onPeriodChange: (period: string) => void;
-  customStartDate: string;
-  onCustomStartDateChange: (date: string) => void;
-  customEndDate: string;
-  onCustomEndDateChange: (date: string) => void;
   tickerMessages: string[];
   isLive?: boolean;
 }
@@ -28,10 +24,6 @@ const Layout: React.FC<LayoutProps> = ({
   onSiteChange, 
   period, 
   onPeriodChange,
-  customStartDate,
-  onCustomStartDateChange,
-  customEndDate,
-  onCustomEndDateChange,
   tickerMessages,
   isLive = false
 }) => {

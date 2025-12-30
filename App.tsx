@@ -174,10 +174,6 @@ const App: React.FC = () => {
         onSiteChange={(s) => setSite(s as Site)}
         period={period}
         onPeriodChange={(p) => setPeriod(p as Period)}
-        customStartDate={customStartDate}
-        onCustomStartDateChange={setCustomStartDate}
-        customEndDate={customEndDate}
-        onCustomEndDateChange={setCustomEndDate}
         tickerMessages={tickerMessages}
         isLive={isLive}
       >

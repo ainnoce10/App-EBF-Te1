@@ -9,10 +9,8 @@ import {
   X,
   Image as ImageIcon,
   ShoppingCart,
-  Maximize2,
   Edit,
   Camera,
-  Trash2,
   Package
 } from 'lucide-react';
 
@@ -82,14 +80,6 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
         setEditForm({ ...editForm, imageUrls: newImages });
       };
       reader.readAsDataURL(file);
-    }
-  };
-
-  const removeImage = (index: number) => {
-    if (editForm) {
-      const newImages = [...(editForm.imageUrls || [])];
-      newImages[index] = '';
-      setEditForm({ ...editForm, imageUrls: newImages });
     }
   };
 

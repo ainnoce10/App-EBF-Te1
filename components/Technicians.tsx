@@ -8,7 +8,6 @@ import {
   MapPin, 
   Calendar, 
   Mic, 
-  FileText, 
   X, 
   Square, 
   Play, 
@@ -20,11 +19,7 @@ import {
   Save,
   Zap,
   Home,
-  Snowflake,
-  Phone,
-  Tag,
-  User,
-  Filter
+  Snowflake
 } from 'lucide-react';
 
 interface TechniciansProps {
@@ -46,7 +41,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   // Modal States
   const [showReportModal, setShowReportModal] = useState(false);
   const [showNewInterventionModal, setShowNewInterventionModal] = useState(false);
-  const [reportMode, setReportMode] = useState<'form' | 'voice'>('voice');
   const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
   const [celebrationMessage, setCelebrationMessage] = useState({ title: 'ENVOYÉ !', sub: 'Ton travail est bien enregistré.' });
   
@@ -182,13 +176,11 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   };
 
   const openVoiceReportAction = () => {
-    setReportMode('voice');
     setShowReportModal(true);
     handleStartRecording();
   };
 
   const openFormReportAction = (clientName: string = '') => {
-    setReportMode('form');
     setFormReport(prev => ({ ...prev, client: clientName }));
     setShowReportModal(true);
     setRecordingState('idle'); 

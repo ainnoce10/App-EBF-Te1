@@ -4,17 +4,12 @@ import { Intervention, Transaction } from '../types';
 import { supabase } from '../lib/supabase';
 import { 
   Calendar, 
-  Clock, 
   User, 
   Phone, 
   Search, 
   Plus, 
   X, 
-  Save, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Wallet,
-  MapPin
+  Wallet
 } from 'lucide-react';
 
 interface SecretariatProps {
@@ -53,16 +48,6 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
     return Array.from(uniqueClients.values());
   }, [liveInterventions]);
 
-  const caisseHistory = useMemo(() => {
-    return liveTransactions.filter(t => t.category === 'Caisse' || true).slice(0, 5).map(t => ({
-        id: t.id,
-        type: t.type === 'Recette' ? 'in' as const : 'out' as const,
-        amount: t.amount,
-        reason: t.description,
-        date: new Date(t.date).toLocaleDateString('fr-FR')
-    }));
-  }, [liveTransactions]);
-
   const currentBalance = useMemo(() => {
       const income = liveTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
       const outcome = liveTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
@@ -81,7 +66,7 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
 
   const [newTransaction, setNewTransaction] = useState<{type: 'in'|'out', amount: string, reason: string}>({ type: 'out', amount: '', reason: '' });
 
-  const handleCall = (phone: string, name: string) => alert(`Appel ${name}...`);
+  const handleCall = (phone: string, name: string) => alert(`Appel ${name} (${phone})...`);
 
   const handleSaveTransaction = async () => {
     if (!newTransaction.amount) return;
