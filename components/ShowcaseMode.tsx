@@ -119,24 +119,24 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           {activeMode === 'PUBLICITE' && currentProduct ? (
             <div className="flex flex-col lg:flex-row w-full animate-fade-in h-full">
                 {/* ZONE IMAGE - Haut sur mobile, Gauche sur desktop */}
-                <div className="w-full lg:w-[40%] h-[40%] lg:h-full relative flex items-center justify-center p-6 md:p-12 bg-gray-950 overflow-hidden shrink-0">
+                <div className="w-full lg:w-[45%] h-[45%] lg:h-full relative flex items-center justify-center p-4 md:p-8 bg-gray-950 overflow-hidden shrink-0">
                     <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/10 to-transparent opacity-50"></div>
                     
                     {/* Container avec key pour relancer l'animation d'entrée à chaque changement de produit */}
                     <div key={currentProduct.id} className="relative w-full h-full flex items-center justify-center animate-scale-in">
                         {/* Blob/Glow arrière plan pour effet de profondeur */}
-                        <div className="absolute w-[80%] h-[80%] bg-white/5 blur-[50px] rounded-full animate-pulse-slow"></div>
+                        <div className="absolute w-[90%] h-[90%] bg-white/5 blur-[60px] rounded-full animate-pulse-slow"></div>
                         
                         <img 
                           src={currentProduct.imageUrls?.[0] || 'https://placehold.co/800x800/1a1a1a/ffffff?text=EBF+Ivoire'} 
                           alt={currentProduct.name}
-                          className="relative z-10 h-[90%] w-auto lg:w-[85%] lg:h-auto aspect-square object-contain rounded-3xl md:rounded-[3rem] shadow-[0_20px_60px_rgba(0,0,0,0.8)] border-4 md:border-[12px] border-white/5 bg-white p-4 md:p-6 animate-float"
+                          className="relative z-10 w-full h-full object-cover rounded-3xl md:rounded-[2.5rem] shadow-[0_30px_80px_rgba(0,0,0,0.9)] border-4 md:border-[8px] border-white/20 bg-gray-800 animate-float"
                         />
                     </div>
                 </div>
                 
                 {/* ZONE TEXTE - Bas sur mobile, Droite sur desktop */}
-                <div className="w-full lg:w-[60%] h-[60%] lg:h-full bg-white text-gray-950 flex flex-col p-6 md:p-16 justify-center shadow-[-20px_0_100px_rgba(0,0,0,0.4)] relative">
+                <div className="w-full lg:w-[55%] h-[55%] lg:h-full bg-white text-gray-950 flex flex-col p-6 md:p-16 justify-center shadow-[-20px_0_100px_rgba(0,0,0,0.4)] relative">
                     
                     <div className="space-y-4 md:space-y-12 animate-slide-up relative z-10 overflow-y-auto lg:overflow-visible no-scrollbar pb-20 lg:pb-0">
                         <div>
