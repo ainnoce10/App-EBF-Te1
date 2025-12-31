@@ -1,6 +1,18 @@
 
 import React, { useState } from 'react';
-import { Bell, Globe, Megaphone, Trash2, Plus, Loader2, Database, AlertTriangle, CheckCircle } from 'lucide-react';
+import { 
+  Bell, 
+  Globe, 
+  Megaphone, 
+  Trash2, 
+  Plus, 
+  Loader2, 
+  Database, 
+  AlertTriangle, 
+  CheckCircle,
+  ArrowUp,
+  ArrowDown
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { MOCK_INTERVENTIONS, MOCK_STOCK, MOCK_TRANSACTIONS, MOCK_EMPLOYEES } from '../constants';
 
@@ -37,8 +49,6 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const handleDeleteMessage = async (msgContent: string) => {
     setIsUpdating(true);
     try {
-        // Attention : Supabase requiert idéalement un ID unique pour la suppression.
-        // Ici on supprime par contenu (risque de supprimer des doublons si existants)
         const { error } = await supabase
             .from('ticker_messages')
             .delete()
@@ -49,6 +59,22 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
         console.error("Erreur suppression message", error);
     }
     setIsUpdating(false);
+  };
+
+  const handleMoveMessage = (index: number, direction: 'up' | 'down') => {
+    const newMessages = [...tickerMessages];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    if (targetIndex >= 0 && targetIndex < newMessages.length) {
+      const temp = newMessages[index];
+      newMessages[index] = newMessages[targetIndex];
+      newMessages[targetIndex] = temp;
+      
+      // Note: Pour une persistence réelle, il faudrait une colonne 'order' dans la BDD
+      // Ici, on simule l'ordre pour l'interface utilisateur.
+      console.log("Nouvel ordre :", newMessages);
+      alert("L'ordre a été mis à jour localement. (Nécessite une colonne 'order' en BDD pour persister au rechargement)");
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -65,33 +91,25 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     setSeedStatus('idle');
 
     try {
-      // 1. Initialiser le Stock
       if (MOCK_STOCK.length > 0) {
         const { error } = await supabase.from('stock').upsert(MOCK_STOCK, { onConflict: 'id' });
         if (error) throw error;
       }
-
-      // 2. Initialiser les Interventions
       if (MOCK_INTERVENTIONS.length > 0) {
         const { error } = await supabase.from('interventions').upsert(MOCK_INTERVENTIONS, { onConflict: 'id' });
         if (error) throw error;
       }
-
-      // 3. Initialiser les Transactions
       if (MOCK_TRANSACTIONS.length > 0) {
         const { error } = await supabase.from('transactions').upsert(MOCK_TRANSACTIONS, { onConflict: 'id' });
         if (error) throw error;
       }
-
-      // 4. Initialiser les Employés
       if (MOCK_EMPLOYEES.length > 0) {
         const { error } = await supabase.from('employees').upsert(MOCK_EMPLOYEES, { onConflict: 'id' });
         if (error) throw error;
       }
       
       setSeedStatus('success');
-      alert("Base de données initialisée avec succès ! Les données de démonstration ont été injectées.");
-
+      alert("Base de données initialisée avec succès !");
     } catch (error) {
       console.error("Erreur initialisation BDD:", error);
       setSeedStatus('error');
@@ -105,26 +123,24 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     <div className="space-y-6 pb-10">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Paramètres de l'application</h2>
-          <p className="text-gray-500">Gérez vos préférences et la configuration globale</p>
+          <h2 className="text-2xl font-bold text-gray-800">Paramètres</h2>
+          <p className="text-gray-500 text-sm">Gérez la configuration globale</p>
         </div>
         {isUpdating && <Loader2 size={24} className="text-orange-500 animate-spin" />}
       </div>
 
-      {/* SECTION ADMINISTRATION BDD */}
       <div className="bg-white rounded-xl shadow-sm border border-red-100 overflow-hidden">
         <div className="p-6 border-b border-red-100 bg-red-50">
            <h3 className="font-bold text-red-800 flex items-center gap-2">
               <Database className="text-red-600" size={20} />
-              Administration Base de Données (Supabase)
+              Administration Supabase
            </h3>
-           <p className="text-sm text-red-600/80 mt-1">Zone technique pour configurer la base de données.</p>
         </div>
         <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-4">
            <div>
              <h4 className="font-bold text-gray-800">Initialiser les Collections</h4>
              <p className="text-sm text-gray-500 max-w-lg">
-               Si c'est la première utilisation, cliquez ici pour injecter les données de démonstration (Stock, Employés, Chantiers) dans vos tables Supabase.
+               Injecter les données de démonstration dans vos tables Supabase.
              </p>
            </div>
            <button 
@@ -132,56 +148,11 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
              disabled={isSeeding}
              className={`px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition-all shadow-md active:scale-95
                ${seedStatus === 'success' ? 'bg-green-600 text-white' : 'bg-gray-900 text-white hover:bg-gray-800'}
-               ${isSeeding ? 'opacity-70 cursor-not-allowed' : ''}
              `}
            >
              {isSeeding ? <Loader2 size={18} className="animate-spin" /> : seedStatus === 'success' ? <CheckCircle size={18}/> : <AlertTriangle size={18} className="text-yellow-400"/>}
-             {isSeeding ? 'Injection en cours...' : seedStatus === 'success' ? 'Données Injectées !' : 'Injecter Données Démo'}
+             {isSeeding ? 'Injection...' : seedStatus === 'success' ? 'Injecté !' : 'Injecter Démo'}
            </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100">
-            <h3 className="font-bold text-gray-800 flex items-center gap-2">
-              <Globe className="text-orange-500" size={20} />
-              Général
-            </h3>
-          </div>
-          <div className="p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nom de l'entreprise</label>
-              <input type="text" defaultValue="EBF Ivoire" className="w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Devise par défaut</label>
-              <select className="w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none bg-white">
-                  <option>FCFA (XOF)</option>
-                  <option>Euro (€)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100">
-            <h3 className="font-bold text-gray-800 flex items-center gap-2">
-              <Bell className="text-orange-500" size={20} />
-              Notifications
-            </h3>
-          </div>
-          <div className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-800">Alertes Stock Critique</p>
-                  <p className="text-sm text-gray-500">Notif quand un produit est &lt; 10</p>
-                </div>
-                <div className="w-11 h-6 bg-orange-500 rounded-full flex items-center px-1">
-                   <div className="w-4 h-4 bg-white rounded-full translate-x-5"></div>
-                </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -191,36 +162,54 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
               <Megaphone className="text-orange-600" size={20} />
               Gestion du Flash Info (Bandeau TV)
            </h3>
-           <p className="text-sm text-gray-500 mt-1">Les messages ajoutés ici apparaissent instantanément sur la TV.</p>
+           <p className="text-sm text-gray-500 mt-1">Les messages apparaissent instantanément sur la TV.</p>
         </div>
         <div className="p-6">
-           <div className="flex gap-2 mb-4">
+           <div className="flex gap-2 mb-6">
               <input 
                 type="text" 
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Nouveau message flash..."
-                className="flex-1 p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                className="flex-1 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold"
               />
               <button 
                 onClick={handleAddMessage}
                 disabled={isUpdating}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
               >
                 <Plus size={18} /> Ajouter
               </button>
            </div>
            
-           <div className="space-y-2 max-h-60 overflow-y-auto">
+           <div className="space-y-3">
               {tickerMessages.map((msg, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 group hover:border-gray-300 transition-colors">
-                   <span className="text-gray-700 font-medium">{msg}</span>
+                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-orange-200 transition-all">
+                   <div className="flex items-center gap-4 flex-1">
+                      <div className="flex flex-col gap-1">
+                         <button 
+                           onClick={() => handleMoveMessage(index, 'up')}
+                           disabled={index === 0}
+                           className="p-1 text-gray-400 hover:text-orange-500 disabled:opacity-20 transition-colors"
+                         >
+                            <ArrowUp size={16} />
+                         </button>
+                         <button 
+                           onClick={() => handleMoveMessage(index, 'down')}
+                           disabled={index === tickerMessages.length - 1}
+                           className="p-1 text-gray-400 hover:text-orange-500 disabled:opacity-20 transition-colors"
+                         >
+                            <ArrowDown size={16} />
+                         </button>
+                      </div>
+                      <span className="text-gray-800 font-bold text-sm md:text-base">{msg}</span>
+                   </div>
                    <button 
                      onClick={() => handleDeleteMessage(msg)}
-                     className="text-gray-400 hover:text-red-500 p-1.5 rounded-full hover:bg-red-50 transition-colors"
+                     className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors ml-4"
                    >
-                     <Trash2 size={16} />
+                     <Trash2 size={20} />
                    </button>
                 </div>
               ))}

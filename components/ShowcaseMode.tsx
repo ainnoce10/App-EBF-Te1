@@ -31,6 +31,26 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const planning = liveInterventions.length > 0 ? liveInterventions : [];
   const flashes = liveMessages.length > 0 ? liveMessages : ["Bienvenue chez EBF Technical Center"];
 
+  // Fonction pour déterminer la couleur du message flash
+  const getMessageColor = (text: string) => {
+    const t = text.toLowerCase();
+    
+    // POSITIF (Vert)
+    if (t.includes('promo') || t.includes('bienvenue') || t.includes('nouveau') || t.includes('arrivage') || t.includes('offert') || t.includes('gratuit') || t.includes('direct') || t.includes('ouvert')) {
+      return 'text-green-400';
+    }
+    // AVERTISSEMENT / INFO (Jaune)
+    if (t.includes('attention') || t.includes('avis') || t.includes('maintenance') || t.includes('info') || t.includes('rappel') || t.includes('prudence')) {
+      return 'text-yellow-400';
+    }
+    // NEGATIF / URGENCE (Rouge)
+    if (t.includes('urgent') || t.includes('danger') || t.includes('alerte') || t.includes('stop') || t.includes('annulé') || t.includes('fermé') || t.includes('coupure') || t.includes('critique')) {
+      return 'text-red-500';
+    }
+    // NEUTRE (Blanc)
+    return 'text-white';
+  };
+
   // Date du jour dynamique pour le titre
   const todayDate = new Date().toLocaleDateString('fr-FR', { 
     weekday: 'long', 
@@ -56,9 +76,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 w-full md:w-auto">
               <div className="bg-orange-600 px-4 py-2 md:px-6 md:py-4 rounded-xl md:rounded-2xl shadow-[0_0_30px_rgba(234,88,12,0.4)] md:-rotate-1">
                  <span className="font-black text-xl md:text-4xl tracking-tighter shadow-sm">
-                    <span className="text-green-300">E</span>
-                    <span className="text-red-800">B</span>
-                    <span className="text-green-300">F</span>
+                    <span className="text-green-500">E</span>
+                    <span className="text-red-600">B</span>
+                    <span className="text-green-500">F</span>
                     <span className="text-white ml-3">TV</span>
                  </span>
               </div>
@@ -174,7 +194,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           )}
       </div>
 
-      {/* FLASH INFO - RESPONSIVE */}
+      {/* FLASH INFO - RESPONSIVE AVEC COULEURS DYNAMIQUES */}
       <div className="h-14 md:h-24 bg-orange-600 relative z-[200] border-t-4 md:border-t-[8px] border-orange-700 overflow-hidden flex items-center shadow-[0_-10px_50px_rgba(0,0,0,0.5)] shrink-0">
           <div className="bg-gray-950 h-full px-4 md:px-8 flex items-center justify-center z-20 shadow-[10px_0_30px_rgba(0,0,0,0.8)] border-r-4 border-orange-500">
               <Megaphone size={24} className="md:w-10 md:h-10 text-orange-500 animate-bounce" />
@@ -183,8 +203,11 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           <div className="flex-1 overflow-hidden whitespace-nowrap">
               <div className="inline-block animate-tv-ticker">
                   {flashes.concat(flashes).concat(flashes).map((msg, i) => (
-                      <span key={i} className="text-white text-xl md:text-6xl font-black px-8 md:px-20 uppercase italic drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)] tracking-tight">
-                          {msg} <span className="text-orange-300 mx-4 md:mx-8 opacity-40">///</span>
+                      <span 
+                        key={i} 
+                        className={`${getMessageColor(msg)} text-xl md:text-6xl font-black px-8 md:px-20 uppercase italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] tracking-tight transition-colors duration-500`}
+                      >
+                          {msg} <span className="text-orange-950/30 mx-4 md:mx-8">///</span>
                       </span>
                   ))}
               </div>
@@ -197,7 +220,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           100% { transform: translateX(-33.33%); }
         }
         .animate-tv-ticker {
-          animation: tv-ticker 30s linear infinite;
+          animation: tv-ticker 35s linear infinite;
         }
         @keyframes scale-in {
           0% { transform: scale(0.5); opacity: 0; }
