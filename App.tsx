@@ -36,15 +36,16 @@ const App: React.FC = () => {
   // Fonction générique pour charger les données
   const fetchData = async () => {
     try {
-        // 1. Messages
+        // 1. Messages - AJOUT DE LA SELECTION DE L'ID
         const { data: tickerData } = await supabase
             .from('ticker_messages')
-            .select('content, color')
+            .select('id, content, color')
             .order('created_at', { ascending: false });
             
         if (tickerData) {
-            // Mapping sécurisé au cas où la colonne color n'existe pas encore en BDD
+            // Mapping sécurisé
             const formattedMessages: TickerMessage[] = tickerData.map(t => ({
+                id: t.id,
                 content: t.content,
                 color: t.color || 'neutral'
             }));
@@ -96,10 +97,12 @@ const App: React.FC = () => {
             console.log('Change received!', payload);
             // Recharger la table concernée (stratégie simple pour v1)
             if (payload.table === 'ticker_messages') {
-                 supabase.from('ticker_messages').select('content, color').order('created_at', { ascending: false })
+                 // AJOUT DE L'ID DANS LA REQUETE REALTIME
+                 supabase.from('ticker_messages').select('id, content, color').order('created_at', { ascending: false })
                  .then(({ data }) => {
                     if (data) {
                         setTickerMessages(data.map(t => ({
+                            id: t.id,
                             content: t.content,
                             color: t.color || 'neutral'
                         })));

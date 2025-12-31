@@ -43,24 +43,49 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
         setSelectedColor('neutral');
       } catch (error) {
         console.error("Erreur ajout message", error);
+        alert("Erreur lors de l'ajout. Vérifiez votre connexion.");
       }
       setIsUpdating(false);
     }
   };
 
-  const handleDeleteMessage = async (msgContent: string) => {
+  const handleDeleteMessage = async (msg: TickerMessage) => {
     setIsUpdating(true);
     try {
-        const { error } = await supabase
-            .from('ticker_messages')
-            .delete()
-            .eq('content', msgContent);
+        let query = supabase.from('ticker_messages').delete();
+        
+        // Priorité à l'ID, sinon repli sur le contenu (pour les anciennes données)
+        if (msg.id) {
+            query = query.eq('id', msg.id);
+        } else {
+            query = query.eq('content', msg.content);
+        }
+
+        const { error } = await query;
             
         if (error) throw error;
     } catch (error) {
         console.error("Erreur suppression message", error);
+        alert("Impossible de supprimer le message.");
     }
     setIsUpdating(false);
+  };
+
+  const handleUpdateColor = async (msg: TickerMessage, newColor: string) => {
+    try {
+        let query = supabase.from('ticker_messages').update({ color: newColor });
+        
+        if (msg.id) {
+            query = query.eq('id', msg.id);
+        } else {
+            query = query.eq('content', msg.content);
+        }
+
+        const { error } = await query;
+        if (error) throw error;
+    } catch (error) {
+        console.error("Erreur mise à jour couleur", error);
+    }
   };
 
   const handleMoveMessage = (index: number, direction: 'up' | 'down') => {
@@ -72,7 +97,9 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
       newMessages[index] = newMessages[targetIndex];
       newMessages[targetIndex] = temp;
       
-      // On met à jour l'ordre dans le parent (App.tsx)
+      // Note: Cela met à jour l'ordre localement, mais Supabase trie par date de création par défaut.
+      // Pour persister l'ordre, il faudrait une colonne 'order' en base de données.
+      // Ici on met à jour l'état local pour un feedback immédiat.
       if (onUpdateMessages) {
         onUpdateMessages(newMessages);
       }
@@ -177,9 +204,10 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
            <p className="text-sm text-gray-500 mt-1">Les messages apparaissent instantanément sur la TV. Choisissez une couleur pour le type d'annonce.</p>
         </div>
         <div className="p-6">
-           <div className="flex flex-col gap-4 mb-6">
+           {/* Zone d'ajout */}
+           <div className="flex flex-col gap-4 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-200">
+               <span className="text-xs font-black uppercase text-gray-400 tracking-widest">Nouveau Message</span>
                <div className="flex gap-4 items-center">
-                    <span className="text-xs font-bold uppercase text-gray-400">Couleur :</span>
                     <div className="flex gap-2">
                         <button 
                             onClick={() => setSelectedColor('green')}
@@ -210,21 +238,23 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder="Nouveau message flash..."
-                        className="flex-1 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold"
+                        className="flex-1 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold bg-white"
                     />
                     <button 
                         onClick={handleAddMessage}
                         disabled={isUpdating}
-                        className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                        className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-md"
                     >
                         <Plus size={18} /> Ajouter
                     </button>
                </div>
            </div>
            
+           {/* Liste des messages */}
            <div className="space-y-3">
               {tickerMessages.map((msg, index) => (
-                <div key={index} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${getColorClass(msg.color)}`}>
+                <div key={msg.id || index} className={`flex flex-col md:flex-row md:items-center justify-between p-4 rounded-2xl border transition-all ${getColorClass(msg.color)}`}>
+                   
                    <div className="flex items-center gap-4 flex-1">
                       <div className="flex flex-col gap-1">
                          <button 
@@ -242,14 +272,40 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
                             <ArrowDown size={16} />
                          </button>
                       </div>
-                      <span className="font-bold text-sm md:text-base">{msg.content}</span>
+                      <span className="font-bold text-sm md:text-base break-words">{msg.content}</span>
                    </div>
-                   <button 
-                     onClick={() => handleDeleteMessage(msg.content)}
-                     className="opacity-50 hover:opacity-100 p-2 rounded-full hover:bg-white/20 transition-colors ml-4"
-                   >
-                     <Trash2 size={20} />
-                   </button>
+
+                   {/* Actions: Changer couleur & Supprimer */}
+                   <div className="flex items-center gap-4 mt-4 md:mt-0 pl-8 md:pl-0 border-t md:border-t-0 border-black/5 pt-2 md:pt-0">
+                       <div className="flex gap-1.5 p-1.5 bg-white/50 rounded-full backdrop-blur-sm border border-black/5 shadow-sm">
+                            <button 
+                                onClick={() => handleUpdateColor(msg, 'green')}
+                                className={`w-6 h-6 rounded-full border-2 ${msg.color === 'green' ? 'border-gray-600 scale-110' : 'border-transparent opacity-30 hover:opacity-100'} bg-green-500 transition-all`}
+                            />
+                            <button 
+                                onClick={() => handleUpdateColor(msg, 'yellow')}
+                                className={`w-6 h-6 rounded-full border-2 ${msg.color === 'yellow' ? 'border-gray-600 scale-110' : 'border-transparent opacity-30 hover:opacity-100'} bg-yellow-400 transition-all`}
+                            />
+                            <button 
+                                onClick={() => handleUpdateColor(msg, 'red')}
+                                className={`w-6 h-6 rounded-full border-2 ${msg.color === 'red' ? 'border-gray-600 scale-110' : 'border-transparent opacity-30 hover:opacity-100'} bg-red-600 transition-all`}
+                            />
+                            <button 
+                                onClick={() => handleUpdateColor(msg, 'neutral')}
+                                className={`w-6 h-6 rounded-full border-2 ${msg.color === 'neutral' ? 'border-gray-600 scale-110' : 'border-transparent opacity-30 hover:opacity-100'} bg-gray-600 transition-all`}
+                            />
+                       </div>
+
+                       <div className="h-8 w-px bg-black/10"></div>
+
+                       <button 
+                         onClick={() => handleDeleteMessage(msg)}
+                         className="opacity-50 hover:opacity-100 p-2 rounded-full hover:bg-red-500 hover:text-white transition-all text-red-600"
+                         title="Supprimer"
+                       >
+                         <Trash2 size={20} />
+                       </button>
+                   </div>
                 </div>
               ))}
            </div>

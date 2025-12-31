@@ -129,26 +129,26 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                 {/* ZONE TEXTE - Bas sur mobile, Droite sur desktop */}
                 <div className="w-full lg:w-[55%] h-[55%] lg:h-full bg-white text-gray-950 flex flex-col p-6 md:p-16 justify-center shadow-[-20px_0_100px_rgba(0,0,0,0.4)] relative overflow-hidden">
                     
-                    <div className="flex flex-col h-full justify-center space-y-4 md:space-y-8 animate-slide-up relative z-10 max-h-full">
+                    <div className="flex flex-col h-full justify-between space-y-4 md:space-y-8 animate-slide-up relative z-10 max-h-full">
                         
-                        {/* Wrapper avec scroll caché si besoin, mais layout flex pour garder le prix en bas si possible */}
-                        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar flex flex-col justify-center">
-                            <div>
-                                <span className="px-4 py-1.5 md:px-8 md:py-3 bg-orange-600 text-white rounded-lg md:rounded-xl text-xs md:text-2xl font-black uppercase mb-2 md:mb-6 inline-block shadow-lg tracking-widest">
+                        {/* Wrapper avec scroll caché si besoin. m-auto permet de centrer verticalement si l'espace le permet, sinon ça commence en haut. */}
+                        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar flex flex-col">
+                            <div className="m-auto w-full pt-4 md:pt-0">
+                                <span className="px-4 py-1.5 md:px-8 md:py-3 bg-orange-600 text-white rounded-lg md:rounded-xl text-xs md:text-2xl font-black uppercase mb-2 md:mb-6 inline-block shadow-lg tracking-widest shrink-0">
                                 {currentProduct.category}
                                 </span>
-                                {/* Line clamp appliqué pour éviter le débordement */}
-                                <h1 className="text-3xl md:text-6xl lg:text-7xl xl:text-8xl font-black leading-tight md:leading-[0.95] tracking-tighter mb-4 md:mb-8 text-gray-950 uppercase italic line-clamp-4 lg:line-clamp-5">
+                                {/* Line clamp ajusté à 4 lignes max pour les très grands écrans aussi */}
+                                <h1 className="text-3xl md:text-6xl lg:text-7xl xl:text-8xl font-black leading-tight md:leading-[0.95] tracking-tighter mb-4 md:mb-8 text-gray-950 uppercase italic line-clamp-4 lg:line-clamp-4 xl:line-clamp-4">
                                 {currentProduct.name}
                                 </h1>
-                                <div className="flex flex-wrap items-center gap-4 md:gap-10 text-gray-400 font-black text-xs md:text-2xl uppercase tracking-widest">
+                                <div className="flex flex-wrap items-center gap-4 md:gap-10 text-gray-400 font-black text-xs md:text-2xl uppercase tracking-widest shrink-0 pb-2">
                                     <div className="flex items-center gap-2 md:gap-3"><Zap size={16} className="md:w-8 md:h-8 text-orange-600" /> {currentProduct.supplier}</div>
                                     <div className="flex items-center gap-2 md:gap-3"><ShieldCheck size={16} className="md:w-8 md:h-8 text-green-600" /> Certifié EBF</div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="shrink-0 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-10 pt-2 md:pt-4 border-t border-gray-100/50 mt-auto">
+                        <div className="shrink-0 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-10 pt-2 md:pt-4 border-t border-gray-100/50">
                             <div className="bg-gray-950 p-6 md:p-10 rounded-2xl md:rounded-[3rem] text-white w-full md:flex-1 border-b-[8px] md:border-b-[20px] border-orange-600 shadow-xl">
                                 <p className="text-sm md:text-2xl font-black uppercase text-orange-500 mb-2 md:mb-4 tracking-widest">Prix Exceptionnel</p>
                                 <p className="text-4xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-none text-white whitespace-nowrap">
