@@ -1,8 +1,6 @@
 
 import React, { useState } from 'react';
 import { 
-  Bell, 
-  Globe, 
   Megaphone, 
   Trash2, 
   Plus, 
@@ -21,7 +19,7 @@ interface SettingsProps {
   onUpdateMessages?: (messages: string[]) => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
+const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessages }) => {
   const [newMessage, setNewMessage] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   
@@ -70,10 +68,13 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
       newMessages[index] = newMessages[targetIndex];
       newMessages[targetIndex] = temp;
       
-      // Note: Pour une persistence réelle, il faudrait une colonne 'order' dans la BDD
-      // Ici, on simule l'ordre pour l'interface utilisateur.
-      console.log("Nouvel ordre :", newMessages);
-      alert("L'ordre a été mis à jour localement. (Nécessite une colonne 'order' en BDD pour persister au rechargement)");
+      // On met à jour l'ordre dans le parent (App.tsx)
+      if (onUpdateMessages) {
+        onUpdateMessages(newMessages);
+      }
+      
+      // Note: Sans colonne 'position' en BDD, l'ordre reviendra au tri par date au rechargement.
+      // Dans une v2, il faudrait sauvegarder cet ordre en base de données.
     }
   };
 

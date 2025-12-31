@@ -17,7 +17,7 @@ import {
 } from 'recharts';
 import { COLORS } from '../constants';
 import { Period, Site, Transaction, Intervention } from '../types';
-import { Activity, TrendingUp, TrendingDown, DollarSign, ChevronDown, ChevronUp, Layers, Target, PieChart as PieIcon, Calendar } from 'lucide-react';
+import { Activity, TrendingUp, TrendingDown, DollarSign, ChevronDown, ChevronUp, PieChart as PieIcon, Calendar } from 'lucide-react';
 
 interface DashboardProps {
   site: Site;
@@ -31,9 +31,8 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, customEndDate, liveTransactions = [], liveInterventions = [] }) => {
   const [showDetailed, setShowDetailed] = useState(false);
   const [synthesisFilter, setSynthesisFilter] = useState<'global' | 'finance' | 'tech'>('global');
-  const [showComparison, setShowComparison] = useState(false);
 
-  // --- TRAITEMENT DES DONNÉES --- (Identique à avant)
+  // --- TRAITEMENT DES DONNÉES ---
   const filteredTransactions = useMemo(() => {
     return liveTransactions.filter(t => {
       if (site !== 'Global' && t.site !== site) return false;
@@ -137,7 +136,7 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
           <span className="italic">{periodLabel}</span>
        </div>
 
-      {/* Stats Cards - Vertical Stack on Mobile, Grid on Desktop */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover-lift stagger-1 relative overflow-hidden">

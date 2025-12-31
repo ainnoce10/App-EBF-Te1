@@ -6,20 +6,9 @@ import { supabase } from '../lib/supabase';
 import { 
   Download, 
   FileText, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Printer, 
   Users, 
-  CheckCircle,
   X, 
-  Loader2,
-  Calendar,
-  Briefcase,
-  Clock,
-  Plus,
-  ArrowLeft,
-  Save,
-  MapPin
+  Loader2
 } from 'lucide-react';
 
 interface AccountingProps {
@@ -35,14 +24,13 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [newEmployeeData, setNewEmployeeData] = useState({ name: '', role: '', site: 'Abidjan', entryDate: new Date().toISOString().split('T')[0] });
   const [isGenerating, setIsGenerating] = useState(false);
-  const [payrollMonth, setPayrollMonth] = useState('Octobre');
 
   useEffect(() => {
     if (liveEmployees.length > 0) setEmployees(liveEmployees);
     else if (employees.length === 0) setEmployees(MOCK_EMPLOYEES);
-  }, [liveEmployees]);
+  }, [liveEmployees, employees.length]);
 
-  const handleExport = (type: 'PDF' | 'Excel') => {
+  const handleExport = () => {
     alert("Export simulé.");
   };
 
@@ -76,15 +64,6 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
     setTimeout(() => { setIsGenerating(false); setShowPayrollModal(false); alert('Paie générée.'); }, 2000);
   };
 
-  const calculateSeniority = (entryDate: string) => {
-    const start = new Date(entryDate);
-    const now = new Date();
-    const totalMonths = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
-    const years = Math.floor(totalMonths / 12);
-    if (years > 0) return `${years} an${years > 1 ? 's' : ''}`;
-    return `${totalMonths} mois`;
-  };
-
   const displayedTransactions = showAllTransactions ? liveTransactions : liveTransactions.slice(0, 5);
   const totalRevenue = liveTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
   const totalExpense = liveTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
@@ -99,7 +78,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
           <p className="text-gray-500 text-sm">Finances et personnel</p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
-          <button onClick={() => handleExport('Excel')} className="flex-1 md:flex-none justify-center bg-green-600 text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-sm text-sm font-bold">
+          <button onClick={() => handleExport()} className="flex-1 md:flex-none justify-center bg-green-600 text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-sm text-sm font-bold">
             <Download size={16} /> Excel
           </button>
         </div>

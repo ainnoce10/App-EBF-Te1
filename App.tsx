@@ -20,8 +20,8 @@ const App: React.FC = () => {
   // Filtres globaux
   const [site, setSite] = useState<Site>('Global');
   const [period, setPeriod] = useState<Period>('Semaine');
-  const [customStartDate, setCustomStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [customStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [customEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   // États de données
   const [tickerMessages, setTickerMessages] = useState<string[]>(TICKER_MESSAGES);
@@ -155,6 +155,7 @@ const App: React.FC = () => {
               return (
                 <Settings 
                   tickerMessages={tickerMessages} 
+                  onUpdateMessages={(msgs) => setTickerMessages(msgs)}
                 />
               );
             default:
