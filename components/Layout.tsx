@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { NAV_ITEMS, Logo } from '../constants';
 import ScrollingTicker from './ScrollingTicker';
+import { TickerMessage } from '../types';
 import { Menu, X, LogOut, Bell, User, Wifi, WifiOff, ChevronRight } from 'lucide-react';
 
 interface LayoutProps {
@@ -12,7 +13,7 @@ interface LayoutProps {
   onSiteChange: (site: string) => void;
   period: string;
   onPeriodChange: (period: string) => void;
-  tickerMessages: string[];
+  tickerMessages: TickerMessage[];
   isLive?: boolean;
 }
 

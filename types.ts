@@ -2,6 +2,12 @@
 export type Site = 'Abidjan' | 'Bouaké' | 'Global';
 export type Period = 'Jour' | 'Semaine' | 'Mois' | 'Année' | 'Personnalisé';
 
+export interface TickerMessage {
+  id?: string;
+  content: string;
+  color: 'green' | 'yellow' | 'red' | 'neutral';
+}
+
 export interface DashboardData {
   period: string;
   turnover: number;

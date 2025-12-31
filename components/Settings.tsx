@@ -13,14 +13,16 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { MOCK_INTERVENTIONS, MOCK_STOCK, MOCK_TRANSACTIONS, MOCK_EMPLOYEES } from '../constants';
+import { TickerMessage } from '../types';
 
 interface SettingsProps {
-  tickerMessages?: string[];
-  onUpdateMessages?: (messages: string[]) => void;
+  tickerMessages?: TickerMessage[];
+  onUpdateMessages?: (messages: TickerMessage[]) => void;
 }
 
 const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessages }) => {
   const [newMessage, setNewMessage] = useState('');
+  const [selectedColor, setSelectedColor] = useState<'green' | 'yellow' | 'red' | 'neutral'>('neutral');
   const [isUpdating, setIsUpdating] = useState(false);
   
   // États pour l'initialisation de la BDD
@@ -33,10 +35,12 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
       try {
         const { error } = await supabase
             .from('ticker_messages')
-            .insert([{ content: newMessage.trim() }]);
+            .insert([{ content: newMessage.trim(), color: selectedColor }]);
         
         if (error) throw error;
         setNewMessage('');
+        // Reset color to neutral after add
+        setSelectedColor('neutral');
       } catch (error) {
         console.error("Erreur ajout message", error);
       }
@@ -72,9 +76,6 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
       if (onUpdateMessages) {
         onUpdateMessages(newMessages);
       }
-      
-      // Note: Sans colonne 'position' en BDD, l'ordre reviendra au tri par date au rechargement.
-      // Dans une v2, il faudrait sauvegarder cet ordre en base de données.
     }
   };
 
@@ -120,6 +121,16 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
     }
   };
 
+  // Helper pour afficher la couleur dans la liste
+  const getColorClass = (color: string) => {
+      switch(color) {
+          case 'green': return 'bg-green-100 text-green-700 border-green-200';
+          case 'yellow': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+          case 'red': return 'bg-red-100 text-red-700 border-red-200';
+          default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      }
+  };
+
   return (
     <div className="space-y-6 pb-10">
       <div className="flex justify-between items-center">
@@ -163,52 +174,79 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
               <Megaphone className="text-orange-600" size={20} />
               Gestion du Flash Info (Bandeau TV)
            </h3>
-           <p className="text-sm text-gray-500 mt-1">Les messages apparaissent instantanément sur la TV.</p>
+           <p className="text-sm text-gray-500 mt-1">Les messages apparaissent instantanément sur la TV. Choisissez une couleur pour le type d'annonce.</p>
         </div>
         <div className="p-6">
-           <div className="flex gap-2 mb-6">
-              <input 
-                type="text" 
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Nouveau message flash..."
-                className="flex-1 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold"
-              />
-              <button 
-                onClick={handleAddMessage}
-                disabled={isUpdating}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
-              >
-                <Plus size={18} /> Ajouter
-              </button>
+           <div className="flex flex-col gap-4 mb-6">
+               <div className="flex gap-4 items-center">
+                    <span className="text-xs font-bold uppercase text-gray-400">Couleur :</span>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setSelectedColor('green')}
+                            className={`w-8 h-8 rounded-full bg-green-500 border-4 transition-all ${selectedColor === 'green' ? 'border-green-200 scale-110 shadow-md' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                            title="Positif / Promo"
+                        />
+                        <button 
+                            onClick={() => setSelectedColor('yellow')}
+                            className={`w-8 h-8 rounded-full bg-yellow-400 border-4 transition-all ${selectedColor === 'yellow' ? 'border-yellow-200 scale-110 shadow-md' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                            title="Info / Attention"
+                        />
+                        <button 
+                            onClick={() => setSelectedColor('red')}
+                            className={`w-8 h-8 rounded-full bg-red-600 border-4 transition-all ${selectedColor === 'red' ? 'border-red-200 scale-110 shadow-md' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                            title="Urgent / Alerte"
+                        />
+                        <button 
+                            onClick={() => setSelectedColor('neutral')}
+                            className={`w-8 h-8 rounded-full bg-gray-600 border-4 transition-all ${selectedColor === 'neutral' ? 'border-gray-200 scale-110 shadow-md' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                            title="Standard / Neutre"
+                        />
+                    </div>
+               </div>
+               <div className="flex gap-2">
+                    <input 
+                        type="text" 
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Nouveau message flash..."
+                        className="flex-1 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold"
+                    />
+                    <button 
+                        onClick={handleAddMessage}
+                        disabled={isUpdating}
+                        className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                        <Plus size={18} /> Ajouter
+                    </button>
+               </div>
            </div>
            
            <div className="space-y-3">
               {tickerMessages.map((msg, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-orange-200 transition-all">
+                <div key={index} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${getColorClass(msg.color)}`}>
                    <div className="flex items-center gap-4 flex-1">
                       <div className="flex flex-col gap-1">
                          <button 
                            onClick={() => handleMoveMessage(index, 'up')}
                            disabled={index === 0}
-                           className="p-1 text-gray-400 hover:text-orange-500 disabled:opacity-20 transition-colors"
+                           className="p-1 opacity-50 hover:opacity-100 disabled:opacity-20 transition-colors"
                          >
                             <ArrowUp size={16} />
                          </button>
                          <button 
                            onClick={() => handleMoveMessage(index, 'down')}
                            disabled={index === tickerMessages.length - 1}
-                           className="p-1 text-gray-400 hover:text-orange-500 disabled:opacity-20 transition-colors"
+                           className="p-1 opacity-50 hover:opacity-100 disabled:opacity-20 transition-colors"
                          >
                             <ArrowDown size={16} />
                          </button>
                       </div>
-                      <span className="text-gray-800 font-bold text-sm md:text-base">{msg}</span>
+                      <span className="font-bold text-sm md:text-base">{msg.content}</span>
                    </div>
                    <button 
-                     onClick={() => handleDeleteMessage(msg)}
-                     className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors ml-4"
+                     onClick={() => handleDeleteMessage(msg.content)}
+                     className="opacity-50 hover:opacity-100 p-2 rounded-full hover:bg-white/20 transition-colors ml-4"
                    >
                      <Trash2 size={20} />
                    </button>

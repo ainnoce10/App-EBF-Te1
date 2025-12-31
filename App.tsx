@@ -8,7 +8,7 @@ import Secretariat from './components/Secretariat';
 import HardwareStore from './components/HardwareStore';
 import Settings from './components/Settings';
 import ShowcaseMode from './components/ShowcaseMode';
-import { Site, Period, StockItem, Intervention, Transaction, Employee } from './types';
+import { Site, Period, StockItem, Intervention, Transaction, Employee, TickerMessage } from './types';
 import { TICKER_MESSAGES } from './constants';
 
 // Supabase Imports
@@ -24,7 +24,7 @@ const App: React.FC = () => {
   const [customEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   // États de données
-  const [tickerMessages, setTickerMessages] = useState<string[]>(TICKER_MESSAGES);
+  const [tickerMessages, setTickerMessages] = useState<TickerMessage[]>(TICKER_MESSAGES);
   const [stock, setStock] = useState<StockItem[]>([]);
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -39,9 +39,17 @@ const App: React.FC = () => {
         // 1. Messages
         const { data: tickerData } = await supabase
             .from('ticker_messages')
-            .select('content')
+            .select('content, color')
             .order('created_at', { ascending: false });
-        if (tickerData) setTickerMessages(tickerData.map(t => t.content));
+            
+        if (tickerData) {
+            // Mapping sécurisé au cas où la colonne color n'existe pas encore en BDD
+            const formattedMessages: TickerMessage[] = tickerData.map(t => ({
+                content: t.content,
+                color: t.color || 'neutral'
+            }));
+            setTickerMessages(formattedMessages);
+        }
 
         // 2. Stock
         const { data: stockData } = await supabase
@@ -88,8 +96,15 @@ const App: React.FC = () => {
             console.log('Change received!', payload);
             // Recharger la table concernée (stratégie simple pour v1)
             if (payload.table === 'ticker_messages') {
-                 supabase.from('ticker_messages').select('content').order('created_at', { ascending: false })
-                 .then(({ data }) => data && setTickerMessages(data.map(t => t.content)));
+                 supabase.from('ticker_messages').select('content, color').order('created_at', { ascending: false })
+                 .then(({ data }) => {
+                    if (data) {
+                        setTickerMessages(data.map(t => ({
+                            content: t.content,
+                            color: t.color || 'neutral'
+                        })));
+                    }
+                 });
             } else if (payload.table === 'stock') {
                  supabase.from('stock').select('*').order('name')
                  .then(({ data }) => data && setStock(data as StockItem[]));

@@ -1,5 +1,6 @@
+
 import { LayoutDashboard, Wrench, Wallet, CalendarDays, ShoppingCart, Settings, MonitorPlay } from 'lucide-react';
-import { DashboardData, Intervention, StockItem, Transaction, Employee } from './types';
+import { DashboardData, Intervention, StockItem, Transaction, Employee, TickerMessage } from './types';
 
 // EBF Brand Colors references
 export const COLORS = {
@@ -139,11 +140,11 @@ export const NAV_ITEMS = [
   { id: 'settings', label: 'Paramètres', icon: <Settings size={20} /> },
 ];
 
-export const TICKER_MESSAGES = [
-  "Bienvenue chez EBF - Votre partenaire technique de confiance.",
-  "Promotion du mois : -15% sur tout l'outillage portatif !",
-  "Nouveau arrivage : Câbles R2V haute résistance en stock.",
-  "EBF Abidjan & Bouaké : Ouvert du Lundi au Samedi de 08h à 18h.",
+export const TICKER_MESSAGES: TickerMessage[] = [
+  { content: "Bienvenue chez EBF - Votre partenaire technique de confiance.", color: "neutral" },
+  { content: "Promotion du mois : -15% sur tout l'outillage portatif !", color: "green" },
+  { content: "Nouveau arrivage : Câbles R2V haute résistance en stock.", color: "green" },
+  { content: "EBF Abidjan & Bouaké : Ouvert du Lundi au Samedi de 08h à 18h.", color: "neutral" },
 ];
 
 export const Logo = () => (

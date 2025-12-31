@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { StockItem, Intervention } from '../types';
+import { StockItem, Intervention, TickerMessage } from '../types';
 import { 
   X, 
   Zap, 
@@ -15,7 +15,7 @@ interface ShowcaseModeProps {
   onClose?: () => void;
   liveStock?: StockItem[];
   liveInterventions?: Intervention[];
-  liveMessages?: string[];
+  liveMessages?: TickerMessage[];
 }
 
 const ShowcaseMode: React.FC<ShowcaseModeProps> = ({ 
@@ -29,26 +29,17 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   
   const products = liveStock.length > 0 ? liveStock : [];
   const planning = liveInterventions.length > 0 ? liveInterventions : [];
-  const flashes = liveMessages.length > 0 ? liveMessages : ["Bienvenue chez EBF Technical Center"];
+  // Fallback si vide, on crée un objet par défaut
+  const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
-  // Fonction pour déterminer la couleur du message flash
-  const getMessageColor = (text: string) => {
-    const t = text.toLowerCase();
-    
-    // POSITIF (Vert)
-    if (t.includes('promo') || t.includes('bienvenue') || t.includes('nouveau') || t.includes('arrivage') || t.includes('offert') || t.includes('gratuit') || t.includes('direct') || t.includes('ouvert')) {
-      return 'text-green-400';
+  // Mapping des couleurs pour le mode sombre (TV)
+  const getMessageColorClass = (color: string) => {
+    switch(color) {
+        case 'green': return 'text-green-400';
+        case 'yellow': return 'text-yellow-400';
+        case 'red': return 'text-red-500';
+        default: return 'text-white';
     }
-    // AVERTISSEMENT / INFO (Jaune)
-    if (t.includes('attention') || t.includes('avis') || t.includes('maintenance') || t.includes('info') || t.includes('rappel') || t.includes('prudence')) {
-      return 'text-yellow-400';
-    }
-    // NEGATIF / URGENCE (Rouge)
-    if (t.includes('urgent') || t.includes('danger') || t.includes('alerte') || t.includes('stop') || t.includes('annulé') || t.includes('fermé') || t.includes('coupure') || t.includes('critique')) {
-      return 'text-red-500';
-    }
-    // NEUTRE (Blanc)
-    return 'text-white';
   };
 
   // Date du jour dynamique pour le titre
@@ -136,23 +127,28 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                 </div>
                 
                 {/* ZONE TEXTE - Bas sur mobile, Droite sur desktop */}
-                <div className="w-full lg:w-[55%] h-[55%] lg:h-full bg-white text-gray-950 flex flex-col p-6 md:p-16 justify-center shadow-[-20px_0_100px_rgba(0,0,0,0.4)] relative">
+                <div className="w-full lg:w-[55%] h-[55%] lg:h-full bg-white text-gray-950 flex flex-col p-6 md:p-16 justify-center shadow-[-20px_0_100px_rgba(0,0,0,0.4)] relative overflow-hidden">
                     
-                    <div className="space-y-4 md:space-y-12 animate-slide-up relative z-10 overflow-y-auto lg:overflow-visible no-scrollbar pb-20 lg:pb-0">
-                        <div>
-                            <span className="px-4 py-1.5 md:px-8 md:py-3 bg-orange-600 text-white rounded-lg md:rounded-xl text-xs md:text-2xl font-black uppercase mb-2 md:mb-8 inline-block shadow-lg tracking-widest">
-                              {currentProduct.category}
-                            </span>
-                            <h1 className="text-3xl md:text-7xl lg:text-8xl font-black leading-tight md:leading-[0.95] tracking-tighter mb-4 md:mb-10 text-gray-950 uppercase italic line-clamp-3 md:line-clamp-none">
-                              {currentProduct.name}
-                            </h1>
-                            <div className="flex flex-wrap items-center gap-4 md:gap-10 text-gray-400 font-black text-xs md:text-2xl uppercase tracking-widest">
-                                <div className="flex items-center gap-2 md:gap-3"><Zap size={16} className="md:w-8 md:h-8 text-orange-600" /> {currentProduct.supplier}</div>
-                                <div className="flex items-center gap-2 md:gap-3"><ShieldCheck size={16} className="md:w-8 md:h-8 text-green-600" /> Certifié EBF</div>
+                    <div className="flex flex-col h-full justify-center space-y-4 md:space-y-8 animate-slide-up relative z-10 max-h-full">
+                        
+                        {/* Wrapper avec scroll caché si besoin, mais layout flex pour garder le prix en bas si possible */}
+                        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar flex flex-col justify-center">
+                            <div>
+                                <span className="px-4 py-1.5 md:px-8 md:py-3 bg-orange-600 text-white rounded-lg md:rounded-xl text-xs md:text-2xl font-black uppercase mb-2 md:mb-6 inline-block shadow-lg tracking-widest">
+                                {currentProduct.category}
+                                </span>
+                                {/* Line clamp appliqué pour éviter le débordement */}
+                                <h1 className="text-3xl md:text-6xl lg:text-7xl xl:text-8xl font-black leading-tight md:leading-[0.95] tracking-tighter mb-4 md:mb-8 text-gray-950 uppercase italic line-clamp-4 lg:line-clamp-5">
+                                {currentProduct.name}
+                                </h1>
+                                <div className="flex flex-wrap items-center gap-4 md:gap-10 text-gray-400 font-black text-xs md:text-2xl uppercase tracking-widest">
+                                    <div className="flex items-center gap-2 md:gap-3"><Zap size={16} className="md:w-8 md:h-8 text-orange-600" /> {currentProduct.supplier}</div>
+                                    <div className="flex items-center gap-2 md:gap-3"><ShieldCheck size={16} className="md:w-8 md:h-8 text-green-600" /> Certifié EBF</div>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-10 pt-2 md:pt-6">
+                        <div className="shrink-0 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-10 pt-2 md:pt-4 border-t border-gray-100/50 mt-auto">
                             <div className="bg-gray-950 p-6 md:p-10 rounded-2xl md:rounded-[3rem] text-white w-full md:flex-1 border-b-[8px] md:border-b-[20px] border-orange-600 shadow-xl">
                                 <p className="text-sm md:text-2xl font-black uppercase text-orange-500 mb-2 md:mb-4 tracking-widest">Prix Exceptionnel</p>
                                 <p className="text-4xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-none text-white whitespace-nowrap">
@@ -205,9 +201,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                   {flashes.concat(flashes).concat(flashes).map((msg, i) => (
                       <span 
                         key={i} 
-                        className={`${getMessageColor(msg)} text-xl md:text-6xl font-black px-8 md:px-20 uppercase italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] tracking-tight transition-colors duration-500`}
+                        className={`${getMessageColorClass(msg.color)} text-xl md:text-6xl font-black px-8 md:px-20 uppercase italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] tracking-tight transition-colors duration-500`}
                       >
-                          {msg} <span className="text-orange-950/30 mx-4 md:mx-8">///</span>
+                          {msg.content} <span className="text-orange-950/30 mx-4 md:mx-8">///</span>
                       </span>
                   ))}
               </div>
