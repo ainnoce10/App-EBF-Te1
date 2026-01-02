@@ -9,10 +9,13 @@ import {
   AlertTriangle, 
   CheckCircle,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Code,
+  Copy,
+  X
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { MOCK_INTERVENTIONS, MOCK_STOCK, MOCK_TRANSACTIONS, MOCK_EMPLOYEES } from '../constants';
+import { MOCK_INTERVENTIONS, MOCK_STOCK, MOCK_TRANSACTIONS, MOCK_EMPLOYEES, TICKER_MESSAGES } from '../constants';
 import { TickerMessage } from '../types';
 
 interface SettingsProps {
@@ -28,6 +31,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
   // États pour l'initialisation de la BDD
   const [isSeeding, setIsSeeding] = useState(false);
   const [seedStatus, setSeedStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [showSql, setShowSql] = useState(false);
 
   const handleAddMessage = async () => {
     if (newMessage.trim()) {
@@ -46,22 +50,19 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
         
         if (error) throw error;
         
-        // Si succès Supabase, on laisse le Realtime mettre à jour ou on fait une maj optimiste
-        // Pour l'instant on reset juste le champ
         setNewMessage('');
         setSelectedColor('neutral');
 
       } catch (error: any) {
         console.error("Erreur ajout message", error);
         
-        // FALLBACK LOCAL : Si l'API échoue, on ajoute quand même localement pour que l'utilisateur ne soit pas bloqué
         if (onUpdateMessages) {
              onUpdateMessages([tempMsg, ...tickerMessages]);
         }
         setNewMessage('');
         setSelectedColor('neutral');
         
-        alert(`Note: Le message a été ajouté localement car la sauvegarde en ligne a échoué.\nErreur: ${error.message || "Connexion/Permissions"}`);
+        alert(`Note: Sauvegarde locale uniquement.\nErreur Supabase : ${error.message || "Table introuvable ?"}\n\nAstuce : Utilisez le bouton 'Script SQL de Création' ci-dessus pour configurer votre base de données.`);
       }
       setIsUpdating(false);
     }
@@ -72,23 +73,19 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
     
     setIsUpdating(true);
     try {
-        // Tentative suppression Supabase
         if (msg.id && !msg.id.startsWith('local-')) {
              const { error } = await supabase.from('ticker_messages').delete().eq('id', msg.id);
              if (error) throw error;
         } else {
-             // C'est un message local ou sans ID compatible
              throw new Error("Message local ou ID manquant");
         }
     } catch (error: any) {
         console.error("Erreur suppression message", error);
-        // Fallback local
         if (onUpdateMessages) {
             const updated = tickerMessages.filter(m => m !== msg);
             onUpdateMessages(updated);
         }
         if (msg.id && !msg.id.startsWith('local-')) {
-             // Si c'était censé être en BDD mais que ça a raté
              alert(`Suppression locale uniquement. Erreur synchro: ${error.message}`);
         }
     }
@@ -96,7 +93,6 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
   };
 
   const handleUpdateColor = async (msg: TickerMessage, newColor: string) => {
-    // Optimistic UI Update
     const updatedList = tickerMessages.map(m => m === msg ? { ...m, color: newColor as any } : m);
     if (onUpdateMessages) onUpdateMessages(updatedList);
 
@@ -107,7 +103,6 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
         }
     } catch (error) {
         console.error("Erreur mise à jour couleur", error);
-        // On ne revert pas pour ne pas frustrer l'utilisateur, mais on log
     }
   };
 
@@ -130,9 +125,8 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
     if (e.key === 'Enter') handleAddMessage();
   };
 
-  // Fonction pour créer les tables et injecter les données
   const handleInitializeDatabase = async () => {
-    if (!window.confirm("Attention : Cette action va tenter d'écrire les données par défaut dans Supabase. Continuer ?")) {
+    if (!window.confirm("Attention : Cette action va injecter les données par défaut. Assurez-vous d'avoir exécuté le script SQL d'abord.")) {
       return;
     }
 
@@ -140,37 +134,137 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
     setSeedStatus('idle');
 
     try {
+      // 1. Messages Flash
+      if (TICKER_MESSAGES.length > 0) {
+         // On insère simplement car pas d'ID fixe
+         await supabase.from('ticker_messages').insert(TICKER_MESSAGES.map(m => ({ content: m.content, color: m.color })));
+      }
+
+      // 2. Stock
       if (MOCK_STOCK.length > 0) {
         const { error } = await supabase.from('stock').upsert(MOCK_STOCK, { onConflict: 'id' });
         if (error) throw error;
       }
+      // 3. Interventions
       if (MOCK_INTERVENTIONS.length > 0) {
         const { error } = await supabase.from('interventions').upsert(MOCK_INTERVENTIONS, { onConflict: 'id' });
         if (error) throw error;
       }
+      // 4. Transactions
       if (MOCK_TRANSACTIONS.length > 0) {
         const { error } = await supabase.from('transactions').upsert(MOCK_TRANSACTIONS, { onConflict: 'id' });
         if (error) throw error;
       }
+      // 5. Employés
       if (MOCK_EMPLOYEES.length > 0) {
         const { error } = await supabase.from('employees').upsert(MOCK_EMPLOYEES, { onConflict: 'id' });
         if (error) throw error;
       }
-      // Tentative d'initialisation des messages ticker si la table existe
-      // Note: On ne peut pas créer la table ici, mais on peut essayer d'insérer des defaults si vide
       
       setSeedStatus('success');
-      alert("Base de données initialisée avec succès !");
+      alert("Données injectées avec succès !");
     } catch (error: any) {
       console.error("Erreur initialisation BDD:", error);
       setSeedStatus('error');
-      alert("Erreur lors de l'initialisation : " + (error.message || error));
+      alert("Erreur d'injection. Avez-vous créé les tables ?\nMessage: " + (error.message || error));
     } finally {
       setIsSeeding(false);
     }
   };
 
-  // Helper pour afficher la couleur dans la liste
+  const getSqlScript = () => `
+-- ----------------------------------------------------------------
+-- SCRIPT DE CONFIGURATION DE LA BASE DE DONNÉES EBF
+-- Copiez tout ce contenu et collez-le dans l'éditeur SQL de Supabase
+-- ----------------------------------------------------------------
+
+-- 1. Table Messages Flash
+CREATE TABLE IF NOT EXISTS ticker_messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  content TEXT NOT NULL,
+  color TEXT DEFAULT 'neutral'
+);
+
+-- 2. Table Stock
+CREATE TABLE IF NOT EXISTS stock (
+  id TEXT PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  name TEXT NOT NULL,
+  category TEXT,
+  quantity INTEGER DEFAULT 0,
+  threshold INTEGER DEFAULT 5,
+  "unitPrice" INTEGER DEFAULT 0,
+  supplier TEXT,
+  site TEXT,
+  "imageUrls" TEXT[],
+  description TEXT,
+  "technicalSheetUrl" TEXT,
+  specs JSONB
+);
+
+-- 3. Table Interventions
+CREATE TABLE IF NOT EXISTS interventions (
+  id TEXT PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  client TEXT NOT NULL,
+  "clientPhone" TEXT,
+  description TEXT,
+  technician TEXT,
+  status TEXT,
+  date DATE,
+  site TEXT,
+  domain TEXT,
+  "interventionType" TEXT
+);
+
+-- 4. Table Transactions
+CREATE TABLE IF NOT EXISTS transactions (
+  id TEXT PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  type TEXT,
+  category TEXT,
+  amount INTEGER,
+  date DATE,
+  description TEXT,
+  site TEXT
+);
+
+-- 5. Table Employés
+CREATE TABLE IF NOT EXISTS employees (
+  id TEXT PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  name TEXT NOT NULL,
+  role TEXT,
+  site TEXT,
+  status TEXT,
+  "entryDate" DATE
+);
+
+-- 6. POLITIQUES DE SÉCURITÉ (RLS) - ACCÈS PUBLIC (PROTOTYPE)
+-- IMPORTANT : Permet à l'application de lire et écrire sans authentification utilisateur complexe
+
+ALTER TABLE ticker_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public Access Messages" ON ticker_messages FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE stock ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public Access Stock" ON stock FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE interventions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public Access Interventions" ON interventions FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public Access Transactions" ON transactions FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public Access Employees" ON employees FOR ALL USING (true) WITH CHECK (true);
+`;
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(getSqlScript());
+    alert("Script SQL copié ! Collez-le dans l'éditeur SQL de Supabase.");
+  };
+
   const getColorClass = (color: string) => {
       switch(color) {
           case 'green': return 'bg-green-100 text-green-700 border-green-200';
@@ -185,35 +279,75 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Paramètres</h2>
-          <p className="text-gray-500 text-sm">Gérez la configuration globale</p>
+          <p className="text-gray-500 text-sm">Configuration et Base de Données</p>
         </div>
         {isUpdating && <Loader2 size={24} className="text-orange-500 animate-spin" />}
       </div>
+
+      {/* --- SECTION SQL SETUP --- */}
+      {showSql && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+           <div className="bg-white w-full max-w-4xl h-[80vh] rounded-3xl flex flex-col overflow-hidden shadow-2xl">
+              <div className="p-6 border-b flex justify-between items-center bg-gray-50">
+                  <h3 className="font-bold text-lg flex items-center gap-2">
+                      <Code size={20} className="text-blue-600"/> Script de Création des Tables
+                  </h3>
+                  <button onClick={() => setShowSql(false)}><X size={24} className="text-gray-400 hover:text-black"/></button>
+              </div>
+              <div className="flex-1 bg-gray-900 overflow-auto p-6">
+                  <pre className="text-green-400 font-mono text-xs md:text-sm whitespace-pre-wrap selection:bg-green-900">
+                      {getSqlScript()}
+                  </pre>
+              </div>
+              <div className="p-6 border-t bg-white flex justify-end gap-4">
+                  <button onClick={() => setShowSql(false)} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100">Fermer</button>
+                  <button onClick={copyToClipboard} className="px-6 py-3 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 shadow-lg">
+                      <Copy size={18}/> Copier le Code
+                  </button>
+              </div>
+           </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-red-100 overflow-hidden">
         <div className="p-6 border-b border-red-100 bg-red-50">
            <h3 className="font-bold text-red-800 flex items-center gap-2">
               <Database className="text-red-600" size={20} />
-              Administration Supabase
+              Configuration Base de Données
            </h3>
         </div>
-        <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
            <div>
-             <h4 className="font-bold text-gray-800">Initialiser les Collections</h4>
-             <p className="text-sm text-gray-500 max-w-lg">
-               Injecter les données de démonstration dans vos tables Supabase.
+             <h4 className="font-bold text-gray-800 mb-1">1. Créer les Tables (Obligatoire)</h4>
+             <p className="text-sm text-gray-500 max-w-lg mb-4">
+               Si vous voyez des erreurs "Table introuvable", cliquez ci-dessous pour obtenir le code SQL à exécuter dans Supabase.
              </p>
+             <button 
+                onClick={() => setShowSql(true)}
+                className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg font-bold text-sm border border-blue-100 hover:bg-blue-100 transition-colors flex items-center gap-2"
+             >
+                <Code size={16}/> Script SQL de Création
+             </button>
            </div>
-           <button 
-             onClick={handleInitializeDatabase}
-             disabled={isSeeding}
-             className={`px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition-all shadow-md active:scale-95
-               ${seedStatus === 'success' ? 'bg-green-600 text-white' : 'bg-gray-900 text-white hover:bg-gray-800'}
-             `}
-           >
-             {isSeeding ? <Loader2 size={18} className="animate-spin" /> : seedStatus === 'success' ? <CheckCircle size={18}/> : <AlertTriangle size={18} className="text-yellow-400"/>}
-             {isSeeding ? 'Injection...' : seedStatus === 'success' ? 'Injecté !' : 'Injecter Démo'}
-           </button>
+           
+           <div className="h-px w-full md:w-px md:h-20 bg-gray-200"></div>
+
+           <div>
+             <h4 className="font-bold text-gray-800 mb-1">2. Injecter les Données</h4>
+             <p className="text-sm text-gray-500 max-w-lg mb-4">
+               Une fois les tables créées, cliquez ici pour envoyer les données de démonstration vers Supabase.
+             </p>
+             <button 
+               onClick={handleInitializeDatabase}
+               disabled={isSeeding}
+               className={`px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition-all shadow-md active:scale-95
+                 ${seedStatus === 'success' ? 'bg-green-600 text-white' : 'bg-gray-900 text-white hover:bg-gray-800'}
+               `}
+             >
+               {isSeeding ? <Loader2 size={18} className="animate-spin" /> : seedStatus === 'success' ? <CheckCircle size={18}/> : <AlertTriangle size={18} className="text-yellow-400"/>}
+               {isSeeding ? 'Injection...' : seedStatus === 'success' ? 'Injecté !' : 'Injecter Démo'}
+             </button>
+           </div>
         </div>
       </div>
 
