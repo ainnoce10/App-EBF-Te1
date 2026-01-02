@@ -32,59 +32,82 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
   const handleAddMessage = async () => {
     if (newMessage.trim()) {
       setIsUpdating(true);
+      
+      const tempMsg: TickerMessage = {
+          id: `local-${Date.now()}`,
+          content: newMessage.trim(),
+          color: selectedColor
+      };
+
       try {
         const { error } = await supabase
             .from('ticker_messages')
-            .insert([{ content: newMessage.trim(), color: selectedColor }]);
+            .insert([{ content: tempMsg.content, color: tempMsg.color }]);
         
         if (error) throw error;
+        
+        // Si succès Supabase, on laisse le Realtime mettre à jour ou on fait une maj optimiste
+        // Pour l'instant on reset juste le champ
         setNewMessage('');
-        // Reset color to neutral after add
         setSelectedColor('neutral');
-      } catch (error) {
+
+      } catch (error: any) {
         console.error("Erreur ajout message", error);
-        alert("Erreur lors de l'ajout. Vérifiez votre connexion.");
+        
+        // FALLBACK LOCAL : Si l'API échoue, on ajoute quand même localement pour que l'utilisateur ne soit pas bloqué
+        if (onUpdateMessages) {
+             onUpdateMessages([tempMsg, ...tickerMessages]);
+        }
+        setNewMessage('');
+        setSelectedColor('neutral');
+        
+        alert(`Note: Le message a été ajouté localement car la sauvegarde en ligne a échoué.\nErreur: ${error.message || "Connexion/Permissions"}`);
       }
       setIsUpdating(false);
     }
   };
 
   const handleDeleteMessage = async (msg: TickerMessage) => {
+    if (!window.confirm("Supprimer ce message ?")) return;
+    
     setIsUpdating(true);
     try {
-        let query = supabase.from('ticker_messages').delete();
-        
-        // Priorité à l'ID, sinon repli sur le contenu (pour les anciennes données)
-        if (msg.id) {
-            query = query.eq('id', msg.id);
+        // Tentative suppression Supabase
+        if (msg.id && !msg.id.startsWith('local-')) {
+             const { error } = await supabase.from('ticker_messages').delete().eq('id', msg.id);
+             if (error) throw error;
         } else {
-            query = query.eq('content', msg.content);
+             // C'est un message local ou sans ID compatible
+             throw new Error("Message local ou ID manquant");
         }
-
-        const { error } = await query;
-            
-        if (error) throw error;
-    } catch (error) {
+    } catch (error: any) {
         console.error("Erreur suppression message", error);
-        alert("Impossible de supprimer le message.");
+        // Fallback local
+        if (onUpdateMessages) {
+            const updated = tickerMessages.filter(m => m !== msg);
+            onUpdateMessages(updated);
+        }
+        if (msg.id && !msg.id.startsWith('local-')) {
+             // Si c'était censé être en BDD mais que ça a raté
+             alert(`Suppression locale uniquement. Erreur synchro: ${error.message}`);
+        }
     }
     setIsUpdating(false);
   };
 
   const handleUpdateColor = async (msg: TickerMessage, newColor: string) => {
-    try {
-        let query = supabase.from('ticker_messages').update({ color: newColor });
-        
-        if (msg.id) {
-            query = query.eq('id', msg.id);
-        } else {
-            query = query.eq('content', msg.content);
-        }
+    // Optimistic UI Update
+    const updatedList = tickerMessages.map(m => m === msg ? { ...m, color: newColor as any } : m);
+    if (onUpdateMessages) onUpdateMessages(updatedList);
 
-        const { error } = await query;
-        if (error) throw error;
+    try {
+        if (msg.id && !msg.id.startsWith('local-')) {
+            const { error } = await supabase.from('ticker_messages').update({ color: newColor }).eq('id', msg.id);
+            if (error) throw error;
+        }
     } catch (error) {
         console.error("Erreur mise à jour couleur", error);
+        // On ne revert pas pour ne pas frustrer l'utilisateur, mais on log
     }
   };
 
@@ -97,9 +120,6 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
       newMessages[index] = newMessages[targetIndex];
       newMessages[targetIndex] = temp;
       
-      // Note: Cela met à jour l'ordre localement, mais Supabase trie par date de création par défaut.
-      // Pour persister l'ordre, il faudrait une colonne 'order' en base de données.
-      // Ici on met à jour l'état local pour un feedback immédiat.
       if (onUpdateMessages) {
         onUpdateMessages(newMessages);
       }
@@ -136,13 +156,15 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
         const { error } = await supabase.from('employees').upsert(MOCK_EMPLOYEES, { onConflict: 'id' });
         if (error) throw error;
       }
+      // Tentative d'initialisation des messages ticker si la table existe
+      // Note: On ne peut pas créer la table ici, mais on peut essayer d'insérer des defaults si vide
       
       setSeedStatus('success');
       alert("Base de données initialisée avec succès !");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur initialisation BDD:", error);
       setSeedStatus('error');
-      alert("Erreur lors de l'initialisation : " + (error as any).message);
+      alert("Erreur lors de l'initialisation : " + (error.message || error));
     } finally {
       setIsSeeding(false);
     }

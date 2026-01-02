@@ -49,6 +49,15 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     month: 'long' 
   });
 
+  // Fonction pour calculer la taille de police idéale selon la longueur du texte
+  const getTitleSizeClass = (text: string) => {
+    const len = text.length;
+    if (len < 20) return "text-3xl md:text-6xl lg:text-7xl xl:text-8xl"; // Très court (ex: Disjoncteur) -> Très gros
+    if (len < 40) return "text-2xl md:text-5xl lg:text-6xl xl:text-7xl"; // Court -> Gros
+    if (len < 80) return "text-xl md:text-4xl lg:text-5xl xl:text-6xl"; // Moyen -> Moyen
+    return "text-lg md:text-3xl lg:text-4xl xl:text-5xl"; // Long -> Plus petit pour tout afficher
+  };
+
   useEffect(() => {
     if (activeMode !== 'PUBLICITE' || products.length === 0) return;
     const interval = setInterval(() => {
@@ -137,8 +146,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                 <span className="px-4 py-1.5 md:px-8 md:py-3 bg-orange-600 text-white rounded-lg md:rounded-xl text-xs md:text-2xl font-black uppercase mb-2 md:mb-6 inline-block shadow-lg tracking-widest shrink-0">
                                 {currentProduct.category}
                                 </span>
-                                {/* Line clamp ajusté à 4 lignes max pour les très grands écrans aussi */}
-                                <h1 className="text-3xl md:text-6xl lg:text-7xl xl:text-8xl font-black leading-tight md:leading-[0.95] tracking-tighter mb-4 md:mb-8 text-gray-950 uppercase italic line-clamp-4 lg:line-clamp-4 xl:line-clamp-4">
+                                {/* Utilisation de la fonction dynamique pour la taille de police */}
+                                <h1 className={`${getTitleSizeClass(currentProduct.name)} font-black leading-tight md:leading-[0.95] tracking-tighter mb-4 md:mb-8 text-gray-950 uppercase italic line-clamp-5`}>
                                 {currentProduct.name}
                                 </h1>
                                 <div className="flex flex-wrap items-center gap-4 md:gap-10 text-gray-400 font-black text-xs md:text-2xl uppercase tracking-widest shrink-0 pb-2">
