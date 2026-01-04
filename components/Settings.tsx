@@ -3,17 +3,13 @@ import React, { useState } from 'react';
 import { 
   Megaphone, 
   Trash2, 
-  Plus, 
   Loader2, 
   Database, 
-  AlertTriangle, 
-  CheckCircle,
-  ArrowUp,
-  ArrowDown,
   Code,
   Copy,
   X,
-  ShieldAlert
+  ShieldAlert,
+  Plus
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { TickerMessage } from '../types';
@@ -23,7 +19,7 @@ interface SettingsProps {
   onUpdateMessages?: (messages: TickerMessage[]) => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessages }) => {
+const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const [newMessage, setNewMessage] = useState('');
   const [selectedColor, setSelectedColor] = useState<'green' | 'yellow' | 'red' | 'neutral'>('neutral');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -38,28 +34,26 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
 
     try {
       // Tentative d'insertion dans Supabase
-      const { data, error } = await supabase
+      const { error } = await supabase
           .from('ticker_messages')
-          .insert([{ content: contentToAdd, color: colorToAdd }])
-          .select();
+          .insert([{ content: contentToAdd, color: colorToAdd }]);
       
       if (error) throw error;
       
-      // Si succès, on vide le champ. Le Realtime dans App.tsx s'occupera de mettre à jour la liste.
+      // Si succès, on vide le champ. 
+      // La mise à jour de la liste se fait via le Realtime dans App.tsx
       setNewMessage('');
       setSelectedColor('neutral');
 
     } catch (error: any) {
-      console.error("Erreur Supabase:", error);
+      console.error("Erreur insertion:", error);
       
-      // Si l'erreur est liée aux permissions (RLS), on prévient l'utilisateur
-      const isRlsError = error.code === '42501' || error.message?.includes('policy');
-      
-      alert(
-        isRlsError 
-        ? "Action bloquée par Supabase (Erreur RLS).\n\nVous devez autoriser l'écriture dans votre tableau de bord Supabase ou utiliser le script 'Débloquer les Permissions' ci-dessus." 
-        : `Erreur technique : ${error.message || "Connexion perdue"}`
-      );
+      // Analyse du code d'erreur Supabase courant pour RLS (42501)
+      if (error.code === '42501' || error.message?.includes('policy')) {
+          alert("ERREUR DE PERMISSION :\n\nSupabase bloque l'ajout car la sécurité RLS est active.\n\nCliquez sur le bouton bleu 'Débloquer les Permissions' ci-dessus, copiez le code, et collez-le dans l'éditeur SQL de votre dashboard Supabase.");
+      } else {
+          alert(`Erreur lors de l'ajout : ${error.message || "Problème de connexion"}`);
+      }
     } finally {
       setIsUpdating(false);
     }
@@ -93,13 +87,17 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onUpdateMessag
   };
 
   const getRlsFixScript = () => `
--- EXECUTER CECI DANS LE SQL EDITOR DE SUPABASE POUR DEBLOQUER L'AJOUT
--- Active la sécurité
+-- 1. On s'assure que la table a les bonnes colonnes
+-- (Si elles existent déjà, SQL ignorera ces lignes ou fera une erreur sans gravité)
+-- ALTER TABLE ticker_messages ADD COLUMN IF NOT EXISTS content TEXT;
+-- ALTER TABLE ticker_messages ADD COLUMN IF NOT EXISTS color TEXT DEFAULT 'neutral';
+
+-- 2. On autorise l'accès public (Lecture/Ecriture) pour le prototype
 ALTER TABLE ticker_messages ENABLE ROW LEVEL SECURITY;
 
--- Autorise tout le monde (Public) à LIRE, INSERER, MODIFIER et SUPPRIMER
--- Note: Pour une app pro, on filtrerait par utilisateur, mais pour ce prototype on ouvre l'accès.
-CREATE POLICY "Accès total public sur ticker_messages" 
+DROP POLICY IF EXISTS "Accès total public" ON ticker_messages;
+
+CREATE POLICY "Accès total public" 
 ON ticker_messages 
 FOR ALL 
 USING (true) 
@@ -108,7 +106,7 @@ WITH CHECK (true);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(getRlsFixScript());
-    alert("Script SQL copié !");
+    alert("Code SQL copié !");
   };
 
   const getColorClass = (color: string) => {
@@ -125,97 +123,82 @@ WITH CHECK (true);
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Paramètres</h2>
-          <p className="text-gray-500 text-sm">Gestion des messages et accès</p>
+          <p className="text-gray-500 text-sm">Gestion des messages flash et accès</p>
         </div>
         {isUpdating && <Loader2 size={24} className="text-orange-500 animate-spin" />}
       </div>
 
-      {/* MODAL SQL FIX */}
-      {showSql && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-           <div className="bg-white w-full max-w-2xl rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-scale-in">
-              <div className="p-6 border-b flex justify-between items-center bg-orange-50">
-                  <h3 className="font-bold text-lg flex items-center gap-2 text-orange-800">
-                      <ShieldAlert size={20}/> Débloquer les Permissions (SQL)
-                  </h3>
-                  <button onClick={() => setShowSql(false)}><X size={24} className="text-gray-400"/></button>
-              </div>
-              <div className="p-6">
-                  <p className="text-sm text-gray-600 mb-4 font-medium">
-                    Si vous ne pouvez pas ajouter de messages, c'est que Supabase bloque l'accès "Public". 
-                    Copiez ce code et collez-le dans l'onglet <b>SQL Editor</b> de Supabase :
-                  </p>
-                  <pre className="bg-gray-900 text-green-400 p-4 rounded-xl text-xs font-mono overflow-auto max-h-48 mb-6">
-                      {getRlsFixScript()}
-                  </pre>
-                  <div className="flex justify-end gap-3">
-                      <button onClick={() => setShowSql(false)} className="px-6 py-3 font-bold text-gray-500">Annuler</button>
-                      <button onClick={copyToClipboard} className="px-6 py-3 bg-orange-600 text-white rounded-xl font-bold flex items-center gap-2">
-                        <Copy size={18}/> Copier
-                      </button>
-                  </div>
-              </div>
-           </div>
-        </div>
-      )}
-
-      {/* SECTION DIAGNOSTIC */}
-      <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-              <div className="bg-blue-100 p-3 rounded-2xl text-blue-600">
-                  <Database size={24}/>
+      {/* SECTION DIAGNOSTIC - PRIORITAIRE */}
+      <div className="bg-blue-600 rounded-3xl shadow-lg p-6 flex flex-col md:flex-row items-center justify-between gap-6 text-white overflow-hidden relative">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Database size={120} />
+          </div>
+          <div className="flex items-center gap-6 relative z-10">
+              <div className="bg-white/20 p-4 rounded-2xl backdrop-blur-md">
+                  <ShieldAlert size={32} />
               </div>
               <div>
-                  <h4 className="font-bold text-gray-800">La sauvegarde échoue ?</h4>
-                  <p className="text-xs text-gray-500">Il faut autoriser l'écriture publique sur la table 'ticker_messages'.</p>
+                  <h4 className="font-black text-xl md:text-2xl tracking-tight">Problème d'ajout ?</h4>
+                  <p className="text-blue-100 text-sm md:text-base font-medium opacity-90">
+                    Supabase demande une autorisation SQL pour permettre l'écriture.
+                  </p>
               </div>
           </div>
           <button 
             onClick={() => setShowSql(true)}
-            className="w-full md:w-auto px-6 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-md hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+            className="w-full md:w-auto px-8 py-4 bg-white text-blue-700 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:scale-105 transition-all active:scale-95 flex items-center justify-center gap-3 relative z-10"
           >
-            <Code size={18}/> Débloquer les Permissions
+            <Code size={20}/> Débloquer SQL
           </button>
       </div>
 
       {/* SECTION MESSAGES */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-orange-50 flex items-center gap-3">
-           <Megaphone className="text-orange-600" size={24} />
-           <h3 className="font-black text-gray-800 uppercase tracking-tight">Flash Info TV</h3>
+      <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-6 md:p-8 border-b border-gray-100 bg-orange-50 flex items-center gap-4">
+           <div className="bg-orange-500 p-2.5 rounded-xl text-white shadow-md">
+                <Megaphone size={24} />
+           </div>
+           <h3 className="font-black text-gray-800 uppercase tracking-tight text-lg md:text-xl">Contrôle Flash Info TV</h3>
         </div>
         
-        <div className="p-6">
-           <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 mb-8">
-               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-4">Nouveau Message</label>
-               <div className="flex flex-col md:flex-row gap-4">
-                    <div className="flex gap-2">
-                        {(['green', 'yellow', 'red', 'neutral'] as const).map(color => (
+        <div className="p-6 md:p-8">
+           <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-200 mb-8">
+               <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] block mb-4">Créer une annonce</label>
+               <div className="flex flex-col gap-6">
+                    <div className="flex flex-wrap gap-3">
+                        {(['neutral', 'green', 'yellow', 'red'] as const).map(color => (
                             <button 
                                 key={color}
                                 onClick={() => setSelectedColor(color)}
-                                className={`w-10 h-10 rounded-full border-4 transition-all shadow-sm
-                                    ${color === 'green' ? 'bg-green-500' : color === 'yellow' ? 'bg-yellow-400' : color === 'red' ? 'bg-red-600' : 'bg-gray-600'}
-                                    ${selectedColor === color ? 'border-white scale-110 ring-2 ring-orange-200' : 'border-transparent opacity-40'}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all font-bold text-xs uppercase
+                                    ${color === 'green' ? 'bg-green-50 border-green-200 text-green-700' : 
+                                      color === 'yellow' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' : 
+                                      color === 'red' ? 'bg-red-50 border-red-200 text-red-700' : 
+                                      'bg-white border-gray-200 text-gray-600'}
+                                    ${selectedColor === color ? 'ring-4 ring-orange-100 scale-105 border-orange-500' : 'opacity-60'}
                                 `}
-                            />
+                            >
+                                <div className={`w-3 h-3 rounded-full ${color === 'green' ? 'bg-green-500' : color === 'yellow' ? 'bg-yellow-400' : color === 'red' ? 'bg-red-600' : 'bg-gray-600'}`}></div>
+                                {color === 'neutral' ? 'Standard' : color === 'green' ? 'Promo' : color === 'yellow' ? 'Info' : 'Urgent'}
+                            </button>
                         ))}
                     </div>
-                    <div className="flex-1 flex gap-2">
+                    <div className="flex flex-col md:flex-row gap-3">
                         <input 
                             type="text" 
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleAddMessage()}
-                            placeholder="Tapez votre annonce ici..."
-                            className="flex-1 p-4 bg-white border border-gray-200 rounded-xl font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                            placeholder="Ex: Arrivage de nouveaux câbles R2V..."
+                            className="flex-1 p-5 bg-white border-2 border-gray-100 rounded-2xl font-bold text-gray-800 outline-none focus:border-orange-500 shadow-inner"
                         />
                         <button 
                             onClick={handleAddMessage}
                             disabled={isUpdating || !newMessage.trim()}
-                            className="bg-orange-500 text-white px-8 py-4 rounded-xl font-black uppercase text-xs tracking-widest disabled:opacity-50 active:scale-95 transition-all shadow-lg"
+                            className="bg-gray-900 text-white px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest disabled:opacity-30 active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2"
                         >
-                            {isUpdating ? <Loader2 size={18} className="animate-spin"/> : 'Ajouter'}
+                            {isUpdating ? <Loader2 size={20} className="animate-spin"/> : <Plus size={20}/>}
+                            {isUpdating ? 'Envoi...' : 'Diffuser'}
                         </button>
                     </div>
                </div>
@@ -223,39 +206,81 @@ WITH CHECK (true);
 
            <div className="space-y-3">
               {tickerMessages.length > 0 ? tickerMessages.map((msg, index) => (
-                <div key={msg.id || index} className={`flex items-center justify-between p-4 rounded-2xl border-2 animate-fade-in ${getColorClass(msg.color)}`}>
+                <div key={msg.id || index} className={`flex items-center justify-between p-5 rounded-2xl border-2 transition-all group ${getColorClass(msg.color)}`}>
                    <div className="flex items-center gap-4">
-                      <div className="w-2 h-2 rounded-full bg-current animate-pulse"></div>
-                      <span className="font-bold">{msg.content}</span>
+                      <div className="w-2.5 h-2.5 rounded-full bg-current animate-pulse"></div>
+                      <span className="font-bold text-gray-800 md:text-lg">{msg.content}</span>
                    </div>
 
                    <div className="flex items-center gap-3">
-                       <div className="flex gap-1">
+                       <div className="flex gap-1 bg-white/50 p-1 rounded-full border border-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
                             {['green', 'yellow', 'red', 'neutral'].map(c => (
                                 <button 
                                     key={c}
                                     onClick={() => handleUpdateColor(msg, c)}
-                                    className={`w-4 h-4 rounded-full border ${msg.color === c ? 'ring-2 ring-gray-400' : 'opacity-20'} 
+                                    className={`w-6 h-6 rounded-full border-2 ${msg.color === c ? 'border-gray-800 scale-110' : 'border-transparent opacity-30'} 
                                         ${c === 'green' ? 'bg-green-500' : c === 'yellow' ? 'bg-yellow-400' : c === 'red' ? 'bg-red-600' : 'bg-gray-600'}
                                     `}
                                 />
                             ))}
                        </div>
-                       <div className="w-px h-6 bg-black/10 mx-2"></div>
                        <button 
                          onClick={() => handleDeleteMessage(msg)}
-                         className="p-2 text-red-500 hover:bg-red-500 hover:text-white rounded-full transition-all"
+                         className="p-3 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all shadow-sm hover:shadow-md"
+                         title="Supprimer"
                        >
-                         <Trash2 size={18} />
+                         <Trash2 size={20} />
                        </button>
                    </div>
                 </div>
               )) : (
-                  <div className="text-center py-10 text-gray-400 italic">Aucun message flash actif</div>
+                  <div className="text-center py-20 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
+                      <Megaphone size={48} className="mx-auto text-gray-200 mb-4" />
+                      <p className="text-gray-400 font-bold italic">Aucun message flash en cours de diffusion</p>
+                  </div>
               )}
            </div>
         </div>
       </div>
+
+      {/* MODAL SQL FIX */}
+      {showSql && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
+           <div className="bg-white w-full max-w-2xl rounded-[3rem] flex flex-col overflow-hidden shadow-2xl animate-scale-in">
+              <div className="p-8 border-b flex justify-between items-center bg-blue-50">
+                  <h3 className="font-black text-2xl flex items-center gap-3 text-blue-900">
+                      <Code size={28} className="text-blue-600"/> Correction SQL
+                  </h3>
+                  <button onClick={() => setShowSql(false)} className="p-2 bg-white rounded-full text-gray-400 hover:text-red-500 transition-colors shadow-sm"><X size={24}/></button>
+              </div>
+              <div className="p-8">
+                  <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r-xl">
+                      <p className="text-sm text-yellow-800 font-bold">
+                        Étape 1 : Allez sur votre tableau de bord Supabase.<br/>
+                        Étape 2 : Cliquez sur "SQL Editor" dans le menu à gauche.<br/>
+                        Étape 3 : Collez le code ci-dessous et cliquez sur "Run".
+                      </p>
+                  </div>
+                  <div className="relative group">
+                    <pre className="bg-gray-900 text-green-400 p-6 rounded-2xl text-xs md:text-sm font-mono overflow-auto max-h-60 mb-8 border-4 border-gray-800">
+                        {getRlsFixScript()}
+                    </pre>
+                    <button 
+                        onClick={copyToClipboard} 
+                        className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all flex items-center gap-2 font-bold text-xs"
+                    >
+                        <Copy size={16}/> Copier
+                    </button>
+                  </div>
+                  <div className="flex justify-center">
+                      <button onClick={() => setShowSql(false)} className="px-12 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-lg hover:bg-blue-700 transition-all">
+                        C'est fait !
+                      </button>
+                  </div>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 };
