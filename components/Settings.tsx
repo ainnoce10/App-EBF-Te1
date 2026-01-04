@@ -6,7 +6,6 @@ import {
   Loader2, 
   Database, 
   Code,
-  Copy,
   X,
   ShieldAlert,
   Plus
