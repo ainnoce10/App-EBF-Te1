@@ -11,14 +11,8 @@ import {
   Square, 
   Play, 
   Pause,
-  Trash2,
   PartyPopper,
-  ChevronRight,
   CalendarPlus,
-  Save,
-  Zap,
-  Home,
-  Snowflake,
   Loader2
 } from 'lucide-react';
 
@@ -44,7 +38,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const [newIntervention, setNewIntervention] = useState({
     client: '',
     clientPhone: '',
-    domain: 'Électricité' as const,
+    domain: 'Électricité' as any,
     interventionType: 'Dépannage',
     description: '',
     site: 'Abidjan' as Site,
@@ -201,4 +195,86 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
             </div>
             <button 
                 onClick={() => { setFormReport({ ...formReport, client: inter.client }); setShowReportModal(true); }} 
-                className="absolute bottom-4 right-4 p-3 bg-gray-50 rounded-2xl text-orange-500 opacity-0 group-hover:opacity-100
+                className="absolute bottom-4 right-4 p-3 bg-gray-50 rounded-2xl text-orange-500 opacity-0 group-hover:opacity-100 transition-all"
+            >
+              <Mic size={20} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* MODAL REPORT VOCAL */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+           <div className="bg-white w-full max-w-lg rounded-[3rem] p-8 animate-scale-in">
+              <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-2xl font-black text-gray-800">Compte Rendu Vocal</h3>
+                  <button onClick={() => setShowReportModal(false)}><X/></button>
+              </div>
+
+              <div className="flex flex-col items-center gap-8 py-10">
+                  <div className={`w-32 h-32 rounded-full flex items-center justify-center shadow-2xl transition-all ${recordingState === 'recording' ? 'bg-red-500 scale-110' : 'bg-orange-500'}`}>
+                      {recordingState === 'idle' ? (
+                        <button onClick={handleStartRecording} className="text-white"><Mic size={48} /></button>
+                      ) : recordingState === 'recording' ? (
+                        <button onClick={handleStopRecording} className="text-white"><Square size={40} /></button>
+                      ) : (
+                        <button onClick={handleTogglePlayback} className="text-white">{isPlaying ? <Pause size={48} /> : <Play size={48} />}</button>
+                      )}
+                  </div>
+                  
+                  <div className="text-center">
+                      <p className="text-4xl font-black font-mono">{formatTime(recordingState === 'review' ? playbackTime : recordingDuration)}</p>
+                      <p className="text-gray-400 font-bold uppercase text-xs mt-2 tracking-widest">
+                          {recordingState === 'recording' ? 'Enregistrement...' : recordingState === 'review' ? 'Réécoute du rapport' : 'Appuie pour parler'}
+                      </p>
+                  </div>
+              </div>
+
+              {recordingState === 'review' && (
+                <div className="space-y-4 animate-fade-in">
+                   <select 
+                     className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none"
+                     value={formReport.client}
+                     onChange={(e) => setFormReport({...formReport, client: e.target.value})}
+                   >
+                     <option value="">Sélectionner le client...</option>
+                     {interventions.map(i => <option key={i.id} value={i.client}>{i.client}</option>)}
+                   </select>
+                   <button 
+                     onClick={handleSubmitReport} 
+                     disabled={isSaving || !formReport.client}
+                     className="w-full py-5 bg-gray-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl flex justify-center items-center gap-2"
+                   >
+                     {isSaving ? <Loader2 className="animate-spin"/> : 'Envoyer au bureau'}
+                   </button>
+                </div>
+              )}
+           </div>
+        </div>
+      )}
+
+      {/* MODAL NOUVELLE INTERVENTION */}
+      {showNewInterventionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+           <div className="bg-white w-full max-w-xl rounded-[3rem] p-8 animate-scale-in max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-2xl font-black text-gray-800">Planifier Intervention</h3>
+                  <button onClick={() => setShowNewInterventionModal(false)}><X/></button>
+              </div>
+              <div className="space-y-4">
+                  <input type="text" placeholder="Client" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
+                  <input type="text" placeholder="Lieu / Site" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={newIntervention.site} onChange={e => setNewIntervention({...newIntervention, site: e.target.value as Site})}/>
+                  <textarea placeholder="Description du travail" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none h-32" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})} />
+                  <button onClick={handleCreateIntervention} disabled={isSaving} className="w-full py-5 bg-green-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl">
+                      {isSaving ? 'Création...' : 'Valider Planning'}
+                  </button>
+              </div>
+           </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Technicians;

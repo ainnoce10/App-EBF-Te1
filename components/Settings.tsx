@@ -33,24 +33,19 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     const colorToAdd = selectedColor;
 
     try {
-      // Tentative d'insertion dans Supabase
       const { error } = await supabase
           .from('ticker_messages')
           .insert([{ content: contentToAdd, color: colorToAdd }]);
       
       if (error) throw error;
       
-      // Si succès, on vide le champ. 
-      // La mise à jour de la liste se fait via le Realtime dans App.tsx
       setNewMessage('');
       setSelectedColor('neutral');
 
     } catch (error: any) {
       console.error("Erreur insertion:", error);
-      
-      // Analyse du code d'erreur Supabase courant pour RLS (42501)
       if (error.code === '42501' || error.message?.includes('policy')) {
-          alert("ERREUR DE PERMISSION :\n\nSupabase bloque l'ajout car la sécurité RLS est active.\n\nCliquez sur le bouton bleu 'Débloquer les Permissions' ci-dessus, copiez le code, et collez-le dans l'éditeur SQL de votre dashboard Supabase.");
+          alert("ERREUR DE PERMISSION :\n\nSupabase bloque l'ajout car la sécurité RLS est active.\n\nCliquez sur le bouton bleu 'Débloquer les Permissions' ci-dessus.");
       } else {
           alert(`Erreur lors de l'ajout : ${error.message || "Problème de connexion"}`);
       }
@@ -87,21 +82,10 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   };
 
   const getRlsFixScript = () => `
--- 1. On s'assure que la table a les bonnes colonnes
--- (Si elles existent déjà, SQL ignorera ces lignes ou fera une erreur sans gravité)
--- ALTER TABLE ticker_messages ADD COLUMN IF NOT EXISTS content TEXT;
--- ALTER TABLE ticker_messages ADD COLUMN IF NOT EXISTS color TEXT DEFAULT 'neutral';
-
--- 2. On autorise l'accès public (Lecture/Ecriture) pour le prototype
+-- Débloquer l'accès public pour la table ticker_messages
 ALTER TABLE ticker_messages ENABLE ROW LEVEL SECURITY;
-
 DROP POLICY IF EXISTS "Accès total public" ON ticker_messages;
-
-CREATE POLICY "Accès total public" 
-ON ticker_messages 
-FOR ALL 
-USING (true) 
-WITH CHECK (true);
+CREATE POLICY "Accès total public" ON ticker_messages FOR ALL USING (true) WITH CHECK (true);
 `;
 
   const copyToClipboard = () => {
@@ -123,12 +107,11 @@ WITH CHECK (true);
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Paramètres</h2>
-          <p className="text-gray-500 text-sm">Gestion des messages flash et accès</p>
+          <p className="text-gray-500 text-sm">Gestion des messages flash</p>
         </div>
         {isUpdating && <Loader2 size={24} className="text-orange-500 animate-spin" />}
       </div>
 
-      {/* SECTION DIAGNOSTIC - PRIORITAIRE */}
       <div className="bg-blue-600 rounded-3xl shadow-lg p-6 flex flex-col md:flex-row items-center justify-between gap-6 text-white overflow-hidden relative">
           <div className="absolute top-0 right-0 p-4 opacity-10">
               <Database size={120} />
@@ -140,7 +123,7 @@ WITH CHECK (true);
               <div>
                   <h4 className="font-black text-xl md:text-2xl tracking-tight">Problème d'ajout ?</h4>
                   <p className="text-blue-100 text-sm md:text-base font-medium opacity-90">
-                    Supabase demande une autorisation SQL pour permettre l'écriture.
+                    Débloquez l'écriture SQL sur Supabase.
                   </p>
               </div>
           </div>
@@ -152,7 +135,6 @@ WITH CHECK (true);
           </button>
       </div>
 
-      {/* SECTION MESSAGES */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-6 md:p-8 border-b border-gray-100 bg-orange-50 flex items-center gap-4">
            <div className="bg-orange-500 p-2.5 rounded-xl text-white shadow-md">
@@ -189,7 +171,7 @@ WITH CHECK (true);
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleAddMessage()}
-                            placeholder="Ex: Arrivage de nouveaux câbles R2V..."
+                            placeholder="Ex: Arrivage de nouveaux câbles..."
                             className="flex-1 p-5 bg-white border-2 border-gray-100 rounded-2xl font-bold text-gray-800 outline-none focus:border-orange-500 shadow-inner"
                         />
                         <button 
@@ -227,7 +209,6 @@ WITH CHECK (true);
                        <button 
                          onClick={() => handleDeleteMessage(msg)}
                          className="p-3 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all shadow-sm hover:shadow-md"
-                         title="Supprimer"
                        >
                          <Trash2 size={20} />
                        </button>
@@ -243,38 +224,25 @@ WITH CHECK (true);
         </div>
       </div>
 
-      {/* MODAL SQL FIX */}
       {showSql && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
-           <div className="bg-white w-full max-w-2xl rounded-[3rem] flex flex-col overflow-hidden shadow-2xl animate-scale-in">
+           <div className="bg-white w-full max-w-2xl rounded-[3rem] flex flex-col overflow-hidden shadow-2xl">
               <div className="p-8 border-b flex justify-between items-center bg-blue-50">
                   <h3 className="font-black text-2xl flex items-center gap-3 text-blue-900">
                       <Code size={28} className="text-blue-600"/> Correction SQL
                   </h3>
-                  <button onClick={() => setShowSql(false)} className="p-2 bg-white rounded-full text-gray-400 hover:text-red-500 transition-colors shadow-sm"><X size={24}/></button>
+                  <button onClick={() => setShowSql(false)} className="p-2 bg-white rounded-full text-gray-400"><X size={24}/></button>
               </div>
               <div className="p-8">
-                  <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r-xl">
-                      <p className="text-sm text-yellow-800 font-bold">
-                        Étape 1 : Allez sur votre tableau de bord Supabase.<br/>
-                        Étape 2 : Cliquez sur "SQL Editor" dans le menu à gauche.<br/>
-                        Étape 3 : Collez le code ci-dessous et cliquez sur "Run".
-                      </p>
-                  </div>
-                  <div className="relative group">
-                    <pre className="bg-gray-900 text-green-400 p-6 rounded-2xl text-xs md:text-sm font-mono overflow-auto max-h-60 mb-8 border-4 border-gray-800">
+                  <pre className="bg-gray-900 text-green-400 p-6 rounded-2xl text-xs md:text-sm font-mono overflow-auto max-h-60 mb-8">
                         {getRlsFixScript()}
-                    </pre>
-                    <button 
-                        onClick={copyToClipboard} 
-                        className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all flex items-center gap-2 font-bold text-xs"
-                    >
-                        <Copy size={16}/> Copier
-                    </button>
-                  </div>
-                  <div className="flex justify-center">
-                      <button onClick={() => setShowSql(false)} className="px-12 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-lg hover:bg-blue-700 transition-all">
-                        C'est fait !
+                  </pre>
+                  <div className="flex justify-center gap-4">
+                      <button onClick={copyToClipboard} className="px-12 py-4 bg-orange-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-lg">
+                        Copier
+                      </button>
+                      <button onClick={() => setShowSql(false)} className="px-12 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-lg">
+                        Fermer
                       </button>
                   </div>
               </div>
