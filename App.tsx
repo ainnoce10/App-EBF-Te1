@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -32,14 +31,6 @@ const App: React.FC = () => {
   
   // Indicateur de connexion
   const [isLive, setIsLive] = useState(false);
-
-  // --- DÉTECTION MODE TV AUTOMATIQUE ---
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('mode') === 'tv') {
-        setActiveTab('showcase');
-    }
-  }, []);
 
   // Fonction générique pour charger les données
   const fetchData = async () => {
