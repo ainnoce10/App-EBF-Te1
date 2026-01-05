@@ -222,7 +222,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                     key={planningPage} // Important pour relancer l'animation à chaque changement de page
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 overflow-hidden content-start pb-20 animate-slide-up"
                 >
-                    {currentPlanningSlice.map((inter, i) => (
+                    {currentPlanningSlice.map((inter) => (
                         <div key={inter.id} className="bg-white/5 border border-white/10 p-6 md:p-10 rounded-3xl flex flex-col justify-between gap-4 shadow-xl hover:bg-white/10 transition-colors h-full min-h-[350px]">
                             
                             {/* Header Card */}
