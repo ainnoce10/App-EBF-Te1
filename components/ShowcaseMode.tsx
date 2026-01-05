@@ -36,15 +36,23 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   
   // Audio state
   const [isMuted, setIsMuted] = useState(true);
+  const [audioSrc, setAudioSrc] = useState('');
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const products = liveStock.length > 0 ? liveStock : [];
   const planning = liveInterventions.length > 0 ? liveInterventions : [];
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
+  // Chargement de la musique depuis les paramètres (localStorage)
+  useEffect(() => {
+    const savedMusic = localStorage.getItem('ebf_tv_music_url');
+    // URL par défaut si rien n'est configuré
+    setAudioSrc(savedMusic || 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=corporate-ambient-14224.mp3');
+  }, []);
+
   // Gestion Audio
   useEffect(() => {
-    if (audioRef.current) {
+    if (audioRef.current && audioSrc) {
         if (isMuted) {
             audioRef.current.pause();
         } else {
@@ -57,7 +65,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
             }
         }
     }
-  }, [isMuted]);
+  }, [isMuted, audioSrc]);
 
   const getMessageColorClass = (color: string) => {
     switch(color) {
@@ -120,8 +128,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   return (
     <div className="fixed inset-0 z-[500] bg-black flex flex-col overflow-hidden font-sans select-none text-white">
       
-      {/* Musique de fond (Libre de droit - Corporate Ambient) */}
-      <audio ref={audioRef} loop src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=corporate-ambient-14224.mp3" />
+      {/* Musique de fond */}
+      {audioSrc && <audio ref={audioRef} loop src={audioSrc} />}
 
       {/* HEADER TV */}
       <div className="bg-gray-950 px-4 py-4 md:px-10 md:h-28 flex flex-col md:flex-row items-center justify-between border-b-4 md:border-b-[8px] border-orange-600 shadow-2xl z-50 gap-4 md:gap-0 shrink-0 transition-colors duration-500">

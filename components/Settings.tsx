@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Megaphone, 
   Trash2, 
@@ -8,7 +8,10 @@ import {
   Code,
   X,
   ShieldAlert,
-  Plus
+  Plus,
+  Music,
+  PlayCircle,
+  Save
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { TickerMessage } from '../types';
@@ -18,11 +21,38 @@ interface SettingsProps {
   onUpdateMessages?: (messages: TickerMessage[]) => void;
 }
 
+const MUSIC_PRESETS = [
+  { name: 'Ambiance Corporate', url: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=corporate-ambient-14224.mp3' },
+  { name: 'Piano Doux', url: 'https://cdn.pixabay.com/download/audio/2022/03/09/audio_822ca808a3.mp3?filename=piano-moment-14032.mp3' },
+  { name: 'Lounge Chill', url: 'https://cdn.pixabay.com/download/audio/2020/05/20/audio_145d04589d.mp3?filename=lounge-11005.mp3' },
+  { name: 'Focus Travail', url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf87a.mp3?filename=lofi-study-112191.mp3' }
+];
+
 const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const [newMessage, setNewMessage] = useState('');
   const [selectedColor, setSelectedColor] = useState<'green' | 'yellow' | 'red' | 'neutral'>('neutral');
   const [isUpdating, setIsUpdating] = useState(false);
   const [showSql, setShowSql] = useState(false);
+  
+  // State pour la musique
+  const [musicUrl, setMusicUrl] = useState('');
+
+  useEffect(() => {
+    // Charger la musique sauvegardée au chargement
+    const savedMusic = localStorage.getItem('ebf_tv_music_url');
+    if (savedMusic) {
+        setMusicUrl(savedMusic);
+    } else {
+        setMusicUrl(MUSIC_PRESETS[0].url);
+    }
+  }, []);
+
+  const handleSaveMusic = () => {
+    if (musicUrl) {
+        localStorage.setItem('ebf_tv_music_url', musicUrl);
+        alert("Musique sauvegardée ! Elle sera jouée lors de la prochaine diffusion TV.");
+    }
+  };
 
   const handleAddMessage = async () => {
     if (!newMessage.trim()) return;
@@ -211,29 +241,74 @@ insert into public.ticker_messages (content, color) values
         {isUpdating && <Loader2 size={24} className="text-orange-500 animate-spin" />}
       </div>
 
-      <div className="bg-blue-600 rounded-3xl shadow-lg p-6 flex flex-col md:flex-row items-center justify-between gap-6 text-white overflow-hidden relative">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Database size={120} />
-          </div>
-          <div className="flex items-center gap-6 relative z-10">
-              <div className="bg-white/20 p-4 rounded-2xl backdrop-blur-md">
-                  <ShieldAlert size={32} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Card Config DB */}
+          <div className="bg-blue-600 rounded-3xl shadow-lg p-6 flex flex-col justify-between text-white overflow-hidden relative min-h-[180px]">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <Database size={120} />
               </div>
-              <div>
-                  <h4 className="font-black text-xl md:text-2xl tracking-tight">Configuration Supabase</h4>
-                  <p className="text-blue-100 text-sm md:text-base font-medium opacity-90">
-                    Copiez le script pour créer les tables et colonnes.
+              <div className="relative z-10 mb-4">
+                  <div className="flex items-center gap-3 mb-2">
+                      <ShieldAlert size={24} className="text-blue-200" />
+                      <h4 className="font-black text-xl tracking-tight">Base de Données</h4>
+                  </div>
+                  <p className="text-blue-100 text-sm font-medium opacity-90">
+                    Générer les tables Supabase requises.
                   </p>
               </div>
+              <button 
+                onClick={() => setShowSql(true)}
+                className="w-full px-6 py-3 bg-white text-blue-700 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl hover:scale-105 transition-all active:scale-95 flex items-center justify-center gap-2 relative z-10"
+              >
+                <Code size={16}/> Configurer SQL
+              </button>
           </div>
-          <button 
-            onClick={() => setShowSql(true)}
-            className="w-full md:w-auto px-8 py-4 bg-white text-blue-700 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:scale-105 transition-all active:scale-95 flex items-center justify-center gap-3 relative z-10"
-          >
-            <Code size={20}/> Configuration SQL
-          </button>
+
+          {/* Card Config Music TV */}
+          <div className="bg-purple-700 rounded-3xl shadow-lg p-6 flex flex-col justify-between text-white overflow-hidden relative min-h-[180px]">
+               <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <Music size={120} />
+              </div>
+              <div className="relative z-10 mb-4">
+                  <div className="flex items-center gap-3 mb-2">
+                      <Music size={24} className="text-purple-200" />
+                      <h4 className="font-black text-xl tracking-tight">Ambiance TV</h4>
+                  </div>
+                  <p className="text-purple-100 text-sm font-medium opacity-90">
+                    Choisir la musique de fond du mode diffusion.
+                  </p>
+              </div>
+              
+              <div className="relative z-10 space-y-3">
+                  <input 
+                    type="text" 
+                    placeholder="Coller un lien MP3..." 
+                    value={musicUrl}
+                    onChange={(e) => setMusicUrl(e.target.value)}
+                    className="w-full px-4 py-2 rounded-xl bg-purple-900/50 border border-purple-500/30 text-white placeholder-purple-300 text-xs font-bold outline-none focus:border-purple-300 transition-colors"
+                  />
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                      {MUSIC_PRESETS.map((p, i) => (
+                          <button 
+                            key={i}
+                            onClick={() => setMusicUrl(p.url)}
+                            className="shrink-0 px-3 py-1.5 bg-purple-600 rounded-lg text-[10px] font-bold uppercase hover:bg-white hover:text-purple-700 transition-colors"
+                          >
+                             {p.name}
+                          </button>
+                      ))}
+                  </div>
+                  <button 
+                    onClick={handleSaveMusic}
+                    className="w-full px-4 py-2 bg-white text-purple-700 rounded-xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform flex items-center justify-center gap-2"
+                  >
+                     <Save size={14} /> Sauvegarder
+                  </button>
+              </div>
+          </div>
       </div>
 
+      {/* SECTION FLASH INFO */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-6 md:p-8 border-b border-gray-100 bg-orange-50 flex items-center gap-4">
            <div className="bg-orange-500 p-2.5 rounded-xl text-white shadow-md">

@@ -17,7 +17,12 @@ import {
   Phone,
   Briefcase,
   Layers,
-  User
+  User,
+  Edit,
+  Save,
+  CheckCircle2,
+  Clock,
+  AlertCircle
 } from 'lucide-react';
 
 interface TechniciansProps {
@@ -33,11 +38,16 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     setInterventions(initialData);
   }, [initialData]);
 
+  // Modals state
   const [showReportModal, setShowReportModal] = useState(false);
   const [showNewInterventionModal, setShowNewInterventionModal] = useState(false);
+  const [editIntervention, setEditIntervention] = useState<Intervention | null>(null); // Pour l'édition
+
+  // Feedback state
   const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
   const [celebrationMessage, setCelebrationMessage] = useState({ title: 'ENVOYÉ !', sub: 'Ton travail est bien enregistré.' });
   
+  // Forms state
   const [formReport, setFormReport] = useState({ client: '', workDone: '', status: 'Terminé' });
   const [newIntervention, setNewIntervention] = useState({
     client: '',
@@ -49,6 +59,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     date: new Date().toISOString().split('T')[0]
   });
 
+  // Audio recording state
   const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'review'>('idle');
   const [recordingDuration, setRecordingDuration] = useState(0);
   const timerRef = useRef<number | null>(null);
@@ -95,6 +106,31 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     setTimeout(() => setShowSuccessCelebration(false), 3000);
   };
 
+  // Mise à jour via le bouton EDITER
+  const handleUpdateIntervention = async () => {
+    if (!editIntervention) return;
+    setIsSaving(true);
+    try {
+        const { error } = await supabase
+            .from('interventions')
+            .update({
+                status: editIntervention.status,
+                description: editIntervention.description,
+                technician: editIntervention.technician,
+                date: editIntervention.date
+            })
+            .eq('id', editIntervention.id);
+
+        if (error) throw error;
+        triggerCelebration('MIS À JOUR !', 'Le statut a été modifié.');
+        setEditIntervention(null);
+    } catch (err: any) {
+        alert("Erreur de mise à jour : " + err.message);
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
   const handleSubmitReport = async () => {
     const target = interventions.find(i => i.client === formReport.client);
     if (!target) return;
@@ -128,7 +164,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       const { error } = await supabase.from('interventions').insert([{
         id,
         ...newIntervention,
-        technician: 'Admin EBF',
+        technician: 'À assigner',
         status: 'En attente'
       }]);
       if (error) throw error;
@@ -160,6 +196,15 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const filteredInterventions = interventions.filter(i => 
     i.client.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const getStatusColorClass = (status: string) => {
+      switch(status) {
+          case 'Terminé': return 'bg-green-100 text-green-700 border-green-200';
+          case 'En cours': return 'bg-orange-100 text-orange-700 border-orange-200';
+          case 'En attente': return 'bg-blue-100 text-blue-700 border-blue-200';
+          default: return 'bg-gray-100 text-gray-700';
+      }
+  };
 
   return (
     <div className="space-y-6 pb-20">
@@ -202,14 +247,23 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredInterventions.map((inter) => (
           <div key={inter.id} className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 hover-lift relative group overflow-hidden">
-            <div className="flex justify-between mb-4">
-              <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${inter.status === 'Terminé' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+            <div className="flex justify-between items-start mb-4">
+              <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${getStatusColorClass(inter.status)}`}>
                 {inter.status}
               </span>
-              <span className="text-[10px] text-gray-300 font-mono">#{inter.id.split('-')[1]}</span>
+              <div className="flex gap-2">
+                  <button 
+                    onClick={() => setEditIntervention(inter)}
+                    className="p-2 bg-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
+                  >
+                      <Edit size={16} strokeWidth={2.5}/>
+                  </button>
+                  <span className="text-[10px] text-gray-300 font-mono mt-2">#{inter.id.split('-')[1]}</span>
+              </div>
             </div>
-            <h3 className="font-black text-xl mb-2 text-gray-900">{inter.client}</h3>
-            <p className="text-gray-500 text-sm mb-6 line-clamp-2">{inter.description}</p>
+            
+            <h3 className="font-black text-xl mb-2 text-gray-900 leading-tight">{inter.client}</h3>
+            <p className="text-gray-500 text-sm mb-6 line-clamp-2 min-h-[2.5rem]">{inter.description}</p>
             
             <div className="space-y-2 mb-6">
                 <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase">
@@ -223,10 +277,13 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
             <div className="flex items-center gap-4 pt-4 border-t border-gray-50 text-[10px] font-black uppercase text-gray-400">
                <div className="flex items-center gap-1"><MapPin size={12}/> {inter.site}</div>
                <div className="flex items-center gap-1"><Calendar size={12}/> {new Date(inter.date).toLocaleDateString()}</div>
+               <div className="flex items-center gap-1 ml-auto text-gray-500"><User size={12}/> {inter.technician}</div>
             </div>
+            
+            {/* Quick Action Overlay (optionnel, gardé pour la compatibilité) */}
             <button 
                 onClick={() => { setFormReport({ ...formReport, client: inter.client }); setShowReportModal(true); }} 
-                className="absolute bottom-4 right-4 p-3 bg-orange-50 rounded-2xl text-orange-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-orange-500 hover:text-white"
+                className="absolute bottom-4 right-4 p-3 bg-orange-50 rounded-2xl text-orange-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-orange-500 hover:text-white shadow-lg"
             >
               <Mic size={20} />
             </button>
@@ -239,6 +296,108 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
             </div>
         )}
       </div>
+
+      {/* --- MODAL EDITION STATUT --- */}
+      {editIntervention && (
+        <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+           <div className="bg-white w-full rounded-t-[2.5rem] md:rounded-[3rem] p-8 md:p-10 animate-slide-up max-w-lg mx-auto shadow-2xl">
+               <div className="flex justify-between items-center mb-8">
+                   <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Modifier l'intervention</h3>
+                   <button onClick={() => setEditIntervention(null)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200"><X size={20}/></button>
+               </div>
+
+               <div className="space-y-6">
+                   {/* STATUS SELECTOR */}
+                   <div className="space-y-3">
+                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Statut d'avancement</label>
+                       <div className="grid grid-cols-1 gap-3">
+                           <button 
+                             onClick={() => setEditIntervention({...editIntervention, status: 'En attente'})}
+                             className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all group ${editIntervention.status === 'En attente' ? 'bg-blue-50 border-blue-500' : 'bg-gray-50 border-transparent hover:bg-white'}`}
+                           >
+                               <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${editIntervention.status === 'En attente' ? 'border-blue-500' : 'border-gray-300'}`}>
+                                   {editIntervention.status === 'En attente' && <div className="w-3 h-3 bg-blue-500 rounded-full"/>}
+                               </div>
+                               <div className="text-left">
+                                   <p className={`font-black uppercase text-sm ${editIntervention.status === 'En attente' ? 'text-blue-700' : 'text-gray-500'}`}>En Attente</p>
+                                   <p className="text-[10px] text-gray-400 font-bold">Dossier créé, technicien à confirmer</p>
+                               </div>
+                               <AlertCircle className={`ml-auto ${editIntervention.status === 'En attente' ? 'text-blue-500' : 'text-gray-300'}`} size={20} />
+                           </button>
+
+                           <button 
+                             onClick={() => setEditIntervention({...editIntervention, status: 'En cours'})}
+                             className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all group ${editIntervention.status === 'En cours' ? 'bg-orange-50 border-orange-500' : 'bg-gray-50 border-transparent hover:bg-white'}`}
+                           >
+                               <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${editIntervention.status === 'En cours' ? 'border-orange-500' : 'border-gray-300'}`}>
+                                   {editIntervention.status === 'En cours' && <div className="w-3 h-3 bg-orange-500 rounded-full"/>}
+                               </div>
+                               <div className="text-left">
+                                   <p className={`font-black uppercase text-sm ${editIntervention.status === 'En cours' ? 'text-orange-700' : 'text-gray-500'}`}>En Cours</p>
+                                   <p className="text-[10px] text-gray-400 font-bold">Technicien sur site ou travaux débutés</p>
+                               </div>
+                               <Clock className={`ml-auto ${editIntervention.status === 'En cours' ? 'text-orange-500' : 'text-gray-300'}`} size={20} />
+                           </button>
+
+                           <button 
+                             onClick={() => setEditIntervention({...editIntervention, status: 'Terminé'})}
+                             className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all group ${editIntervention.status === 'Terminé' ? 'bg-green-50 border-green-500' : 'bg-gray-50 border-transparent hover:bg-white'}`}
+                           >
+                               <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${editIntervention.status === 'Terminé' ? 'border-green-500' : 'border-gray-300'}`}>
+                                   {editIntervention.status === 'Terminé' && <div className="w-3 h-3 bg-green-500 rounded-full"/>}
+                               </div>
+                               <div className="text-left">
+                                   <p className={`font-black uppercase text-sm ${editIntervention.status === 'Terminé' ? 'text-green-700' : 'text-gray-500'}`}>Exécuté / Terminé</p>
+                                   <p className="text-[10px] text-gray-400 font-bold">Travaux finalisés et validés</p>
+                               </div>
+                               <CheckCircle2 className={`ml-auto ${editIntervention.status === 'Terminé' ? 'text-green-500' : 'text-gray-300'}`} size={20} />
+                           </button>
+                       </div>
+                   </div>
+
+                   {/* TECHNICIAN & DETAILS */}
+                   <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-2">
+                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Technicien</label>
+                           <input 
+                             type="text" 
+                             value={editIntervention.technician} 
+                             onChange={(e) => setEditIntervention({...editIntervention, technician: e.target.value})}
+                             className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-gray-300"
+                           />
+                       </div>
+                       <div className="space-y-2">
+                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</label>
+                           <input 
+                             type="date" 
+                             value={editIntervention.date} 
+                             onChange={(e) => setEditIntervention({...editIntervention, date: e.target.value})}
+                             className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-gray-300"
+                           />
+                       </div>
+                   </div>
+                   
+                   <div className="space-y-2">
+                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Description</label>
+                       <textarea 
+                           value={editIntervention.description} 
+                           onChange={(e) => setEditIntervention({...editIntervention, description: e.target.value})}
+                           className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-gray-300 h-24 resize-none"
+                       />
+                   </div>
+
+                   <button 
+                     onClick={handleUpdateIntervention} 
+                     disabled={isSaving}
+                     className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl hover:bg-black transition-all active:scale-95"
+                   >
+                       {isSaving ? <Loader2 className="animate-spin"/> : <Save size={18} />}
+                       {isSaving ? 'Mise à jour...' : 'Enregistrer les modifications'}
+                   </button>
+               </div>
+           </div>
+        </div>
+      )}
 
       {/* MODAL REPORT VOCAL */}
       {showReportModal && (
