@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StockItem, Intervention, TickerMessage } from '../types';
 import { 
   X, 
@@ -12,7 +12,9 @@ import {
   Clock,
   MapPin,
   Briefcase,
-  Layers
+  Layers,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 interface ShowcaseModeProps {
@@ -32,12 +34,31 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const [productIdx, setProductIdx] = useState(0);
   const [planningPage, setPlanningPage] = useState(0);
   
+  // Audio state
+  const [isMuted, setIsMuted] = useState(true);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
   const products = liveStock.length > 0 ? liveStock : [];
   const planning = liveInterventions.length > 0 ? liveInterventions : [];
-  // Fallback si vide, on crée un objet par défaut
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
-  // Mapping des couleurs pour le mode sombre (TV)
+  // Gestion Audio
+  useEffect(() => {
+    if (audioRef.current) {
+        if (isMuted) {
+            audioRef.current.pause();
+        } else {
+            audioRef.current.volume = 0.3; // Volume doux
+            const playPromise = audioRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log("Lecture auto bloquée par le navigateur:", error);
+                });
+            }
+        }
+    }
+  }, [isMuted]);
+
   const getMessageColorClass = (color: string) => {
     switch(color) {
         case 'green': return 'text-green-400';
@@ -47,14 +68,12 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     }
   };
 
-  // Date du jour dynamique pour le titre
   const todayDate = new Date().toLocaleDateString('fr-FR', { 
     weekday: 'long', 
     day: 'numeric', 
     month: 'long' 
   });
 
-  // Fonction pour calculer la taille de police idéale selon la longueur du texte
   const getTitleSizeClass = (text: string) => {
     const len = text.length;
     if (len < 20) return "text-3xl md:text-6xl lg:text-7xl xl:text-8xl"; 
@@ -63,15 +82,15 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return "text-lg md:text-3xl lg:text-4xl xl:text-5xl"; 
   };
 
-  // 1. Alternance automatique des modes (PRODUIT <-> PLANNING) toutes les 60 secondes
+  // 1. Alternance automatique (60s)
   useEffect(() => {
     const modeInterval = setInterval(() => {
       setActiveMode((prev) => (prev === 'PUBLICITE' ? 'PLANNING' : 'PUBLICITE'));
-    }, 60000); // 1 minute
+    }, 60000); 
     return () => clearInterval(modeInterval);
   }, []);
 
-  // 2. Rotation des produits (10s)
+  // 2. Rotation Produits (10s)
   useEffect(() => {
     if (activeMode !== 'PUBLICITE' || products.length === 0) return;
     const interval = setInterval(() => {
@@ -80,18 +99,18 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return () => clearInterval(interval);
   }, [activeMode, products.length]);
 
-  // 3. Rotation du planning (3 par page, toutes les 20s)
+  // 3. Rotation Planning (20s)
   const itemsPerPage = 3;
   const totalPlanningPages = Math.ceil(planning.length / itemsPerPage) || 1;
 
   useEffect(() => {
     if (activeMode !== 'PLANNING' || planning.length === 0) {
-        setPlanningPage(0); // Reset page quand on quitte ou arrive
+        setPlanningPage(0); 
         return;
     }
     const interval = setInterval(() => {
       setPlanningPage((prev) => (prev + 1) % totalPlanningPages);
-    }, 20000); // 20 secondes
+    }, 20000); 
     return () => clearInterval(interval);
   }, [activeMode, planning.length, totalPlanningPages]);
 
@@ -101,8 +120,11 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   return (
     <div className="fixed inset-0 z-[500] bg-black flex flex-col overflow-hidden font-sans select-none text-white">
       
-      {/* HEADER TV - RESPONSIVE */}
-      <div className="bg-gray-950 px-4 py-4 md:px-10 md:h-28 flex flex-col md:flex-row items-center justify-between border-b-4 md:border-b-[8px] border-orange-600 shadow-2xl z-50 gap-4 md:gap-0 shrink-0">
+      {/* Musique de fond (Libre de droit - Corporate Ambient) */}
+      <audio ref={audioRef} loop src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=corporate-ambient-14224.mp3" />
+
+      {/* HEADER TV */}
+      <div className="bg-gray-950 px-4 py-4 md:px-10 md:h-28 flex flex-col md:flex-row items-center justify-between border-b-4 md:border-b-[8px] border-orange-600 shadow-2xl z-50 gap-4 md:gap-0 shrink-0 transition-colors duration-500">
           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 w-full md:w-auto">
               <div className="bg-yellow-500 px-4 py-2 md:px-6 md:py-4 rounded-xl md:rounded-2xl shadow-[0_0_30px_rgba(234,179,8,0.4)] md:-rotate-1">
                  <span className="font-black text-xl md:text-4xl tracking-tighter shadow-sm">
@@ -132,6 +154,14 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           </div>
 
           <div className="flex items-center gap-4 md:gap-8 absolute top-4 right-4 md:static">
+              {/* Bouton Mute/Unmute */}
+              <button 
+                onClick={() => setIsMuted(!isMuted)}
+                className={`p-3 rounded-full border transition-all ${isMuted ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-green-500/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'}`}
+              >
+                  {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              </button>
+
               <div className="hidden md:flex bg-green-600/10 px-4 py-2 rounded-full border border-green-500/30 items-center gap-3">
                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.8)]"></div>
                  <span className="text-green-500 font-black text-lg uppercase tracking-widest">En Direct</span>
@@ -144,19 +174,17 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           </div>
       </div>
 
-      {/* CONTENU PRINCIPAL - RESPONSIVE */}
-      <div className="flex-1 flex overflow-hidden relative bg-gray-900">
+      {/* CONTENU PRINCIPAL - ANIMATION BACKGROUND ET CONTENU */}
+      {/* Modification ici : Changement de fond dynamique selon le mode */}
+      <div className={`flex-1 flex overflow-hidden relative transition-colors duration-1000 ease-in-out ${activeMode === 'PLANNING' ? 'bg-[#0f172a]' : 'bg-gray-900'}`}>
+          
           {activeMode === 'PUBLICITE' && currentProduct ? (
             <div className="flex flex-col lg:flex-row w-full animate-fade-in h-full">
-                {/* ZONE IMAGE - Haut sur mobile, Gauche sur desktop */}
+                {/* ZONE IMAGE */}
                 <div className="w-full lg:w-[45%] h-[45%] lg:h-full relative flex items-center justify-center p-4 md:p-8 bg-gray-950 overflow-hidden shrink-0">
                     <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/10 to-transparent opacity-50"></div>
-                    
-                    {/* Container avec key pour relancer l'animation d'entrée à chaque changement de produit */}
                     <div key={currentProduct.id} className="relative w-full h-full flex items-center justify-center animate-scale-in">
-                        {/* Blob/Glow arrière plan pour effet de profondeur */}
                         <div className="absolute w-[90%] h-[90%] bg-white/5 blur-[60px] rounded-full animate-pulse-slow"></div>
-                        
                         <img 
                           src={currentProduct.imageUrls?.[0] || 'https://placehold.co/800x800/1a1a1a/ffffff?text=EBF+Ivoire'} 
                           alt={currentProduct.name}
@@ -165,18 +193,14 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                     </div>
                 </div>
                 
-                {/* ZONE TEXTE - Bas sur mobile, Droite sur desktop */}
+                {/* ZONE TEXTE */}
                 <div className="w-full lg:w-[55%] h-[55%] lg:h-full bg-white text-gray-950 flex flex-col p-6 md:p-16 justify-center shadow-[-20px_0_100px_rgba(0,0,0,0.4)] relative overflow-hidden">
-                    
                     <div className="flex flex-col h-full justify-between space-y-4 md:space-y-8 animate-slide-up relative z-10 max-h-full">
-                        
-                        {/* Wrapper avec scroll caché si besoin. m-auto permet de centrer verticalement si l'espace le permet, sinon ça commence en haut. */}
                         <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar flex flex-col">
                             <div className="m-auto w-full pt-4 md:pt-0">
                                 <span className="px-4 py-1.5 md:px-8 md:py-3 bg-orange-600 text-white rounded-lg md:rounded-xl text-xs md:text-2xl font-black uppercase mb-2 md:mb-6 inline-block shadow-lg tracking-widest shrink-0">
                                 {currentProduct.category}
                                 </span>
-                                {/* Utilisation de la fonction dynamique pour la taille de police */}
                                 <h1 className={`${getTitleSizeClass(currentProduct.name)} font-black leading-tight md:leading-[0.95] tracking-tighter mb-4 md:mb-8 text-gray-950 uppercase italic line-clamp-5`}>
                                 {currentProduct.name}
                                 </h1>
@@ -199,14 +223,13 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                 </div>
             </div>
           ) : activeMode === 'PLANNING' ? (
-             <div className="flex w-full bg-gray-950 p-6 md:p-16 animate-fade-in flex-col h-full overflow-hidden">
+             <div className="flex w-full p-6 md:p-16 animate-fade-in flex-col h-full overflow-hidden">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 md:mb-10 shrink-0 border-b border-white/10 pb-6 gap-4">
                     <div className="flex flex-col md:flex-row md:items-baseline gap-4 md:gap-8">
-                      <h2 className="text-2xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white uppercase italic truncate">
+                      <h2 className="text-2xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white uppercase italic truncate drop-shadow-lg">
                           Chantiers EBF
                       </h2>
-                      {/* Date déplacée ICI */}
-                      <span className="text-orange-500 font-bold text-lg md:text-4xl uppercase tracking-widest">
+                      <span className="text-blue-400 font-bold text-lg md:text-4xl uppercase tracking-widest drop-shadow-md">
                          {todayDate}
                       </span>
                     </div>
@@ -219,62 +242,65 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                 
                 {/* Grille ajustée pour 3 items max */}
                 <div 
-                    key={planningPage} // Important pour relancer l'animation à chaque changement de page
+                    key={planningPage} 
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 overflow-hidden content-start pb-20 animate-slide-up"
                 >
                     {currentPlanningSlice.map((inter) => (
-                        <div key={inter.id} className="bg-white/5 border border-white/10 p-6 md:p-10 rounded-3xl flex flex-col justify-between gap-4 shadow-xl hover:bg-white/10 transition-colors h-full min-h-[350px]">
+                        <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-6 md:p-10 rounded-3xl flex flex-col justify-between gap-4 shadow-2xl hover:bg-white/15 transition-all duration-300 hover:-translate-y-2 h-full min-h-[350px]">
                             
                             {/* Header Card */}
                             <div className="flex justify-between items-start">
                                 <div className="flex flex-col gap-2">
-                                    <span className={`px-4 py-2 rounded-xl font-black text-xs md:text-sm uppercase tracking-widest inline-block text-center
-                                      ${inter.status === 'Terminé' ? 'bg-green-500/20 text-green-400' : 
-                                        inter.status === 'En cours' ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-700 text-gray-300'}`}>
+                                    {/* Modification ici : Statut "En attente" en bleu */}
+                                    <span className={`px-4 py-2 rounded-xl font-black text-xs md:text-sm uppercase tracking-widest inline-block text-center shadow-lg
+                                      ${inter.status === 'Terminé' ? 'bg-green-500 text-white' : 
+                                        inter.status === 'En cours' ? 'bg-orange-500 text-white' : 
+                                        inter.status === 'En attente' ? 'bg-blue-600 text-white' : // Nouveau Style Bleu
+                                        'bg-gray-700 text-gray-300'}`}>
                                       {inter.status}
                                     </span>
-                                    <div className="flex items-center gap-2 text-blue-400 font-bold uppercase text-xs md:text-sm">
+                                    <div className="flex items-center gap-2 text-blue-300 font-bold uppercase text-xs md:text-sm mt-1">
                                         <MapPin size={16} /> {inter.site}
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <span className="block text-white font-black text-2xl md:text-4xl">{new Date(inter.date).getDate()}</span>
-                                    <span className="block text-white/40 text-sm font-bold uppercase">{new Date(inter.date).toLocaleDateString('fr-FR', { month: 'short' })}</span>
+                                    <span className="block text-white font-black text-2xl md:text-4xl drop-shadow-md">{new Date(inter.date).getDate()}</span>
+                                    <span className="block text-blue-200 text-sm font-bold uppercase">{new Date(inter.date).toLocaleDateString('fr-FR', { month: 'short' })}</span>
                                 </div>
                             </div>
 
                             {/* Tags Domaine / Type */}
                             <div className="flex flex-wrap gap-2 my-2">
                                 {inter.domain && (
-                                    <span className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg text-white/80 text-sm font-bold uppercase border border-white/5">
+                                    <span className="flex items-center gap-2 px-4 py-2 bg-black/30 rounded-lg text-white/90 text-sm font-bold uppercase border border-white/10">
                                        <Briefcase size={16}/> {inter.domain}
                                     </span>
                                 )}
                                 {inter.interventionType && (
-                                    <span className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg text-white/80 text-sm font-bold uppercase border border-white/5">
+                                    <span className="flex items-center gap-2 px-4 py-2 bg-black/30 rounded-lg text-white/90 text-sm font-bold uppercase border border-white/10">
                                        <Layers size={16}/> {inter.interventionType}
                                     </span>
                                 )}
                             </div>
 
                             {/* Main Info */}
-                            <div className="flex-1 flex flex-col justify-center">
-                                <h4 className="text-white text-2xl md:text-4xl font-black tracking-tight leading-none mb-4 line-clamp-2">{inter.client}</h4>
-                                <p className="text-gray-400 text-base md:text-xl font-medium leading-relaxed line-clamp-4">{inter.description}</p>
+                            <div className="flex-1 flex flex-col justify-center py-4">
+                                <h4 className="text-white text-2xl md:text-4xl font-black tracking-tight leading-none mb-4 line-clamp-2 drop-shadow-md">{inter.client}</h4>
+                                <p className="text-gray-200 text-base md:text-xl font-medium leading-relaxed line-clamp-4">{inter.description}</p>
                             </div>
                             
                             {/* Footer Card */}
-                            <div className="pt-6 border-t border-white/5 flex justify-between items-center text-white/30 text-sm font-mono mt-auto">
+                            <div className="pt-6 border-t border-white/10 flex justify-between items-center text-white/50 text-sm font-mono mt-auto">
                                 <span>ID: {inter.id}</span>
-                                <span className="flex items-center gap-2"><Clock size={16}/> {inter.technician}</span>
+                                <span className="flex items-center gap-2 text-blue-300"><Clock size={16}/> {inter.technician}</span>
                             </div>
                         </div>
                     ))}
                     
-                    {/* Remplissage vide si moins de 3 items pour garder la grille propre (optionnel mais esthétique) */}
+                    {/* Remplissage vide */}
                     {Array.from({ length: Math.max(0, 3 - currentPlanningSlice.length) }).map((_, i) => (
-                         <div key={`empty-${i}`} className="border-2 border-dashed border-white/5 rounded-3xl flex items-center justify-center opacity-30">
-                            <span className="text-white/20 font-black text-4xl uppercase">EBF</span>
+                         <div key={`empty-${i}`} className="border-2 border-dashed border-white/5 rounded-3xl flex items-center justify-center opacity-10">
+                            <span className="text-white font-black text-4xl uppercase">EBF</span>
                          </div>
                     ))}
                 </div>
