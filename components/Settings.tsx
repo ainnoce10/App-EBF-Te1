@@ -10,7 +10,6 @@ import {
   ShieldAlert,
   Plus,
   Music,
-  PlayCircle,
   Save
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
