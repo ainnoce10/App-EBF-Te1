@@ -30,6 +30,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 }) => {
   const [activeMode, setActiveMode] = useState<'PUBLICITE' | 'PLANNING'>('PUBLICITE');
   const [productIdx, setProductIdx] = useState(0);
+  const [planningPage, setPlanningPage] = useState(0);
   
   const products = liveStock.length > 0 ? liveStock : [];
   const planning = liveInterventions.length > 0 ? liveInterventions : [];
@@ -56,21 +57,46 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   // Fonction pour calculer la taille de police idéale selon la longueur du texte
   const getTitleSizeClass = (text: string) => {
     const len = text.length;
-    if (len < 20) return "text-3xl md:text-6xl lg:text-7xl xl:text-8xl"; // Très court (ex: Disjoncteur) -> Très gros
-    if (len < 40) return "text-2xl md:text-5xl lg:text-6xl xl:text-7xl"; // Court -> Gros
-    if (len < 80) return "text-xl md:text-4xl lg:text-5xl xl:text-6xl"; // Moyen -> Moyen
-    return "text-lg md:text-3xl lg:text-4xl xl:text-5xl"; // Long -> Plus petit pour tout afficher
+    if (len < 20) return "text-3xl md:text-6xl lg:text-7xl xl:text-8xl"; 
+    if (len < 40) return "text-2xl md:text-5xl lg:text-6xl xl:text-7xl"; 
+    if (len < 80) return "text-xl md:text-4xl lg:text-5xl xl:text-6xl"; 
+    return "text-lg md:text-3xl lg:text-4xl xl:text-5xl"; 
   };
 
+  // 1. Alternance automatique des modes (PRODUIT <-> PLANNING) toutes les 60 secondes
+  useEffect(() => {
+    const modeInterval = setInterval(() => {
+      setActiveMode((prev) => (prev === 'PUBLICITE' ? 'PLANNING' : 'PUBLICITE'));
+    }, 60000); // 1 minute
+    return () => clearInterval(modeInterval);
+  }, []);
+
+  // 2. Rotation des produits (10s)
   useEffect(() => {
     if (activeMode !== 'PUBLICITE' || products.length === 0) return;
     const interval = setInterval(() => {
       setProductIdx((prev) => (prev + 1) % products.length);
-    }, 10000); // 10 secondes par produit
+    }, 10000); 
     return () => clearInterval(interval);
   }, [activeMode, products.length]);
 
+  // 3. Rotation du planning (3 par page, toutes les 20s)
+  const itemsPerPage = 3;
+  const totalPlanningPages = Math.ceil(planning.length / itemsPerPage) || 1;
+
+  useEffect(() => {
+    if (activeMode !== 'PLANNING' || planning.length === 0) {
+        setPlanningPage(0); // Reset page quand on quitte ou arrive
+        return;
+    }
+    const interval = setInterval(() => {
+      setPlanningPage((prev) => (prev + 1) % totalPlanningPages);
+    }, 20000); // 20 secondes
+    return () => clearInterval(interval);
+  }, [activeMode, planning.length, totalPlanningPages]);
+
   const currentProduct = products[productIdx];
+  const currentPlanningSlice = planning.slice(planningPage * itemsPerPage, (planningPage + 1) * itemsPerPage);
 
   return (
     <div className="fixed inset-0 z-[500] bg-black flex flex-col overflow-hidden font-sans select-none text-white">
@@ -174,19 +200,30 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
             </div>
           ) : activeMode === 'PLANNING' ? (
              <div className="flex w-full bg-gray-950 p-6 md:p-16 animate-fade-in flex-col h-full overflow-hidden">
-                <div className="flex items-center justify-between mb-6 md:mb-10 shrink-0 border-b border-white/10 pb-6">
-                    <div>
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 md:mb-10 shrink-0 border-b border-white/10 pb-6 gap-4">
+                    <div className="flex flex-col md:flex-row md:items-baseline gap-4 md:gap-8">
                       <h2 className="text-2xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white uppercase italic truncate">
                           Chantiers EBF
                       </h2>
-                      <p className="text-orange-500 font-bold text-lg md:text-2xl uppercase tracking-widest mt-2">{todayDate}</p>
+                      {/* Date déplacée ICI */}
+                      <span className="text-orange-500 font-bold text-lg md:text-4xl uppercase tracking-widest">
+                         {todayDate}
+                      </span>
                     </div>
-                    <Calendar size={40} className="md:w-[80px] md:h-[80px] text-blue-500 animate-pulse shrink-0 ml-4" />
+                    
+                    <div className="flex items-center gap-4">
+                        <span className="text-white/30 font-mono font-bold">Page {planningPage + 1}/{totalPlanningPages}</span>
+                        <Calendar size={40} className="md:w-[80px] md:h-[80px] text-blue-500 animate-pulse shrink-0" />
+                    </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 overflow-y-auto no-scrollbar content-start pb-20">
-                    {planning.slice(0, 9).map((inter, i) => (
-                        <div key={inter.id} className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-3xl flex flex-col justify-between gap-4 animate-slide-up shadow-xl hover:bg-white/10 transition-colors h-full min-h-[300px]" style={{ animationDelay: `${i * 0.1}s` }}>
+                {/* Grille ajustée pour 3 items max */}
+                <div 
+                    key={planningPage} // Important pour relancer l'animation à chaque changement de page
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 overflow-hidden content-start pb-20 animate-slide-up"
+                >
+                    {currentPlanningSlice.map((inter, i) => (
+                        <div key={inter.id} className="bg-white/5 border border-white/10 p-6 md:p-10 rounded-3xl flex flex-col justify-between gap-4 shadow-xl hover:bg-white/10 transition-colors h-full min-h-[350px]">
                             
                             {/* Header Card */}
                             <div className="flex justify-between items-start">
@@ -196,42 +233,49 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                         inter.status === 'En cours' ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-700 text-gray-300'}`}>
                                       {inter.status}
                                     </span>
-                                    <div className="flex items-center gap-2 text-blue-400 font-bold uppercase text-xs">
-                                        <MapPin size={14} /> {inter.site}
+                                    <div className="flex items-center gap-2 text-blue-400 font-bold uppercase text-xs md:text-sm">
+                                        <MapPin size={16} /> {inter.site}
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <span className="block text-white font-black text-xl md:text-2xl">{new Date(inter.date).getDate()}</span>
-                                    <span className="block text-white/40 text-xs font-bold uppercase">{new Date(inter.date).toLocaleDateString('fr-FR', { month: 'short' })}</span>
+                                    <span className="block text-white font-black text-2xl md:text-4xl">{new Date(inter.date).getDate()}</span>
+                                    <span className="block text-white/40 text-sm font-bold uppercase">{new Date(inter.date).toLocaleDateString('fr-FR', { month: 'short' })}</span>
                                 </div>
                             </div>
 
                             {/* Tags Domaine / Type */}
                             <div className="flex flex-wrap gap-2 my-2">
                                 {inter.domain && (
-                                    <span className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-lg text-white/80 text-[10px] md:text-xs font-bold uppercase border border-white/5">
-                                       <Briefcase size={12}/> {inter.domain}
+                                    <span className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg text-white/80 text-sm font-bold uppercase border border-white/5">
+                                       <Briefcase size={16}/> {inter.domain}
                                     </span>
                                 )}
                                 {inter.interventionType && (
-                                    <span className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-lg text-white/80 text-[10px] md:text-xs font-bold uppercase border border-white/5">
-                                       <Layers size={12}/> {inter.interventionType}
+                                    <span className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg text-white/80 text-sm font-bold uppercase border border-white/5">
+                                       <Layers size={16}/> {inter.interventionType}
                                     </span>
                                 )}
                             </div>
 
                             {/* Main Info */}
-                            <div>
-                                <h4 className="text-white text-xl md:text-3xl font-black tracking-tight leading-none mb-3 line-clamp-1">{inter.client}</h4>
-                                <p className="text-gray-400 text-sm md:text-lg font-medium leading-relaxed line-clamp-3">{inter.description}</p>
+                            <div className="flex-1 flex flex-col justify-center">
+                                <h4 className="text-white text-2xl md:text-4xl font-black tracking-tight leading-none mb-4 line-clamp-2">{inter.client}</h4>
+                                <p className="text-gray-400 text-base md:text-xl font-medium leading-relaxed line-clamp-4">{inter.description}</p>
                             </div>
                             
                             {/* Footer Card */}
-                            <div className="pt-4 border-t border-white/5 flex justify-between items-center text-white/30 text-xs font-mono mt-auto">
+                            <div className="pt-6 border-t border-white/5 flex justify-between items-center text-white/30 text-sm font-mono mt-auto">
                                 <span>ID: {inter.id}</span>
-                                <span className="flex items-center gap-1"><Clock size={12}/> {inter.technician}</span>
+                                <span className="flex items-center gap-2"><Clock size={16}/> {inter.technician}</span>
                             </div>
                         </div>
+                    ))}
+                    
+                    {/* Remplissage vide si moins de 3 items pour garder la grille propre (optionnel mais esthétique) */}
+                    {Array.from({ length: Math.max(0, 3 - currentPlanningSlice.length) }).map((_, i) => (
+                         <div key={`empty-${i}`} className="border-2 border-dashed border-white/5 rounded-3xl flex items-center justify-center opacity-30">
+                            <span className="text-white/20 font-black text-4xl uppercase">EBF</span>
+                         </div>
                     ))}
                 </div>
              </div>
