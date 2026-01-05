@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { StockItem } from '../types';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { StockItem, Transaction } from '../types';
 import { supabase } from '../lib/supabase';
 import { 
   Plus,
@@ -11,14 +11,16 @@ import {
   ShoppingCart,
   Edit,
   Camera,
-  Package
+  Package,
+  Wallet
 } from 'lucide-react';
 
 interface HardwareStoreProps {
   initialData?: StockItem[];
+  liveTransactions?: Transaction[];
 }
 
-const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
+const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTransactions = [] }) => {
   const [inventory, setInventory] = useState<StockItem[]>(initialData);
   const [searchTerm, setSearchTerm] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -27,6 +29,10 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [isManagementMode, setIsManagementMode] = useState(false);
+  
+  // États pour la Caisse
+  const [showCaisseModal, setShowCaisseModal] = useState(false);
+  const [newTransaction, setNewTransaction] = useState<{type: 'in'|'out', amount: string, reason: string}>({ type: 'in', amount: '', reason: '' });
 
   // Refs pour les inputs de fichiers cachés
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
@@ -34,6 +40,23 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
   useEffect(() => {
     if (initialData.length > 0) setInventory(initialData);
   }, [initialData]);
+
+  // --- CALCULS CAISSE ---
+  const currentBalance = useMemo(() => {
+      const income = liveTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
+      const outcome = liveTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
+      return income - outcome;
+  }, [liveTransactions]);
+
+  const todayIncome = useMemo(() => {
+      const today = new Date().toISOString().split('T')[0];
+      return liveTransactions.filter(t => t.type === 'Recette' && t.date === today).reduce((acc, t) => acc + t.amount, 0);
+  }, [liveTransactions]);
+
+  const todayOutcome = useMemo(() => {
+      const today = new Date().toISOString().split('T')[0];
+      return liveTransactions.filter(t => t.type === 'Dépense' && t.date === today).reduce((acc, t) => acc + t.amount, 0);
+  }, [liveTransactions]);
 
   const filteredItems = inventory.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -84,7 +107,33 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
   };
 
   const handleAddToCart = (item: StockItem) => {
-    alert(`🛒 ${item.name} ajouté au panier !`);
+    // Raccourci vers la modale caisse avec pré-remplissage
+    setNewTransaction({ 
+        type: 'in', 
+        amount: item.unitPrice.toString(), 
+        reason: `Vente : ${item.name}` 
+    });
+    setShowCaisseModal(true);
+  };
+
+  const handleSaveTransaction = async () => {
+    if (!newTransaction.amount) return;
+    const newId = `TRX-${Math.floor(Math.random() * 100000)}`;
+    const globalTransaction: Transaction = {
+        id: newId,
+        type: newTransaction.type === 'in' ? 'Recette' : 'Dépense',
+        category: newTransaction.type === 'in' ? 'Vente Magasin' : 'Achat Stock',
+        amount: parseInt(newTransaction.amount),
+        date: new Date().toISOString().split('T')[0],
+        description: newTransaction.reason || (newTransaction.type === 'in' ? 'Vente comptoir' : 'Dépense diverse'),
+        site: 'Abidjan' // Par défaut ou dynamique selon le contexte user
+    };
+    try {
+        const { error } = await supabase.from('transactions').insert([globalTransaction]);
+        if (error) throw error;
+        setNewTransaction({ type: 'in', amount: '', reason: '' });
+        setShowCaisseModal(false);
+    } catch (error) { console.error(error); alert("Erreur enregistrement: " + (error as any).message); }
   };
 
   const handleSave = async () => {
@@ -160,6 +209,33 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
         </select>
       </div>
 
+      {/* --- CAISSE WIDGET --- */}
+      <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 animate-fade-in">
+            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide">
+                <Wallet className="text-gray-600" size={18} /> Caisse Magasin
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="p-3 bg-gray-900 rounded-xl text-center text-white col-span-2 md:col-span-1">
+                    <p className="text-gray-400 text-[10px] uppercase font-bold">Solde Global</p>
+                    <p className="text-2xl font-black">{currentBalance.toLocaleString()} F</p>
+                </div>
+                 <div className="p-3 bg-green-50 rounded-xl text-center border border-green-100">
+                    <p className="text-green-600 text-[10px] uppercase font-bold">Ventes du jour</p>
+                    <p className="text-lg font-black text-green-700">+{todayIncome.toLocaleString()}</p>
+                </div>
+                 <div className="p-3 bg-red-50 rounded-xl text-center border border-red-100">
+                    <p className="text-red-500 text-[10px] uppercase font-bold">Achats du jour</p>
+                    <p className="text-lg font-black text-red-600">-{todayOutcome.toLocaleString()}</p>
+                </div>
+                <button 
+                  onClick={() => { setNewTransaction({ type: 'in', amount: '', reason: '' }); setShowCaisseModal(true); }}
+                  className="p-3 bg-orange-500 hover:bg-orange-600 rounded-xl text-white font-bold shadow-md flex flex-col items-center justify-center active:scale-95 col-span-2 md:col-span-1 transition-colors"
+                >
+                    <Plus size={20} /> <span className="text-xs uppercase mt-1">Opération Caisse</span>
+                </button>
+            </div>
+      </div>
+
       {/* Liste des articles - 1 Col on Mobile */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-8">
         {filteredItems.map((item) => {
@@ -214,10 +290,10 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
                      
                      <button 
                         onClick={() => handleAddToCart(item)}
-                        className="w-full bg-gray-950 text-white py-3 md:py-4 rounded-xl md:rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] hover:bg-orange-600 transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 border-b-4 border-gray-800 hover:border-orange-800"
+                        className="w-full bg-gray-950 text-white py-3 md:py-4 rounded-xl md:rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] hover:bg-green-600 transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 border-b-4 border-gray-800 hover:border-green-800"
                      >
                        <ShoppingCart size={16} strokeWidth={3} />
-                       Ajouter
+                       Vendre
                      </button>
                   </div>
                </div>
@@ -243,6 +319,27 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [] }) => {
             />
         </div>
       )}
+
+      {/* --- MODAL CAISSE --- */}
+       {showCaisseModal && (
+        <div className="fixed inset-0 z-[80] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="bg-white w-full rounded-t-[2rem] md:rounded-3xl p-6 animate-slide-up max-w-sm mx-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-black text-gray-800 text-lg">Mouvement Caisse Magasin</h3>
+                    <button onClick={() => setShowCaisseModal(false)}><X/></button>
+                </div>
+                <div className="space-y-4">
+                    <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
+                        <button onClick={() => setNewTransaction({...newTransaction, type: 'in'})} className={`flex-1 py-3 rounded-lg font-bold text-sm ${newTransaction.type === 'in' ? 'bg-white shadow-sm text-green-600' : 'text-gray-500'}`}>VENTE (Entrée)</button>
+                        <button onClick={() => setNewTransaction({...newTransaction, type: 'out'})} className={`flex-1 py-3 rounded-lg font-bold text-sm ${newTransaction.type === 'out' ? 'bg-white shadow-sm text-red-600' : 'text-gray-500'}`}>ACHAT (Sortie)</button>
+                    </div>
+                    <input type="number" placeholder="Montant (FCFA)" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-xl outline-none" value={newTransaction.amount} onChange={e => setNewTransaction({...newTransaction, amount: e.target.value})} autoFocus/>
+                    <input type="text" placeholder="Détails (ex: Nom du client)" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" value={newTransaction.reason} onChange={e => setNewTransaction({...newTransaction, reason: e.target.value})}/>
+                    <button onClick={handleSaveTransaction} className="w-full py-4 bg-gray-900 text-white rounded-xl font-bold uppercase shadow-lg">Valider l'opération</button>
+                </div>
+            </div>
+        </div>
+       )}
 
       {/* MODAL AJOUT/MODIFICATION MOBILE OPTIMIZED */}
       {(isAdding || isEditing) && editForm && (

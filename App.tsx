@@ -168,7 +168,7 @@ const App: React.FC = () => {
             case 'secretariat':
               return <Secretariat liveInterventions={interventions} liveTransactions={transactions} />;
             case 'hardware':
-              return <HardwareStore initialData={stock} />;
+              return <HardwareStore initialData={stock} liveTransactions={transactions} />;
             case 'settings':
               return (
                 <Settings 

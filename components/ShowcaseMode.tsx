@@ -8,7 +8,11 @@ import {
   Calendar,
   Megaphone,
   LayoutGrid,
-  ClipboardList
+  ClipboardList,
+  Clock,
+  MapPin,
+  Briefcase,
+  Layers
 } from 'lucide-react';
 
 interface ShowcaseModeProps {
@@ -170,21 +174,63 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
             </div>
           ) : activeMode === 'PLANNING' ? (
              <div className="flex w-full bg-gray-950 p-6 md:p-16 animate-fade-in flex-col h-full overflow-hidden">
-                <div className="flex items-center justify-between mb-6 md:mb-16 shrink-0">
-                    <h2 className="text-2xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white uppercase italic truncate">
-                        Planning <span className="hidden md:inline">du {todayDate}</span>
-                    </h2>
-                    <Calendar size={40} className="md:w-[100px] md:h-[100px] text-blue-500 animate-pulse shrink-0 ml-4" />
+                <div className="flex items-center justify-between mb-6 md:mb-10 shrink-0 border-b border-white/10 pb-6">
+                    <div>
+                      <h2 className="text-2xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white uppercase italic truncate">
+                          Chantiers EBF
+                      </h2>
+                      <p className="text-orange-500 font-bold text-lg md:text-2xl uppercase tracking-widest mt-2">{todayDate}</p>
+                    </div>
+                    <Calendar size={40} className="md:w-[80px] md:h-[80px] text-blue-500 animate-pulse shrink-0 ml-4" />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 flex-1 overflow-y-auto no-scrollbar content-start pb-20">
-                    {planning.slice(0, 6).map((inter, i) => (
-                        <div key={inter.id} className="bg-white/5 border-2 md:border-[4px] border-white/10 p-6 md:p-8 rounded-3xl md:rounded-[3rem] flex flex-col justify-center gap-2 md:gap-4 animate-slide-up shadow-xl min-h-[120px] md:min-h-0 md:h-full md:max-h-[25vh]" style={{ animationDelay: `${i * 0.1}s` }}>
-                            <div className="flex justify-between items-center">
-                              <span className="bg-blue-600 text-white px-3 py-1 md:px-6 md:py-2 rounded-lg md:rounded-xl font-black text-xs md:text-2xl uppercase tracking-widest">{inter.site}</span>
-                              <span className="text-white/20 text-xs md:text-xl font-mono font-bold"># {inter.id.split('-')[1]}</span>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 overflow-y-auto no-scrollbar content-start pb-20">
+                    {planning.slice(0, 9).map((inter, i) => (
+                        <div key={inter.id} className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-3xl flex flex-col justify-between gap-4 animate-slide-up shadow-xl hover:bg-white/10 transition-colors h-full min-h-[300px]" style={{ animationDelay: `${i * 0.1}s` }}>
+                            
+                            {/* Header Card */}
+                            <div className="flex justify-between items-start">
+                                <div className="flex flex-col gap-2">
+                                    <span className={`px-4 py-2 rounded-xl font-black text-xs md:text-sm uppercase tracking-widest inline-block text-center
+                                      ${inter.status === 'Terminé' ? 'bg-green-500/20 text-green-400' : 
+                                        inter.status === 'En cours' ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-700 text-gray-300'}`}>
+                                      {inter.status}
+                                    </span>
+                                    <div className="flex items-center gap-2 text-blue-400 font-bold uppercase text-xs">
+                                        <MapPin size={14} /> {inter.site}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <span className="block text-white font-black text-xl md:text-2xl">{new Date(inter.date).getDate()}</span>
+                                    <span className="block text-white/40 text-xs font-bold uppercase">{new Date(inter.date).toLocaleDateString('fr-FR', { month: 'short' })}</span>
+                                </div>
                             </div>
-                            <h4 className="text-white text-xl md:text-5xl font-black tracking-tighter leading-tight line-clamp-1">{inter.client}</h4>
-                            <p className="text-orange-500 text-sm md:text-3xl font-black uppercase tracking-widest line-clamp-1 italic">{inter.description}</p>
+
+                            {/* Tags Domaine / Type */}
+                            <div className="flex flex-wrap gap-2 my-2">
+                                {inter.domain && (
+                                    <span className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-lg text-white/80 text-[10px] md:text-xs font-bold uppercase border border-white/5">
+                                       <Briefcase size={12}/> {inter.domain}
+                                    </span>
+                                )}
+                                {inter.interventionType && (
+                                    <span className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-lg text-white/80 text-[10px] md:text-xs font-bold uppercase border border-white/5">
+                                       <Layers size={12}/> {inter.interventionType}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Main Info */}
+                            <div>
+                                <h4 className="text-white text-xl md:text-3xl font-black tracking-tight leading-none mb-3 line-clamp-1">{inter.client}</h4>
+                                <p className="text-gray-400 text-sm md:text-lg font-medium leading-relaxed line-clamp-3">{inter.description}</p>
+                            </div>
+                            
+                            {/* Footer Card */}
+                            <div className="pt-4 border-t border-white/5 flex justify-between items-center text-white/30 text-xs font-mono mt-auto">
+                                <span>ID: {inter.id}</span>
+                                <span className="flex items-center gap-1"><Clock size={12}/> {inter.technician}</span>
+                            </div>
                         </div>
                     ))}
                 </div>
