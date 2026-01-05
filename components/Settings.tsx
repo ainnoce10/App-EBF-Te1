@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Megaphone, 
   Trash2, 
@@ -10,7 +10,10 @@ import {
   ShieldAlert,
   Plus,
   Music,
-  Save
+  Save,
+  Upload,
+  Play,
+  Pause
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { TickerMessage } from '../types';
@@ -35,6 +38,9 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   
   // State pour la musique
   const [musicUrl, setMusicUrl] = useState('');
+  const [isPlayingTest, setIsPlayingTest] = useState(false);
+  const audioTestRef = useRef<HTMLAudioElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Charger la musique sauvegardée au chargement
@@ -46,11 +52,50 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     }
   }, []);
 
+  // Gestion du test audio
+  useEffect(() => {
+    if (audioTestRef.current) {
+        if (isPlayingTest) {
+            audioTestRef.current.play().catch(e => {
+                console.error("Erreur lecture test:", e);
+                setIsPlayingTest(false);
+            });
+        } else {
+            audioTestRef.current.pause();
+            audioTestRef.current.currentTime = 0;
+        }
+    }
+  }, [isPlayingTest, musicUrl]);
+
   const handleSaveMusic = () => {
     if (musicUrl) {
-        localStorage.setItem('ebf_tv_music_url', musicUrl);
-        alert("Musique sauvegardée ! Elle sera jouée lors de la prochaine diffusion TV.");
+        try {
+            localStorage.setItem('ebf_tv_music_url', musicUrl);
+            alert("Musique sauvegardée ! Elle sera jouée lors de la prochaine diffusion TV.");
+        } catch (e) {
+            alert("Erreur : Le fichier est peut-être trop volumineux pour le stockage local. Essayez un fichier plus petit (< 3Mo).");
+        }
     }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Vérification taille (limite localStorage ~5MB, on vise 3.5MB max pour la sécurité)
+    if (file.size > 3.5 * 1024 * 1024) {
+        alert("Le fichier est trop volumineux pour être stocké dans le navigateur. Veuillez choisir un MP3 de moins de 3.5 Mo ou utiliser une URL.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setMusicUrl(result);
+        // On arrête le test s'il jouait
+        setIsPlayingTest(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleAddMessage = async () => {
@@ -240,6 +285,9 @@ insert into public.ticker_messages (content, color) values
         {isUpdating && <Loader2 size={24} className="text-orange-500 animate-spin" />}
       </div>
 
+      {/* Audio element caché pour le test */}
+      <audio ref={audioTestRef} src={musicUrl} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Card Config DB */}
           <div className="bg-blue-600 rounded-3xl shadow-lg p-6 flex flex-col justify-between text-white overflow-hidden relative min-h-[180px]">
@@ -279,18 +327,43 @@ insert into public.ticker_messages (content, color) values
               </div>
               
               <div className="relative z-10 space-y-3">
-                  <input 
-                    type="text" 
-                    placeholder="Coller un lien MP3..." 
-                    value={musicUrl}
-                    onChange={(e) => setMusicUrl(e.target.value)}
-                    className="w-full px-4 py-2 rounded-xl bg-purple-900/50 border border-purple-500/30 text-white placeholder-purple-300 text-xs font-bold outline-none focus:border-purple-300 transition-colors"
-                  />
+                  <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="Lien MP3 ou Importer..." 
+                        value={musicUrl.length > 50 ? 'Fichier importé (Base64)' : musicUrl}
+                        readOnly={musicUrl.length > 50}
+                        onChange={(e) => setMusicUrl(e.target.value)}
+                        className="flex-1 px-4 py-2 rounded-xl bg-purple-900/50 border border-purple-500/30 text-white placeholder-purple-300 text-xs font-bold outline-none focus:border-purple-300 transition-colors truncate"
+                      />
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        accept="audio/*" 
+                        className="hidden" 
+                        onChange={handleFileUpload}
+                      />
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="bg-purple-500 hover:bg-purple-400 text-white p-2 rounded-xl transition-colors"
+                        title="Importer depuis le PC"
+                      >
+                          <Upload size={16} />
+                      </button>
+                      <button 
+                        onClick={() => setIsPlayingTest(!isPlayingTest)}
+                        className={`p-2 rounded-xl transition-colors ${isPlayingTest ? 'bg-green-500 text-white' : 'bg-purple-800 text-purple-200'}`}
+                        title="Tester le son"
+                      >
+                          {isPlayingTest ? <Pause size={16} /> : <Play size={16} />}
+                      </button>
+                  </div>
+
                   <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                       {MUSIC_PRESETS.map((p, i) => (
                           <button 
                             key={i}
-                            onClick={() => setMusicUrl(p.url)}
+                            onClick={() => { setMusicUrl(p.url); setIsPlayingTest(false); }}
                             className="shrink-0 px-3 py-1.5 bg-purple-600 rounded-lg text-[10px] font-bold uppercase hover:bg-white hover:text-purple-700 transition-colors"
                           >
                              {p.name}

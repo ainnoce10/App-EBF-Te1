@@ -14,7 +14,8 @@ import {
   Briefcase,
   Layers,
   Volume2,
-  VolumeX
+  VolumeX,
+  Play
 } from 'lucide-react';
 
 interface ShowcaseModeProps {
@@ -35,8 +36,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const [planningPage, setPlanningPage] = useState(0);
   
   // Audio state
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false); // On tente le son activé par défaut
   const [audioSrc, setAudioSrc] = useState('');
+  const [autoplayFailed, setAutoplayFailed] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const products = liveStock.length > 0 ? liveStock : [];
@@ -50,22 +52,37 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     setAudioSrc(savedMusic || 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=corporate-ambient-14224.mp3');
   }, []);
 
-  // Gestion Audio
+  // Gestion Audio et Autoplay
   useEffect(() => {
     if (audioRef.current && audioSrc) {
-        if (isMuted) {
-            audioRef.current.pause();
-        } else {
-            audioRef.current.volume = 0.3; // Volume doux
-            const playPromise = audioRef.current.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.log("Lecture auto bloquée par le navigateur:", error);
-                });
-            }
-        }
+        audioRef.current.volume = 0.3; // Volume doux
+        
+        const tryPlay = async () => {
+             try {
+                 if (!isMuted) {
+                    await audioRef.current?.play();
+                    setAutoplayFailed(false);
+                 } else {
+                    audioRef.current?.pause();
+                 }
+             } catch (error) {
+                 console.log("Autoplay bloqué, attente interaction utilisateur");
+                 setAutoplayFailed(true);
+                 setIsMuted(true); // On passe en muet pour éviter l'erreur visuelle
+             }
+        };
+
+        tryPlay();
     }
-  }, [isMuted, audioSrc]);
+  }, [audioSrc, isMuted]);
+
+  const handleForceUnmute = () => {
+    setIsMuted(false);
+    setAutoplayFailed(false);
+    if(audioRef.current) {
+        audioRef.current.play().catch(console.error);
+    }
+  };
 
   const getMessageColorClass = (color: string) => {
     switch(color) {
@@ -131,6 +148,18 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       {/* Musique de fond */}
       {audioSrc && <audio ref={audioRef} loop src={audioSrc} />}
 
+      {/* BOUTON OVERLAY SI AUTOPLAY BLOQUÉ */}
+      {autoplayFailed && (
+          <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[600] animate-bounce">
+              <button 
+                onClick={handleForceUnmute}
+                className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-full font-bold shadow-[0_0_20px_rgba(34,197,94,0.6)] flex items-center gap-2"
+              >
+                  <Play size={16} fill="currentColor" /> ACTIVER LE SON
+              </button>
+          </div>
+      )}
+
       {/* HEADER TV */}
       <div className="bg-gray-950 px-4 py-4 md:px-10 md:h-28 flex flex-col md:flex-row items-center justify-between border-b-4 md:border-b-[8px] border-orange-600 shadow-2xl z-50 gap-4 md:gap-0 shrink-0 transition-colors duration-500">
           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 w-full md:w-auto">
@@ -164,7 +193,14 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           <div className="flex items-center gap-4 md:gap-8 absolute top-4 right-4 md:static">
               {/* Bouton Mute/Unmute */}
               <button 
-                onClick={() => setIsMuted(!isMuted)}
+                onClick={() => {
+                    const newState = !isMuted;
+                    setIsMuted(newState);
+                    if (!newState) {
+                        setAutoplayFailed(false);
+                        audioRef.current?.play().catch(() => setAutoplayFailed(true));
+                    }
+                }}
                 className={`p-3 rounded-full border transition-all ${isMuted ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-green-500/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'}`}
               >
                   {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
