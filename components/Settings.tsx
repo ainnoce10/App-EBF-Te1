@@ -25,12 +25,8 @@ interface SettingsProps {
   onUpdateMessages?: (messages: TickerMessage[]) => void;
 }
 
-const MUSIC_PRESETS = [
-  { name: 'Ambiance Corporate', url: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=corporate-ambient-14224.mp3' },
-  { name: 'Piano Doux', url: 'https://cdn.pixabay.com/download/audio/2022/03/09/audio_822ca808a3.mp3?filename=piano-moment-14032.mp3' },
-  { name: 'Lounge Chill', url: 'https://cdn.pixabay.com/download/audio/2020/05/20/audio_145d04589d.mp3?filename=lounge-11005.mp3' },
-  { name: 'Focus Travail', url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf87a.mp3?filename=lofi-study-112191.mp3' }
-];
+// Suppression des presets par défaut pour ne montrer que la DB
+const MUSIC_PRESETS: { name: string; url: string }[] = [];
 
 const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const [newMessage, setNewMessage] = useState('');
@@ -44,7 +40,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   // State pour la musique
   const [musicUrl, setMusicUrl] = useState('');
   const [isPlayingTest, setIsPlayingTest] = useState(false);
-  const [audioLibrary, setAudioLibrary] = useState<{name: string, url: string}[]>(MUSIC_PRESETS);
+  const [audioLibrary, setAudioLibrary] = useState<{name: string, url: string}[]>([]);
   const audioTestRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -66,8 +62,6 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
                 const logo = data.find(d => d.key === 'company_logo');
                 
                 if (music && music.value) setMusicUrl(music.value);
-                else setMusicUrl(MUSIC_PRESETS[0].url);
-
                 if (logo && logo.value) setLogoUrl(logo.value);
             }
         } catch (error) {
@@ -78,7 +72,6 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     // 2. Charger la bibliothèque audio depuis le stockage
     const loadAudioLibrary = async () => {
         try {
-            // CORRECTION: Suppression de la variable 'error' inutilisée
             const { data } = await supabase.storage.from('assets').list();
             
             if (data) {
@@ -93,8 +86,8 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
                         };
                     });
                 
-                // Combiner Presets + Uploads
-                setAudioLibrary([...MUSIC_PRESETS, ...uploadedTracks]);
+                // On affiche uniquement les fichiers uploadés (plus de presets)
+                setAudioLibrary(uploadedTracks);
             }
         } catch (error) {
             console.warn("Impossible de charger la bibliothèque audio (Bucket 'assets' peut-être manquant).");
@@ -501,7 +494,7 @@ create policy "Public Access Accounting Trx" on public.accounting_transactions f
                             <span className="text-[10px] text-purple-300">{audioLibrary.length} pistes</span>
                         </div>
                         <div className="max-h-32 overflow-y-auto custom-scrollbar space-y-1 pr-1">
-                            {audioLibrary.map((track, idx) => (
+                            {audioLibrary.length > 0 ? audioLibrary.map((track, idx) => (
                                 <button
                                     key={idx}
                                     onClick={() => { setMusicUrl(track.url); setIsPlayingTest(false); }}
@@ -510,7 +503,11 @@ create policy "Public Access Accounting Trx" on public.accounting_transactions f
                                     <span className="truncate">{track.name}</span>
                                     {musicUrl === track.url && <CheckCircle2 size={12} className="shrink-0 ml-2"/>}
                                 </button>
-                            ))}
+                            )) : (
+                                <div className="text-center py-4 text-purple-300 text-xs italic">
+                                    Aucune musique trouvée.<br/>Ajoutez un fichier MP3 ci-dessous.
+                                </div>
+                            )}
                         </div>
                     </div>
 
