@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -32,10 +33,67 @@ const App: React.FC = () => {
   // Indicateur de connexion
   const [isLive, setIsLive] = useState(false);
 
+  // --- DÉTECTION MODE TV AUTOMATIQUE & INITIALISATION ---
+  useEffect(() => {
+    // 1. Détection via URL
+    const params = new URLSearchParams(window.location.search);
+    const modeParam = params.get('mode');
+
+    // 2. Détection via User Agent (Pour Smart TV & Android TV)
+    const ua = navigator.userAgent.toLowerCase();
+    const isSmartTV = /smart-tv|smarttv|googletv|appletv|hbbtv|pov_tv|netcast|webos|tizen/.test(ua);
+    const isAndroidTV = /android/.test(ua) && !/mobile/.test(ua); // Android sans "Mobile" est souvent une TV/Tablette
+
+    // Si URL explicite OU détection Smart TV => Mode Showcase
+    if (modeParam === 'tv' || isSmartTV || isAndroidTV) {
+        setActiveTab('showcase');
+    }
+
+    // Chargement initial des données
+    fetchData();
+
+    // Configuration Realtime (Écoute globale des changements)
+    const channel = supabase.channel('global-changes')
+        .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+            console.log('Change received!', payload);
+            // Recharger la table concernée (stratégie simple pour v1)
+            if (payload.table === 'ticker_messages') {
+                 // AJOUT DE L'ID DANS LA REQUETE REALTIME
+                 supabase.from('ticker_messages').select('id, content, color').order('created_at', { ascending: false })
+                 .then(({ data }) => {
+                    if (data) {
+                        setTickerMessages(data.map(t => ({
+                            id: t.id,
+                            content: t.content,
+                            color: t.color || 'neutral'
+                        })));
+                    }
+                 });
+            } else if (payload.table === 'stock') {
+                 supabase.from('stock').select('*').order('name')
+                 .then(({ data }) => data && setStock(data as StockItem[]));
+            } else if (payload.table === 'interventions') {
+                 supabase.from('interventions').select('*').order('date', { ascending: false })
+                 .then(({ data }) => data && setInterventions(data as Intervention[]));
+            } else if (payload.table === 'transactions') {
+                 supabase.from('transactions').select('*').order('date', { ascending: false })
+                 .then(({ data }) => data && setTransactions(data as Transaction[]));
+            } else if (payload.table === 'employees') {
+                 supabase.from('employees').select('*').order('name')
+                 .then(({ data }) => data && setEmployees(data as Employee[]));
+            }
+        })
+        .subscribe();
+
+    return () => {
+        supabase.removeChannel(channel);
+    };
+  }, []);
+
   // Fonction générique pour charger les données
   const fetchData = async () => {
     try {
-        // 1. Messages - AJOUT DE LA SELECTION DE L'ID
+        // 1. Messages
         const { data: tickerData } = await supabase
             .from('ticker_messages')
             .select('id, content, color')
@@ -85,48 +143,6 @@ const App: React.FC = () => {
         setIsLive(false);
     }
   };
-
-  useEffect(() => {
-    // Chargement initial
-    fetchData();
-
-    // Configuration Realtime (Écoute globale des changements)
-    const channel = supabase.channel('global-changes')
-        .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
-            console.log('Change received!', payload);
-            // Recharger la table concernée (stratégie simple pour v1)
-            if (payload.table === 'ticker_messages') {
-                 // AJOUT DE L'ID DANS LA REQUETE REALTIME
-                 supabase.from('ticker_messages').select('id, content, color').order('created_at', { ascending: false })
-                 .then(({ data }) => {
-                    if (data) {
-                        setTickerMessages(data.map(t => ({
-                            id: t.id,
-                            content: t.content,
-                            color: t.color || 'neutral'
-                        })));
-                    }
-                 });
-            } else if (payload.table === 'stock') {
-                 supabase.from('stock').select('*').order('name')
-                 .then(({ data }) => data && setStock(data as StockItem[]));
-            } else if (payload.table === 'interventions') {
-                 supabase.from('interventions').select('*').order('date', { ascending: false })
-                 .then(({ data }) => data && setInterventions(data as Intervention[]));
-            } else if (payload.table === 'transactions') {
-                 supabase.from('transactions').select('*').order('date', { ascending: false })
-                 .then(({ data }) => data && setTransactions(data as Transaction[]));
-            } else if (payload.table === 'employees') {
-                 supabase.from('employees').select('*').order('name')
-                 .then(({ data }) => data && setEmployees(data as Employee[]));
-            }
-        })
-        .subscribe();
-
-    return () => {
-        supabase.removeChannel(channel);
-    };
-  }, []);
 
   if (activeTab === 'showcase') {
     return (
