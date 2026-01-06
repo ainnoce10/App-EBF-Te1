@@ -431,7 +431,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                           <h2 className="text-2xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white uppercase italic truncate drop-shadow-lg">
                               Chantiers EBF
                           </h2>
-                          <span className="text-blue-400 font-bold text-lg md:text-4xl uppercase tracking-widest drop-shadow-md">
+                          <span className="text-orange-500 font-black text-xl md:text-5xl uppercase tracking-widest drop-shadow-md">
                             {todayDate}
                           </span>
                         </div>
