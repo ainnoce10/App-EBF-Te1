@@ -22,7 +22,8 @@ import {
   Minus,
   Plus,
   Monitor,
-  Scan
+  Scan,
+  Phone
 } from 'lucide-react';
 
 interface ShowcaseModeProps {
@@ -490,9 +491,15 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                     <p className="text-gray-200 text-sm md:text-lg font-medium leading-relaxed line-clamp-3 md:line-clamp-4">{inter.description}</p>
                                 </div>
                                 
-                                <div className="pt-4 md:pt-6 border-t border-white/10 flex justify-between items-center text-white/50 text-xs md:text-sm font-mono mt-auto shrink-0">
-                                    <span>ID: {inter.id}</span>
-                                    <span className="flex items-center gap-2 text-blue-300"><Clock size={16}/> {inter.technician}</span>
+                                {/* REPLACEMENT DU FOOTER PLANNING : SUPPRESSION ID/TECHNI, AJOUT TELEPHONE */}
+                                <div className="pt-4 md:pt-6 border-t border-white/10 flex justify-center items-center text-white/50 text-xs md:text-sm font-mono mt-auto shrink-0">
+                                    {inter.clientPhone ? (
+                                        <span className="flex items-center gap-2 text-orange-400 font-bold tracking-wider text-lg">
+                                            <Phone size={20}/> {inter.clientPhone}
+                                        </span>
+                                    ) : (
+                                        <span className="text-white/30 italic">Contact non spécifié</span>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -514,8 +521,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               )}
           </div>
 
-          {/* FLASH INFO */}
-          <div className="h-14 md:h-24 bg-orange-600 relative z-[200] border-t-4 md:border-t-[8px] border-orange-700 overflow-hidden flex items-center shadow-[0_-10px_50px_rgba(0,0,0,0.5)] shrink-0 rounded-b-xl md:rounded-b-3xl">
+          {/* FLASH INFO - FOND NOIR */}
+          <div className="h-14 md:h-24 bg-black relative z-[200] border-t-4 md:border-t-[8px] border-orange-600 overflow-hidden flex items-center shadow-[0_-10px_50px_rgba(0,0,0,0.5)] shrink-0 rounded-b-xl md:rounded-b-3xl">
               <div className="bg-gray-950 h-full px-4 md:px-8 flex items-center justify-center z-20 shadow-[10px_0_30px_rgba(0,0,0,0.8)] border-r-4 border-orange-500 rounded-bl-xl md:rounded-bl-3xl">
                   <Megaphone size={24} className="md:w-10 md:h-10 text-orange-500 animate-bounce" />
               </div>
