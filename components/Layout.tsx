@@ -279,6 +279,7 @@ const Layout: React.FC<LayoutProps> = ({
             scrollbar-width: none;
           }
         `}</style>
+      </main>
     </div>
   );
 };
