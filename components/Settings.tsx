@@ -78,7 +78,9 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     // 2. Charger la bibliothèque audio depuis le stockage
     const loadAudioLibrary = async () => {
         try {
-            const { data, error } = await supabase.storage.from('assets').list();
+            // CORRECTION: Suppression de la variable 'error' inutilisée
+            const { data } = await supabase.storage.from('assets').list();
+            
             if (data) {
                 // Filtrer pour ne garder que les fichiers audio
                 const uploadedTracks = data
