@@ -476,8 +476,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                     {/* 3. LIEU */}
                                     {inter.location && (
                                         <div className="flex items-center gap-2 text-gray-300">
-                                            <MapPin size={18} className="text-orange-500 shrink-0" />
-                                            <span className="text-sm md:text-lg font-bold uppercase tracking-wide line-clamp-1">
+                                            <MapPin size={24} className="text-orange-500 shrink-0" />
+                                            <span className="text-lg md:text-xl font-bold uppercase tracking-wide line-clamp-1">
                                                 {inter.location}
                                             </span>
                                         </div>
@@ -486,8 +486,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                     {/* 4. TEL (VERT) */}
                                     {inter.clientPhone && (
                                         <div className="flex items-center gap-2 text-green-400">
-                                            <Phone size={18} className="text-green-500 shrink-0" />
-                                            <span className="text-sm md:text-lg font-mono font-black tracking-widest">
+                                            <Phone size={24} className="text-green-500 shrink-0" />
+                                            <span className="text-lg md:text-xl font-mono font-black tracking-widest">
                                                 {inter.clientPhone}
                                             </span>
                                         </div>
