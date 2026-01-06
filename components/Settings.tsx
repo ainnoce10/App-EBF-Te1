@@ -239,24 +239,25 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   };
 
   const getFullSchemaScript = () => `
--- 0. NETTOYAGE (Optionnel, supprime les données existantes)
+-- 0. NETTOYAGE (Pour éviter les doublons de publication)
 drop publication if exists supabase_realtime;
 
 -- 1. Activer le Temps Réel (Realtime)
 create publication supabase_realtime for all tables;
 
--- 2. Configuration du Stockage (Pour fichiers > 5Mo)
+-- 2. Configuration du Stockage (Bucket 'assets')
 insert into storage.buckets (id, name, public) 
 values ('assets', 'assets', true)
 on conflict (id) do nothing;
 
--- Politique d'accès au stockage (Lecture/Ecriture Publique)
+-- Nettoyage ancienne policy storage avant recréation
+drop policy if exists "Public Access Assets" on storage.objects;
 create policy "Public Access Assets" 
 on storage.objects for all 
 using ( bucket_id = 'assets' ) 
 with check ( bucket_id = 'assets' );
 
--- 3. Tables de données
+-- 3. Tables de données (IF NOT EXISTS gère déjà les doublons de tables)
 create table if not exists public.tv_settings (
   key text primary key,
   value text,
@@ -322,29 +323,35 @@ create table if not exists public.ticker_messages (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 4. Sécurité (RLS - Public Access pour démo)
+-- 4. Sécurité (RLS) - Suppression explicite avant création pour éviter l'erreur 42710
 alter table public.tv_settings enable row level security;
+drop policy if exists "Public Access Settings" on public.tv_settings;
 create policy "Public Access Settings" on public.tv_settings for all using (true) with check (true);
 
 alter table public.stock enable row level security;
+drop policy if exists "Public Access Stock" on public.stock;
 create policy "Public Access Stock" on public.stock for all using (true) with check (true);
 
 alter table public.interventions enable row level security;
+drop policy if exists "Public Access Interventions" on public.interventions;
 create policy "Public Access Interventions" on public.interventions for all using (true) with check (true);
 
 alter table public.transactions enable row level security;
+drop policy if exists "Public Access Transactions" on public.transactions;
 create policy "Public Access Transactions" on public.transactions for all using (true) with check (true);
 
 alter table public.employees enable row level security;
+drop policy if exists "Public Access Employees" on public.employees;
 create policy "Public Access Employees" on public.employees for all using (true) with check (true);
 
 alter table public.ticker_messages enable row level security;
+drop policy if exists "Public Access Ticker" on public.ticker_messages;
 create policy "Public Access Ticker" on public.ticker_messages for all using (true) with check (true);
 `;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(getFullSchemaScript());
-    alert("Script SQL copié ! Exécutez-le dans Supabase pour activer le stockage de gros fichiers.");
+    alert("Script SQL copié ! Exécutez-le dans Supabase pour corriger les erreurs et activer le stockage.");
   };
 
   const getColorClass = (color: string) => {
