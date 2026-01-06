@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { NAV_ITEMS, Logo } from '../constants';
 import ScrollingTicker from './ScrollingTicker';
@@ -15,6 +14,7 @@ interface LayoutProps {
   onPeriodChange: (period: string) => void;
   tickerMessages: TickerMessage[];
   isLive?: boolean;
+  customLogo?: string;
 }
 
 const Layout: React.FC<LayoutProps> = ({ 
@@ -26,7 +26,8 @@ const Layout: React.FC<LayoutProps> = ({
   period, 
   onPeriodChange,
   tickerMessages,
-  isLive = false
+  isLive = false,
+  customLogo
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -35,7 +36,7 @@ const Layout: React.FC<LayoutProps> = ({
       {/* Sidebar Desktop */}
       <aside className="hidden md:flex flex-col w-72 bg-white border-r border-gray-200 shadow-sm z-20">
         <div className="p-8 flex justify-center border-b border-gray-100">
-          <Logo />
+          <Logo url={customLogo} />
         </div>
         
         <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar">
@@ -165,7 +166,7 @@ const Layout: React.FC<LayoutProps> = ({
                 />
                 <div className="absolute top-0 bottom-0 left-0 w-[80%] max-w-sm bg-white shadow-2xl flex flex-col animate-slide-right">
                     <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-orange-50/50">
-                        <Logo />
+                        <Logo url={customLogo} />
                         <button onClick={() => setMobileMenuOpen(false)} className="p-2 bg-white rounded-full shadow-sm text-gray-500 active:scale-90 transition-transform">
                             <X size={20} />
                         </button>

@@ -21,21 +21,25 @@ import {
   Plus,
   Monitor,
   Scan,
-  Phone
+  Phone,
+  Info
 } from 'lucide-react';
+import { Logo } from '../constants';
 
 interface ShowcaseModeProps {
   onClose?: () => void;
   liveStock?: StockItem[];
   liveInterventions?: Intervention[];
   liveMessages?: TickerMessage[];
+  customLogo?: string;
 }
 
 const ShowcaseMode: React.FC<ShowcaseModeProps> = ({ 
   onClose, 
   liveStock = [], 
   liveInterventions = [], 
-  liveMessages = [] 
+  liveMessages = [],
+  customLogo
 }) => {
   const [activeMode, setActiveMode] = useState<'PUBLICITE' | 'PLANNING'>('PUBLICITE');
   const [productIdx, setProductIdx] = useState(0);
@@ -276,13 +280,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           {/* HEADER TV */}
           <div className="bg-gray-950 px-4 py-4 md:px-10 md:h-28 flex flex-col md:flex-row items-center justify-between border-b-4 md:border-b-[8px] border-orange-600 shadow-2xl z-50 gap-4 md:gap-0 shrink-0 transition-colors duration-500">
               <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 w-full md:w-auto">
-                  <div className="bg-yellow-500 px-4 py-2 md:px-6 md:py-4 rounded-xl md:rounded-2xl shadow-[0_0_30px_rgba(234,179,8,0.4)] md:-rotate-1">
-                    <span className="font-black text-xl md:text-4xl tracking-tighter shadow-sm">
-                        <span className="text-green-700">E</span>
-                        <span className="text-red-600">B</span>
-                        <span className="text-green-700">F</span>
-                        <span className="text-white ml-3 drop-shadow-md">TV</span>
-                    </span>
+                  <div className="bg-white/10 px-4 py-2 md:px-6 md:py-4 rounded-xl md:rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                    <Logo url={customLogo} />
                   </div>
                   
                   <div className="flex gap-2 md:gap-4 bg-white/5 p-1.5 md:p-2 rounded-2xl md:rounded-3xl border border-white/10 w-full md:w-auto justify-center">
@@ -451,53 +450,79 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 min-h-0 animate-slide-up"
                     >
                         {currentPlanningSlice.map((inter) => (
-                            <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-6 md:p-8 rounded-3xl flex flex-col justify-between gap-2 md:gap-4 shadow-2xl h-full">
+                            <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-6 md:p-8 rounded-3xl flex flex-col gap-4 shadow-2xl h-full relative overflow-hidden group">
+                                {/* Header: Status + Site + Badge Nature/Domaine */}
                                 <div className="flex justify-between items-start shrink-0">
-                                    <div className="flex flex-col gap-1 md:gap-2">
-                                        <span className={`px-4 py-2 rounded-xl font-black text-xs md:text-sm uppercase tracking-widest inline-block text-center shadow-lg
-                                          ${inter.status === 'Terminé' ? 'bg-green-500 text-white' : 
-                                            inter.status === 'En cours' ? 'bg-orange-500 text-white' : 
-                                            inter.status === 'En attente' ? 'bg-blue-600 text-white' :
-                                            'bg-gray-700 text-gray-300'}`}>
-                                          {inter.status}
-                                        </span>
-                                        <div className="flex items-center gap-2 text-blue-300 font-bold uppercase text-xs md:text-sm mt-1">
-                                            <MapPin size={16} /> {inter.site}
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex flex-wrap gap-2">
+                                             <span className={`px-4 py-2 rounded-xl font-black text-xs md:text-sm uppercase tracking-widest inline-block text-center shadow-lg
+                                              ${inter.status === 'Terminé' ? 'bg-green-500 text-white' : 
+                                                inter.status === 'En cours' ? 'bg-orange-500 text-white' : 
+                                                inter.status === 'En attente' ? 'bg-blue-600 text-white' :
+                                                'bg-gray-700 text-gray-300'}`}>
+                                              {inter.status}
+                                            </span>
+                                            {inter.site && (
+                                                <span className="px-3 py-2 bg-white/20 rounded-lg text-white font-bold text-xs uppercase flex items-center gap-1">
+                                                    <MapPin size={12} /> {inter.site}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {inter.domain && (
+                                                <span className="text-[10px] md:text-xs font-bold uppercase text-white/70 bg-black/20 px-2 py-1 rounded border border-white/5">
+                                                   {inter.domain}
+                                                </span>
+                                            )}
+                                            {inter.interventionType && (
+                                                <span className="text-[10px] md:text-xs font-bold uppercase text-blue-200 bg-blue-900/20 px-2 py-1 rounded border border-blue-500/20">
+                                                   {inter.interventionType}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <span className="block text-white font-black text-2xl md:text-4xl drop-shadow-md">{new Date(inter.date).getDate()}</span>
-                                        <span className="block text-blue-200 text-sm font-bold uppercase">{new Date(inter.date).toLocaleDateString('fr-FR', { month: 'short' })}</span>
+                                </div>
+
+                                {/* Body Information ordered as requested: Client -> Lieu -> Tel -> Détails */}
+                                <div className="flex-1 flex flex-col justify-center min-h-0 space-y-4">
+                                    {/* 1. CLIENT */}
+                                    <div className="border-l-4 border-orange-500 pl-4">
+                                        <h4 className="text-white text-2xl md:text-4xl font-black tracking-tight leading-none drop-shadow-md uppercase line-clamp-1">
+                                            {inter.client}
+                                        </h4>
                                     </div>
-                                </div>
 
-                                <div className="flex flex-wrap gap-2 my-1 md:my-2 shrink-0">
-                                    {inter.domain && (
-                                        <span className="flex items-center gap-2 px-4 py-2 bg-black/30 rounded-lg text-white/90 text-xs md:text-sm font-bold uppercase border border-white/10">
-                                          <Briefcase size={14}/> {inter.domain}
-                                        </span>
+                                    {/* 2. LIEU (Location precise) */}
+                                    {inter.location && (
+                                        <div className="flex items-center gap-3 text-blue-200">
+                                            <div className="p-2 bg-blue-500/20 rounded-full">
+                                                <MapPin size={24} />
+                                            </div>
+                                            <span className="text-lg md:text-xl font-bold uppercase tracking-wide line-clamp-1">
+                                                {inter.location}
+                                            </span>
+                                        </div>
                                     )}
-                                    {inter.interventionType && (
-                                        <span className="flex items-center gap-2 px-4 py-2 bg-black/30 rounded-lg text-white/90 text-xs md:text-sm font-bold uppercase border border-white/10">
-                                          <Layers size={14}/> {inter.interventionType}
-                                        </span>
-                                    )}
-                                </div>
 
-                                <div className="flex-1 flex flex-col justify-center py-2 md:py-4 min-h-0 overflow-hidden">
-                                    <h4 className="text-white text-xl md:text-3xl font-black tracking-tight leading-none mb-2 md:mb-4 line-clamp-2 drop-shadow-md">{inter.client}</h4>
-                                    <p className="text-gray-200 text-sm md:text-lg font-medium leading-relaxed line-clamp-3 md:line-clamp-4">{inter.description}</p>
-                                </div>
-                                
-                                {/* REPLACEMENT DU FOOTER PLANNING : SUPPRESSION ID/TECHNI, AJOUT TELEPHONE */}
-                                <div className="pt-4 md:pt-6 border-t border-white/10 flex justify-center items-center text-white/50 text-xs md:text-sm font-mono mt-auto shrink-0">
-                                    {inter.clientPhone ? (
-                                        <span className="flex items-center gap-2 text-orange-400 font-bold tracking-wider text-lg">
-                                            <Phone size={20}/> {inter.clientPhone}
-                                        </span>
-                                    ) : (
-                                        <span className="text-white/30 italic">Contact non spécifié</span>
+                                    {/* 3. TEL */}
+                                    {inter.clientPhone && (
+                                        <div className="flex items-center gap-3 text-green-400">
+                                            <div className="p-2 bg-green-500/20 rounded-full">
+                                                <Phone size={24} />
+                                            </div>
+                                            <span className="text-lg md:text-xl font-mono font-bold tracking-widest">
+                                                {inter.clientPhone}
+                                            </span>
+                                        </div>
                                     )}
+
+                                    {/* 4. DETAILS (Description) */}
+                                    <div className="bg-black/20 p-4 rounded-xl border border-white/5 flex-1 min-h-0 overflow-hidden relative">
+                                        <div className="absolute top-2 right-2 opacity-20"><Info size={20}/></div>
+                                        <p className="text-gray-300 text-sm md:text-lg font-medium leading-relaxed line-clamp-4">
+                                            {inter.description}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         ))}

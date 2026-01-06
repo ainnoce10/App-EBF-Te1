@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Megaphone, 
@@ -13,7 +12,8 @@ import {
   Save,
   Upload,
   Play,
-  Pause
+  Pause,
+  Image as ImageIcon
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { TickerMessage } from '../types';
@@ -35,6 +35,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const [selectedColor, setSelectedColor] = useState<'green' | 'yellow' | 'red' | 'neutral'>('neutral');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSavingMusic, setIsSavingMusic] = useState(false);
+  const [isSavingLogo, setIsSavingLogo] = useState(false);
   const [showSql, setShowSql] = useState(false);
   
   // State pour la musique
@@ -43,30 +44,33 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const audioTestRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // State pour le logo
+  const [logoUrl, setLogoUrl] = useState('');
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    // Charger la musique depuis Supabase (Table tv_settings)
-    const loadMusicSettings = async () => {
+    // Charger la musique et le logo depuis Supabase (Table tv_settings)
+    const loadSettings = async () => {
         try {
-            // CORRECTION: Suppression de la variable 'error' inutilisée
             const { data } = await supabase
                 .from('tv_settings')
-                .select('value')
-                .eq('key', 'background_music')
-                .single();
+                .select('key, value')
+                .in('key', ['background_music', 'company_logo']);
             
-            if (data && data.value) {
-                setMusicUrl(data.value);
-            } else {
-                setMusicUrl(MUSIC_PRESETS[0].url);
+            if (data) {
+                const music = data.find(d => d.key === 'background_music');
+                const logo = data.find(d => d.key === 'company_logo');
+                
+                if (music && music.value) setMusicUrl(music.value);
+                else setMusicUrl(MUSIC_PRESETS[0].url);
+
+                if (logo && logo.value) setLogoUrl(logo.value);
             }
         } catch (error) {
-            console.error("Erreur chargement musique:", error);
-            // Fallback localStorage si Supabase échoue ou table inexistante
-            const local = localStorage.getItem('ebf_tv_music_url');
-            if (local) setMusicUrl(local);
+            console.error("Erreur chargement réglages:", error);
         }
     };
-    loadMusicSettings();
+    loadSettings();
   }, []);
 
   // Gestion du test audio
@@ -89,44 +93,62 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     
     setIsSavingMusic(true);
     try {
-        // Sauvegarde dans Supabase
         const { error } = await supabase
             .from('tv_settings')
             .upsert({ key: 'background_music', value: musicUrl }, { onConflict: 'key' });
 
         if (error) {
-             // Si erreur (ex: table n'existe pas), on propose le SQL
              if (error.code === '42P01') { 
-                 alert("Erreur : La table 'tv_settings' n'existe pas.\n\nVeuillez exécuter le script SQL mis à jour (Bouton 'Configurer SQL').");
+                 alert("Erreur : La table 'tv_settings' n'existe pas.\n\nVeuillez exécuter le script SQL mis à jour.");
              } else {
                  throw error;
              }
         } else {
-            alert("Musique sauvegardée dans la base de données !");
+            alert("Musique sauvegardée !");
         }
     } catch (e: any) {
-        console.error(e);
         alert("Erreur sauvegarde : " + e.message);
     } finally {
         setIsSavingMusic(false);
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSaveLogo = async () => {
+    if (!logoUrl) return;
+
+    setIsSavingLogo(true);
+    try {
+        const { error } = await supabase
+            .from('tv_settings')
+            .upsert({ key: 'company_logo', value: logoUrl }, { onConflict: 'key' });
+        
+        if (error) throw error;
+        alert("Logo mis à jour ! Il apparaîtra au prochain rechargement.");
+    } catch (e: any) {
+        alert("Erreur sauvegarde logo : " + e.message);
+    } finally {
+        setIsSavingLogo(false);
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'music' | 'logo') => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Limite Supabase Payload (souvent 6MB par défaut, on reste prudent à 4.5MB)
     if (file.size > 4.5 * 1024 * 1024) {
-        alert("Le fichier est trop volumineux pour la base de données (Max 4.5 Mo). Veuillez compresser le MP3 ou utiliser un lien URL.");
+        alert("Le fichier est trop volumineux pour la base de données (Max 4.5 Mo).");
         return;
     }
 
     const reader = new FileReader();
     reader.onload = (e) => {
         const result = e.target?.result as string;
-        setMusicUrl(result);
-        setIsPlayingTest(false);
+        if (type === 'music') {
+            setMusicUrl(result);
+            setIsPlayingTest(false);
+        } else {
+            setLogoUrl(result);
+        }
     };
     reader.readAsDataURL(file);
   };
@@ -135,26 +157,17 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     if (!newMessage.trim()) return;
     
     setIsUpdating(true);
-    const contentToAdd = newMessage.trim();
-    const colorToAdd = selectedColor;
-
     try {
       const { error } = await supabase
           .from('ticker_messages')
-          .insert([{ content: contentToAdd, color: colorToAdd }]);
+          .insert([{ content: newMessage.trim(), color: selectedColor }]);
       
       if (error) throw error;
-      
       setNewMessage('');
       setSelectedColor('neutral');
 
     } catch (error: any) {
-      console.error("Erreur insertion:", error);
-      if (error.code === '42501' || error.message?.includes('policy') || error.message?.includes('violates row-level security')) {
-          alert("ERREUR DE PERMISSION :\n\nSupabase bloque l'ajout. Veuillez exécuter le script SQL de configuration (Bouton 'Configuration SQL').");
-      } else {
-          alert(`Erreur lors de l'ajout : ${error.message || "Problème de connexion"}`);
-      }
+      alert(`Erreur lors de l'ajout : ${error.message}`);
     } finally {
       setIsUpdating(false);
     }
@@ -162,13 +175,9 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
 
   const handleDeleteMessage = async (msg: TickerMessage) => {
     if (!window.confirm("Supprimer ce message définitivement ?")) return;
-    
     setIsUpdating(true);
     try {
-        if (msg.id) {
-             const { error } = await supabase.from('ticker_messages').delete().eq('id', msg.id);
-             if (error) throw error;
-        }
+        if (msg.id) await supabase.from('ticker_messages').delete().eq('id', msg.id);
     } catch (error: any) {
         alert(`Erreur lors de la suppression : ${error.message}`);
     } finally {
@@ -178,10 +187,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
 
   const handleUpdateColor = async (msg: TickerMessage, newColor: string) => {
     try {
-        if (msg.id) {
-            const { error } = await supabase.from('ticker_messages').update({ color: newColor }).eq('id', msg.id);
-            if (error) throw error;
-        }
+        if (msg.id) await supabase.from('ticker_messages').update({ color: newColor }).eq('id', msg.id);
     } catch (error: any) {
         alert(`Erreur changement couleur : ${error.message}`);
     }
@@ -190,17 +196,19 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const getFullSchemaScript = () => `
 -- 0. NETTOYAGE
 drop publication if exists supabase_realtime;
+-- Attention: ces lignes suppriment les données existantes.
+-- Commentez les 'drop table' si vous voulez juste mettre à jour la structure.
 drop table if exists public.stock cascade;
 drop table if exists public.interventions cascade;
 drop table if exists public.transactions cascade;
 drop table if exists public.employees cascade;
 drop table if exists public.ticker_messages cascade;
-drop table if exists public.tv_settings cascade; -- Nouvelle table
+drop table if exists public.tv_settings cascade; 
 
 -- 1. Activer le Temps Réel (Realtime)
 create publication supabase_realtime for all tables;
 
--- 2. Création de la table TV_SETTINGS (Pour la musique)
+-- 2. Création de la table TV_SETTINGS (Pour musique et logo)
 create table public.tv_settings (
   key text primary key,
   value text,
@@ -224,7 +232,7 @@ create table public.stock (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 4. Création de la table INTERVENTIONS
+-- 4. Création de la table INTERVENTIONS (Avec Location)
 create table public.interventions (
   id text primary key,
   client text,
@@ -232,6 +240,7 @@ create table public.interventions (
   domain text,
   "interventionType" text,
   description text,
+  location text, -- Nouvelle colonne
   technician text,
   status text,
   date date,
@@ -270,7 +279,7 @@ create table public.ticker_messages (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 8. Configuration de la sécurité (RLS)
+-- 8. Configuration de la sécurité (RLS - Public Access pour démo)
 alter table public.tv_settings enable row level security;
 create policy "Public Access Settings" on public.tv_settings for all using (true) with check (true);
 
@@ -289,20 +298,18 @@ create policy "Public Access Employees" on public.employees for all using (true)
 alter table public.ticker_messages enable row level security;
 create policy "Public Access Ticker" on public.ticker_messages for all using (true) with check (true);
 
--- 9. INSERTION DE DONNÉES DE DÉMARRAGE
+-- 9. Données initiales
 insert into public.stock (id, name, description, category, quantity, threshold, "unitPrice", supplier, site, "imageUrls", specs)
-values 
-('STK-001', 'Câble R2V 3G2.5mm²', 'Câble électrique rigide pour installation fixe industrielle ou domestique.', 'Électricité', 500, 100, 25000, 'ElecPro', 'Abidjan', ARRAY['https://images.unsplash.com/photo-1558402529-d2638a7023e9?auto=format&fit=crop&q=80&w=1200'], '{"Type": "R2V"}'::jsonb),
-('STK-002', 'Disjoncteur 16A', 'Disjoncteur magnéto-thermique pour protection des circuits.', 'Électricité', 15, 20, 3500, 'ElecPro', 'Bouaké', ARRAY['https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=1200'], '{"Calibre": "16A"}'::jsonb);
+values ('STK-001', 'Câble R2V 3G2.5mm²', 'Câble électrique.', 'Électricité', 500, 100, 25000, 'ElecPro', 'Abidjan', ARRAY['https://images.unsplash.com/photo-1558402529-d2638a7023e9?auto=format&fit=crop&q=80&w=1200'], '{"Type": "R2V"}'::jsonb);
 
 insert into public.ticker_messages (content, color) values 
-('Bienvenue chez EBF - Votre partenaire technique.', 'neutral'),
-('Promotion : -15% sur les câbles cette semaine !', 'green');
+('Bienvenue chez EBF.', 'neutral'),
+('Promotion : -15% sur les câbles.', 'green');
 `;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(getFullSchemaScript());
-    alert("Script SQL copié ! Collez-le dans l'éditeur SQL de Supabase.");
+    alert("Script SQL copié !");
   };
 
   const getColorClass = (color: string) => {
@@ -327,7 +334,7 @@ insert into public.ticker_messages (content, color) values
       {/* Audio element caché pour le test */}
       <audio ref={audioTestRef} src={musicUrl} />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Card Config DB */}
           <div className="bg-blue-600 rounded-3xl shadow-lg p-6 flex flex-col justify-between text-white overflow-hidden relative min-h-[180px]">
               <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -339,7 +346,7 @@ insert into public.ticker_messages (content, color) values
                       <h4 className="font-black text-xl tracking-tight">Base de Données</h4>
                   </div>
                   <p className="text-blue-100 text-sm font-medium opacity-90">
-                    Générer les tables Supabase requises (dont Musique).
+                    Générer les tables Supabase (dont colonne Location et Logo).
                   </p>
               </div>
               <button 
@@ -360,63 +367,48 @@ insert into public.ticker_messages (content, color) values
                       <Music size={24} className="text-purple-200" />
                       <h4 className="font-black text-xl tracking-tight">Ambiance TV</h4>
                   </div>
-                  <p className="text-purple-100 text-sm font-medium opacity-90">
-                    Musique de fond synchronisée (Stockage BDD).
-                  </p>
+                  
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                        <button onClick={() => fileInputRef.current?.click()} className="flex-1 bg-purple-500 hover:bg-purple-400 text-white p-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2">
+                            <Upload size={14} /> Importer MP3
+                        </button>
+                        <input type="file" ref={fileInputRef} accept="audio/*" className="hidden" onChange={(e) => handleFileUpload(e, 'music')} />
+                        <button onClick={() => setIsPlayingTest(!isPlayingTest)} className="p-2 bg-purple-800 rounded-xl">
+                            {isPlayingTest ? <Pause size={14}/> : <Play size={14}/>}
+                        </button>
+                    </div>
+                    <button onClick={handleSaveMusic} disabled={isSavingMusic} className="w-full px-4 py-2 bg-white text-purple-700 rounded-xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform flex items-center justify-center gap-2">
+                        {isSavingMusic ? <Loader2 size={14} className="animate-spin"/> : <Save size={14} />} Sauver
+                    </button>
+                  </div>
               </div>
-              
-              <div className="relative z-10 space-y-3">
-                  <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        placeholder="Lien MP3 ou Importer..." 
-                        value={musicUrl.length > 50 ? 'Fichier importé (Base64)' : musicUrl}
-                        readOnly={musicUrl.length > 50}
-                        onChange={(e) => setMusicUrl(e.target.value)}
-                        className="flex-1 px-4 py-2 rounded-xl bg-purple-900/50 border border-purple-500/30 text-white placeholder-purple-300 text-xs font-bold outline-none focus:border-purple-300 transition-colors truncate"
-                      />
-                      <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        accept="audio/*" 
-                        className="hidden" 
-                        onChange={handleFileUpload}
-                      />
-                      <button 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="bg-purple-500 hover:bg-purple-400 text-white p-2 rounded-xl transition-colors"
-                        title="Importer depuis le PC (Max 4.5Mo)"
-                      >
-                          <Upload size={16} />
-                      </button>
-                      <button 
-                        onClick={() => setIsPlayingTest(!isPlayingTest)}
-                        className={`p-2 rounded-xl transition-colors ${isPlayingTest ? 'bg-green-500 text-white' : 'bg-purple-800 text-purple-200'}`}
-                        title="Tester le son"
-                      >
-                          {isPlayingTest ? <Pause size={16} /> : <Play size={16} />}
-                      </button>
-                  </div>
+          </div>
 
-                  <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                      {MUSIC_PRESETS.map((p, i) => (
-                          <button 
-                            key={i}
-                            onClick={() => { setMusicUrl(p.url); setIsPlayingTest(false); }}
-                            className="shrink-0 px-3 py-1.5 bg-purple-600 rounded-lg text-[10px] font-bold uppercase hover:bg-white hover:text-purple-700 transition-colors"
-                          >
-                             {p.name}
-                          </button>
-                      ))}
+          {/* Card Config Logo */}
+          <div className="bg-orange-600 rounded-3xl shadow-lg p-6 flex flex-col justify-between text-white overflow-hidden relative min-h-[180px]">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <ImageIcon size={120} />
+              </div>
+              <div className="relative z-10 mb-4">
+                  <div className="flex items-center gap-3 mb-2">
+                      <ImageIcon size={24} className="text-orange-200" />
+                      <h4 className="font-black text-xl tracking-tight">Logo Entreprise</h4>
                   </div>
-                  <button 
-                    onClick={handleSaveMusic}
-                    disabled={isSavingMusic}
-                    className="w-full px-4 py-2 bg-white text-purple-700 rounded-xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                     {isSavingMusic ? <Loader2 size={14} className="animate-spin"/> : <Save size={14} />} 
-                     {isSavingMusic ? 'Sauvegarde...' : 'Sauvegarder en Base de Données'}
-                  </button>
+                  <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center overflow-hidden border-2 border-orange-400">
+                          {logoUrl ? <img src={logoUrl} className="w-full h-full object-contain" /> : <span className="text-orange-600 font-bold text-xs">EBF</span>}
+                      </div>
+                      <div className="space-y-2 flex-1">
+                          <button onClick={() => logoInputRef.current?.click()} className="w-full bg-orange-500 hover:bg-orange-400 text-white p-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2">
+                              <Upload size={14} /> Choisir Logo
+                          </button>
+                          <input type="file" ref={logoInputRef} accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, 'logo')} />
+                          <button onClick={handleSaveLogo} disabled={isSavingLogo} className="w-full bg-white text-orange-700 p-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                              {isSavingLogo ? <Loader2 size={14} className="animate-spin"/> : <Save size={14} />} Sauver
+                          </button>
+                      </div>
+                  </div>
               </div>
           </div>
       </div>
@@ -522,7 +514,7 @@ insert into public.ticker_messages (content, color) values
               </div>
               <div className="p-8">
                   <div className="mb-4 bg-yellow-50 p-4 rounded-xl border border-yellow-100 text-yellow-800 text-xs font-bold">
-                    ⚠️ Ce script supprime et recrée toutes les tables pour s'assurer que les nouvelles colonnes (Téléphone, Domaine, etc.) sont bien présentes.
+                    ⚠️ Ce script supprime et recrée toutes les tables pour s'assurer que les nouvelles colonnes (Location) sont bien présentes.
                   </div>
                   <pre className="bg-gray-900 text-green-400 p-6 rounded-2xl text-xs md:text-sm font-mono overflow-auto max-h-60 mb-8 custom-scrollbar">
                         {getFullSchemaScript()}

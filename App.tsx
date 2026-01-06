@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -29,6 +28,9 @@ const App: React.FC = () => {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  
+  // Custom Branding
+  const [customLogo, setCustomLogo] = useState<string>('');
   
   // Indicateur de connexion
   const [isLive, setIsLive] = useState(false);
@@ -81,6 +83,11 @@ const App: React.FC = () => {
             } else if (payload.table === 'employees') {
                  supabase.from('employees').select('*').order('name')
                  .then(({ data }) => data && setEmployees(data as Employee[]));
+            } else if (payload.table === 'tv_settings') {
+                 // Check if logo changed
+                 if ((payload.new as any)?.key === 'company_logo') {
+                     setCustomLogo((payload.new as any).value);
+                 }
             }
         })
         .subscribe();
@@ -136,6 +143,14 @@ const App: React.FC = () => {
             .select('*')
             .order('name');
         if (empData) setEmployees(empData as Employee[]);
+        
+        // 6. Settings (Logo)
+        const { data: settingsData } = await supabase
+            .from('tv_settings')
+            .select('value')
+            .eq('key', 'company_logo')
+            .maybeSingle();
+        if (settingsData && settingsData.value) setCustomLogo(settingsData.value);
 
         setIsLive(true);
     } catch (error) {
@@ -151,6 +166,7 @@ const App: React.FC = () => {
         liveStock={stock}
         liveInterventions={interventions}
         liveMessages={tickerMessages}
+        customLogo={customLogo}
       />
     );
   }
@@ -210,6 +226,7 @@ const App: React.FC = () => {
         onPeriodChange={(p) => setPeriod(p as Period)}
         tickerMessages={tickerMessages}
         isLive={isLive}
+        customLogo={customLogo}
       >
         {renderContent()}
       </Layout>

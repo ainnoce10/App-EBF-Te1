@@ -1,4 +1,3 @@
-
 import { LayoutDashboard, Wrench, Wallet, CalendarDays, ShoppingCart, Settings, MonitorPlay } from 'lucide-react';
 import { DashboardData, Intervention, StockItem, Transaction, Employee, TickerMessage } from './types';
 
@@ -147,16 +146,26 @@ export const TICKER_MESSAGES: TickerMessage[] = [
   { content: "EBF Abidjan & Bouaké : Ouvert du Lundi au Samedi de 08h à 18h.", color: "neutral" },
 ];
 
-export const Logo = () => (
-  <div className="flex items-center gap-2 font-bold text-2xl tracking-tighter select-none">
-     <div className="relative w-10 h-10 bg-orange-500 rounded-tr-lg rounded-bl-lg flex items-center justify-center shadow-md">
-        <span className="text-white text-xs font-black">EBF</span>
-        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-600 rounded-full border-2 border-white"></div>
-     </div>
-     <div>
-       <span className="text-orange-600 font-black">E</span>
-       <span className="text-green-600 font-black">B</span>
-       <span className="text-gray-700 font-black">F</span>
-     </div>
-  </div>
-);
+export const Logo = ({ url }: { url?: string }) => {
+    if (url) {
+        return (
+            <div className="flex items-center gap-3">
+                 <img src={url} alt="Logo" className="h-10 w-auto object-contain rounded-lg shadow-sm bg-white" />
+                 <span className="font-black text-2xl tracking-tighter text-gray-800">EBF</span>
+            </div>
+        );
+    }
+    return (
+        <div className="flex items-center gap-2 font-bold text-2xl tracking-tighter select-none">
+            <div className="relative w-10 h-10 bg-orange-500 rounded-tr-lg rounded-bl-lg flex items-center justify-center shadow-md">
+                <span className="text-white text-xs font-black">EBF</span>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-600 rounded-full border-2 border-white"></div>
+            </div>
+            <div>
+            <span className="text-orange-600 font-black">E</span>
+            <span className="text-green-600 font-black">B</span>
+            <span className="text-gray-700 font-black">F</span>
+            </div>
+        </div>
+    );
+};

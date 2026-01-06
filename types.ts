@@ -21,6 +21,7 @@ export interface Intervention {
   clientPhone?: string;
   domain?: 'Électricité' | 'Bâtiment' | 'Froid' | 'Plomberie';
   interventionType?: 'Dépannage' | 'Installation' | 'Désinstallation' | 'Entretien' | 'Tuyauterie' | 'Appareillage' | 'Fillerie' | 'Rénovation' | 'Réhabilitation' | 'Expertise' | 'Devis' | 'Maintenance';
+  location?: string;
   description: string;
   technician: string;
   status: 'En cours' | 'Terminé' | 'En attente';
@@ -58,6 +59,6 @@ export interface Employee {
   name: string;
   role: string;
   site: Site | string;
-  status: 'Actif' | 'Congés';
+  status: 'Actif' | 'Congés' | 'Inactif';
   entryDate: string;
 }

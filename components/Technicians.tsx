@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Intervention, Site } from '../types';
 import { supabase } from '../lib/supabase';
@@ -22,7 +21,8 @@ import {
   Save,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Navigation
 } from 'lucide-react';
 
 interface TechniciansProps {
@@ -55,6 +55,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     domain: 'Électricité' as 'Électricité' | 'Bâtiment' | 'Froid' | 'Plomberie',
     interventionType: 'Dépannage' as any,
     description: '',
+    location: '',
     site: 'Abidjan' as Site,
     date: new Date().toISOString().split('T')[0]
   });
@@ -117,7 +118,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                 status: editIntervention.status,
                 description: editIntervention.description,
                 technician: editIntervention.technician,
-                date: editIntervention.date
+                date: editIntervention.date,
+                location: editIntervention.location
             })
             .eq('id', editIntervention.id);
 
@@ -177,6 +179,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         domain: 'Électricité',
         interventionType: 'Dépannage',
         description: '',
+        location: '',
         site: 'Abidjan',
         date: new Date().toISOString().split('T')[0]
       });
@@ -262,7 +265,13 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
               </div>
             </div>
             
-            <h3 className="font-black text-xl mb-2 text-gray-900 leading-tight">{inter.client}</h3>
+            <h3 className="font-black text-xl mb-1 text-gray-900 leading-tight">{inter.client}</h3>
+            {inter.location && (
+                 <div className="flex items-center gap-1 text-gray-400 text-xs font-bold mb-2">
+                     <MapPin size={12} className="text-orange-500"/>
+                     {inter.location}
+                 </div>
+            )}
             <p className="text-gray-500 text-sm mb-6 line-clamp-2 min-h-[2.5rem]">{inter.description}</p>
             
             <div className="space-y-2 mb-6">
@@ -279,14 +288,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                <div className="flex items-center gap-1"><Calendar size={12}/> {new Date(inter.date).toLocaleDateString()}</div>
                <div className="flex items-center gap-1 ml-auto text-gray-500"><User size={12}/> {inter.technician}</div>
             </div>
-            
-            {/* Quick Action Overlay (optionnel, gardé pour la compatibilité) */}
-            <button 
-                onClick={() => { setFormReport({ ...formReport, client: inter.client }); setShowReportModal(true); }} 
-                className="absolute bottom-4 right-4 p-3 bg-orange-50 rounded-2xl text-orange-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-orange-500 hover:text-white shadow-lg"
-            >
-              <Mic size={20} />
-            </button>
           </div>
         ))}
         {filteredInterventions.length === 0 && (
@@ -377,6 +378,16 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                        </div>
                    </div>
                    
+                   <div className="space-y-2">
+                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Lieu précis</label>
+                       <input
+                           type="text" 
+                           value={editIntervention.location || ''} 
+                           onChange={(e) => setEditIntervention({...editIntervention, location: e.target.value})}
+                           className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-gray-300"
+                       />
+                   </div>
+
                    <div className="space-y-2">
                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Description</label>
                        <textarea 
@@ -535,12 +546,27 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                     <input type="date" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-green-500 transition-all" value={newIntervention.date} onChange={e => setNewIntervention({...newIntervention, date: e.target.value})}/>
                   </div>
 
-                  {/* Description / Lieu */}
+                  {/* Location (New separate field) */}
                   <div className="col-span-full space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Lieu & Description du travail</label>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Lieu précis d'intervention</label>
+                    <div className="relative">
+                        <Navigation className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                        <input 
+                            type="text" 
+                            placeholder="Ex: Rue 12 Plateau, 3ème étage" 
+                            className="w-full pl-12 p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-green-500 transition-all"
+                            value={newIntervention.location} 
+                            onChange={e => setNewIntervention({...newIntervention, location: e.target.value})}
+                        />
+                    </div>
+                  </div>
+
+                  {/* Description (Separated) */}
+                  <div className="col-span-full space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Description du travail</label>
                     <textarea 
-                        placeholder="Ex: Rue 12 Plateau, 3ème étage. Panne de climatiseur central..." 
-                        className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-green-500 transition-all h-32 resize-none" 
+                        placeholder="Ex: Panne de climatiseur central, bruit anormal..." 
+                        className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-green-500 transition-all h-24 resize-none" 
                         value={newIntervention.description} 
                         onChange={e => setNewIntervention({...newIntervention, description: e.target.value})} 
                     />
