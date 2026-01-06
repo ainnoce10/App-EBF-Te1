@@ -11,8 +11,7 @@ import {
   PieChart,
   Pie,
   Cell,
-  ComposedChart,
-  Line
+  ComposedChart
 } from 'recharts';
 import { Period, Site, Transaction, Intervention } from '../types';
 import { 
