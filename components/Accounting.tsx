@@ -153,7 +153,6 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
   const totalRevenue = accountingTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
   const totalExpense = accountingTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
   const netMargin = totalRevenue - totalExpense;
-  const marginPercent = totalRevenue > 0 ? ((netMargin / totalRevenue) * 100).toFixed(0) : 0;
 
   return (
     <div className="space-y-6 relative pb-24">
