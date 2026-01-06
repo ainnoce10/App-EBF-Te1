@@ -427,9 +427,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                         {currentPlanningSlice.map((inter) => (
                             <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-6 md:p-8 rounded-3xl flex flex-col gap-4 shadow-2xl h-full relative overflow-hidden group">
                                 {/* NOUVEAU HEADER: STATUS & SITE */}
-                                <div className="flex justify-between items-start mb-2">
-                                     {/* STATUT - TRES PETIT */}
-                                     <span className={`px-2 py-0.5 md:px-3 md:py-1 rounded-lg font-black text-[8px] md:text-[10px] uppercase tracking-widest inline-block text-center shadow-lg
+                                <div className="flex justify-between items-start mb-4">
+                                     {/* STATUT - AUGMENTE */}
+                                     <span className={`px-4 py-1.5 md:px-5 md:py-2 rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest inline-block text-center shadow-lg
                                       ${inter.status === 'Terminé' ? 'bg-green-500 text-white' : 
                                         inter.status === 'En cours' ? 'bg-orange-500 text-white' : 
                                         inter.status === 'En attente' ? 'bg-blue-600 text-white' :
@@ -437,61 +437,63 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                       {inter.status}
                                     </span>
                                     
-                                    {/* SITE - TRES REDUIT */}
+                                    {/* SITE - AUGMENTE */}
                                     {inter.site && (
-                                        <div className="flex items-center gap-1 md:gap-2 bg-white/10 px-2 py-0.5 md:px-3 md:py-1 rounded-lg border border-white/10 backdrop-blur-md animate-pulse-soft">
-                                            <MapPin className="w-3 h-3 md:w-4 md:h-4 text-orange-500" />
-                                            <span className="text-[10px] md:text-sm font-black text-white uppercase tracking-tighter">
+                                        <div className="flex items-center gap-2 md:gap-3 bg-white/10 px-4 py-1.5 md:px-5 md:py-2 rounded-xl border border-white/10 backdrop-blur-md animate-pulse-soft">
+                                            <MapPin className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />
+                                            <span className="text-xs md:text-base font-black text-white uppercase tracking-tighter">
                                                 {inter.site}
                                             </span>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Body Information */}
-                                <div className="flex-1 flex flex-col justify-center min-h-0 space-y-2">
-                                    {/* 1. CLIENT - TRES REDUIT */}
-                                    <div className="border-l-2 md:border-l-4 border-orange-500 pl-3 md:pl-4">
-                                        <h4 className="text-white text-lg md:text-2xl lg:text-3xl font-black tracking-tight leading-none drop-shadow-md uppercase truncate">
+                                {/* Body Information - REORDONNÉ */}
+                                <div className="flex-1 flex flex-col justify-start min-h-0 space-y-4">
+                                    
+                                    {/* 1. NATURE & DOMAINE (Inversé & Diminué) */}
+                                    <div className="flex flex-wrap items-center gap-3 mb-1">
+                                         {inter.interventionType && (
+                                            <span className="px-3 py-1 bg-gray-700/50 border border-gray-600 text-gray-200 rounded-lg text-sm md:text-xl font-black uppercase">
+                                               {inter.interventionType}
+                                            </span>
+                                        )}
+                                        {inter.domain && (
+                                            <span className="px-2 py-1 bg-blue-900/30 border border-blue-500/50 text-blue-300 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider">
+                                               {inter.domain}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* 2. CLIENT */}
+                                    <div>
+                                        <span className="text-gray-400 text-[10px] uppercase font-bold tracking-widest block mb-1">Client</span>
+                                        <h4 className="text-white text-xl md:text-3xl font-black tracking-tight leading-none uppercase truncate">
                                             {inter.client}
                                         </h4>
                                     </div>
 
-                                    {/* 2. DOMAINE & TYPE (AGRANDI) */}
-                                    <div className="flex flex-wrap gap-3 md:gap-4 my-2">
-                                        {inter.domain && (
-                                            <span className="px-3 py-1 md:px-5 md:py-2 bg-blue-600/30 border-2 border-blue-500 text-blue-200 rounded-xl text-lg md:text-3xl font-black uppercase tracking-widest shadow-[0_0_20px_rgba(37,99,235,0.3)]">
-                                               {inter.domain}
+                                    {/* 3. LIEU */}
+                                    {inter.location && (
+                                        <div className="flex items-center gap-2 text-gray-300">
+                                            <MapPin size={18} className="text-orange-500 shrink-0" />
+                                            <span className="text-sm md:text-lg font-bold uppercase tracking-wide line-clamp-1">
+                                                {inter.location}
                                             </span>
-                                        )}
-                                        {inter.interventionType && (
-                                            <span className="px-3 py-1 md:px-5 md:py-2 bg-gray-700/50 border border-gray-600 text-gray-300 rounded-xl text-base md:text-2xl font-bold uppercase">
-                                               {inter.interventionType}
+                                        </div>
+                                    )}
+
+                                    {/* 4. TEL (VERT) */}
+                                    {inter.clientPhone && (
+                                        <div className="flex items-center gap-2 text-green-400">
+                                            <Phone size={18} className="text-green-500 shrink-0" />
+                                            <span className="text-sm md:text-lg font-mono font-black tracking-widest">
+                                                {inter.clientPhone}
                                             </span>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
 
-                                    {/* 3. LIEU & TEL (Secondaire) */}
-                                    <div className="flex flex-col gap-2">
-                                        {inter.location && (
-                                            <div className="flex items-center gap-3 text-gray-300">
-                                                <MapPin size={24} className="text-orange-500/80" />
-                                                <span className="text-lg md:text-2xl font-bold uppercase tracking-wide line-clamp-1">
-                                                    {inter.location}
-                                                </span>
-                                            </div>
-                                        )}
-                                        {inter.clientPhone && (
-                                            <div className="flex items-center gap-3 text-gray-400">
-                                                <Phone size={24} className="text-green-500/80" />
-                                                <span className="text-lg md:text-2xl font-mono font-bold tracking-widest">
-                                                    {inter.clientPhone}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* 4. DETAILS (Description) - Interface réduite (padding/margin) mais police conservée */}
+                                    {/* 5. DETAILS (Description) */}
                                     <div className="mt-auto bg-black/40 p-3 md:p-4 rounded-xl border-t border-white/5 flex-1 min-h-0 overflow-hidden relative">
                                         <p className="text-gray-100 text-lg md:text-2xl lg:text-3xl font-bold leading-tight line-clamp-3 md:line-clamp-4">
                                             {inter.description}
