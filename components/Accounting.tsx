@@ -1,14 +1,20 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MOCK_EMPLOYEES } from '../constants';
-import { Transaction, Employee } from '../types';
+import { Transaction, Employee, Site } from '../types';
 import { supabase } from '../lib/supabase';
 import { 
   Download, 
   FileText, 
   Users, 
   X, 
-  Loader2
+  Loader2,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  PlusCircle,
+  Briefcase,
+  TrendingUp,
+  Wallet,
+  Calendar
 } from 'lucide-react';
 
 interface AccountingProps {
@@ -18,21 +24,77 @@ interface AccountingProps {
 
 const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmployees = [] }) => {
   const [showAllTransactions, setShowAllTransactions] = useState(false);
+  
+  // Modals States
   const [showPayrollModal, setShowPayrollModal] = useState(false);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+
+  // Data States
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [newEmployeeData, setNewEmployeeData] = useState({ name: '', role: '', site: 'Abidjan', entryDate: new Date().toISOString().split('T')[0] });
+  
+  // Transaction Form State
+  const [transactionType, setTransactionType] = useState<'Recette' | 'Dépense'>('Recette');
+  const [newTransaction, setNewTransaction] = useState({
+    amount: '',
+    category: '',
+    description: '',
+    site: 'Abidjan' as Site,
+    date: new Date().toISOString().split('T')[0]
+  });
+
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (liveEmployees.length > 0) setEmployees(liveEmployees);
     else if (employees.length === 0) setEmployees(MOCK_EMPLOYEES);
   }, [liveEmployees, employees.length]);
 
-  const handleExport = () => {
-    alert("Export simulé.");
+  // --- ACTIONS TRANSACTIONS ---
+
+  const openTransactionModal = (type: 'Recette' | 'Dépense') => {
+    setTransactionType(type);
+    setNewTransaction({
+        amount: '',
+        category: type === 'Recette' ? 'Prestation' : 'Achat Matériel',
+        description: '',
+        site: 'Abidjan',
+        date: new Date().toISOString().split('T')[0]
+    });
+    setShowTransactionModal(true);
   };
+
+  const handleSaveTransaction = async () => {
+    if (!newTransaction.amount || !newTransaction.description) return;
+    
+    setIsSaving(true);
+    const newId = `TRX-${Math.floor(Math.random() * 100000)}`;
+    
+    const transactionToSave: Transaction = {
+        id: newId,
+        type: transactionType,
+        amount: parseInt(newTransaction.amount),
+        category: newTransaction.category,
+        description: newTransaction.description,
+        site: newTransaction.site,
+        date: newTransaction.date
+    };
+
+    try {
+        const { error } = await supabase.from('transactions').insert([transactionToSave]);
+        if (error) throw error;
+        setShowTransactionModal(false);
+    } catch (error: any) {
+        alert("Erreur enregistrement : " + error.message);
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
+  // --- ACTIONS RH ---
 
   const handleToggleStatus = async (empId: string) => {
     const emp = employees.find(e => e.id === empId);
@@ -61,7 +123,21 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
 
   const handleGeneratePaie = () => {
     setIsGenerating(true);
-    setTimeout(() => { setIsGenerating(false); setShowPayrollModal(false); alert('Paie générée.'); }, 2000);
+    setTimeout(() => { setIsGenerating(false); setShowPayrollModal(false); alert('Fiches de paie générées et envoyées.'); }, 2000);
+  };
+
+  const handleExport = () => {
+    // Simulation export CSV
+    const headers = ['Date', 'Type', 'Catégorie', 'Description', 'Montant', 'Site'];
+    const rows = liveTransactions.map(t => [t.date, t.type, t.category, t.description, t.amount, t.site].join(','));
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "transactions_ebf.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const displayedTransactions = showAllTransactions ? liveTransactions : liveTransactions.slice(0, 5);
@@ -71,100 +147,262 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
   const marginPercent = totalRevenue > 0 ? ((netMargin / totalRevenue) * 100).toFixed(0) : 0;
 
   return (
-    <div className="space-y-6 relative pb-20">
+    <div className="space-y-6 relative pb-24">
+       
+       {/* HEADER */}
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Comptabilité & RH</h2>
-          <p className="text-gray-500 text-sm">Finances et personnel</p>
+          <h2 className="text-3xl font-black text-gray-900 tracking-tight">Comptabilité & RH</h2>
+          <p className="text-gray-500 font-bold text-sm">Pilotage financier et gestion du personnel</p>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <button onClick={() => handleExport()} className="flex-1 md:flex-none justify-center bg-green-600 text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-sm text-sm font-bold">
-            <Download size={16} /> Excel
-          </button>
-        </div>
+        <button onClick={handleExport} className="bg-white border border-gray-200 text-gray-700 px-5 py-3 rounded-2xl flex items-center gap-2 shadow-sm text-xs font-black uppercase tracking-widest hover:bg-gray-50 active:scale-95 transition-all">
+            <Download size={16} /> Exporter Données
+        </button>
       </div>
 
+      {/* KPI CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-green-500">
-          <p className="text-gray-500 text-xs font-bold uppercase">Recettes</p>
-          <h3 className="text-2xl font-black text-gray-800">{totalRevenue.toLocaleString()} F</h3>
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><ArrowUpCircle size={80} className="text-green-600"/></div>
+          <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Recettes Totales</p>
+          <h3 className="text-3xl font-black text-gray-900 tracking-tighter">{totalRevenue.toLocaleString()} <span className="text-sm text-gray-400">FCFA</span></h3>
         </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-red-500">
-          <p className="text-gray-500 text-xs font-bold uppercase">Dépenses</p>
-          <h3 className="text-2xl font-black text-gray-800">{totalExpense.toLocaleString()} F</h3>
+        
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><ArrowDownCircle size={80} className="text-red-600"/></div>
+          <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Dépenses Totales</p>
+          <h3 className="text-3xl font-black text-gray-900 tracking-tighter">{totalExpense.toLocaleString()} <span className="text-sm text-gray-400">FCFA</span></h3>
         </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-orange-500">
-          <p className="text-gray-500 text-xs font-bold uppercase">Marge Nette ({marginPercent}%)</p>
-          <h3 className="text-2xl font-black text-gray-800">{netMargin.toLocaleString()} F</h3>
+        
+        <div className="bg-gray-900 p-6 rounded-[2rem] shadow-lg border border-gray-800 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10"><Wallet size={80} className="text-white"/></div>
+          <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Marge Nette ({marginPercent}%)</p>
+          <h3 className={`text-3xl font-black tracking-tighter ${netMargin >= 0 ? 'text-white' : 'text-red-400'}`}>
+              {netMargin > 0 && '+'}{netMargin.toLocaleString()} <span className="text-sm text-gray-600">FCFA</span>
+          </h3>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-5 border-b border-gray-100 flex justify-between items-center">
-          <h3 className="font-bold text-gray-800">Transactions</h3>
-          <button onClick={() => setShowAllTransactions(!showAllTransactions)} className="text-orange-600 text-xs font-bold uppercase">
+      {/* ACTION BAR FINANCIERE */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button 
+            onClick={() => openTransactionModal('Recette')}
+            className="group flex items-center justify-between p-5 bg-green-50 hover:bg-green-100 border-2 border-green-200 rounded-2xl transition-all active:scale-95"
+          >
+              <div className="flex items-center gap-4">
+                  <div className="bg-green-500 text-white p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
+                      <PlusCircle size={24} />
+                  </div>
+                  <div className="text-left">
+                      <h4 className="font-black text-green-900 uppercase text-sm tracking-wide">Nouvelle Recette</h4>
+                      <p className="text-green-600 text-xs font-bold">Encaisser un paiement</p>
+                  </div>
+              </div>
+              <ArrowUpCircle className="text-green-300 group-hover:text-green-500 transition-colors" size={32} />
+          </button>
+
+          <button 
+            onClick={() => openTransactionModal('Dépense')}
+            className="group flex items-center justify-between p-5 bg-red-50 hover:bg-red-100 border-2 border-red-200 rounded-2xl transition-all active:scale-95"
+          >
+              <div className="flex items-center gap-4">
+                  <div className="bg-red-500 text-white p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
+                      <Briefcase size={24} />
+                  </div>
+                  <div className="text-left">
+                      <h4 className="font-black text-red-900 uppercase text-sm tracking-wide">Nouvelle Dépense</h4>
+                      <p className="text-red-600 text-xs font-bold">Régler une facture / Achat</p>
+                  </div>
+              </div>
+              <ArrowDownCircle className="text-red-300 group-hover:text-red-500 transition-colors" size={32} />
+          </button>
+      </div>
+
+      {/* TABLEAU TRANSACTIONS */}
+      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+          <div className="flex items-center gap-2">
+             <TrendingUp size={20} className="text-orange-500"/>
+             <h3 className="font-black text-gray-800 text-sm uppercase tracking-wide">Historique Transactions</h3>
+          </div>
+          <button onClick={() => setShowAllTransactions(!showAllTransactions)} className="bg-white border border-gray-200 px-4 py-2 rounded-xl text-orange-600 text-[10px] font-black uppercase tracking-widest hover:bg-orange-50 transition-colors">
             {showAllTransactions ? 'Réduire' : 'Voir tout'}
           </button>
         </div>
         
-        {/* Mobile Scrollable Table Container */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left whitespace-nowrap min-w-[600px]">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+          <table className="w-full text-left whitespace-nowrap min-w-[700px]">
+            <thead className="bg-gray-50 text-gray-400 text-[10px] uppercase tracking-widest">
               <tr>
-                <th className="px-6 py-4 font-bold">Date</th>
-                <th className="px-6 py-4 font-bold">Libellé</th>
-                <th className="px-6 py-4 font-bold">Catégorie</th>
-                <th className="px-6 py-4 font-bold text-right">Montant</th>
-                <th className="px-6 py-4 font-bold text-center">Type</th>
+                <th className="px-6 py-4 font-black">Date</th>
+                <th className="px-6 py-4 font-black">Libellé</th>
+                <th className="px-6 py-4 font-black">Catégorie</th>
+                <th className="px-6 py-4 font-black">Site</th>
+                <th className="px-6 py-4 font-black text-right">Montant</th>
+                <th className="px-6 py-4 font-black text-center">Flux</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 text-sm">
+            <tbody className="divide-y divide-gray-100 text-sm font-medium">
               {displayedTransactions.length > 0 ? displayedTransactions.map((trx) => (
-                <tr key={trx.id} className="hover:bg-gray-50">
+                <tr key={trx.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 text-gray-500">{new Date(trx.date).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 font-bold text-gray-800">{trx.description}</td>
-                  <td className="px-6 py-4 text-gray-500"><span className="bg-gray-100 px-2 py-1 rounded text-xs">{trx.category}</span></td>
+                  <td className="px-6 py-4 font-bold text-gray-900">{trx.description}</td>
+                  <td className="px-6 py-4">
+                      <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-lg text-xs font-bold border border-gray-200">{trx.category}</span>
+                  </td>
+                  <td className="px-6 py-4 text-gray-500 text-xs uppercase">{trx.site}</td>
                   <td className="px-6 py-4 font-black text-right">{trx.amount.toLocaleString()} F</td>
                   <td className="px-6 py-4 text-center">
                     {trx.type === 'Recette' 
-                        ? <span className="text-green-600 bg-green-100 px-2 py-1 rounded-md text-xs font-bold">Entrée</span>
-                        : <span className="text-red-600 bg-red-100 px-2 py-1 rounded-md text-xs font-bold">Sortie</span>}
+                        ? <span className="text-green-600 bg-green-100 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider">Entrée</span>
+                        : <span className="text-red-600 bg-red-100 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider">Sortie</span>}
                   </td>
                 </tr>
               )) : (
-                <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-400">Aucune donnée</td></tr>
+                <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-300 font-bold">Aucune transaction enregistrée</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
       
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-        <h3 className="font-bold text-gray-800 mb-4">Actions RH</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-             <button onClick={() => setShowPayrollModal(true)} className="p-4 border border-gray-200 rounded-xl flex items-center gap-3 hover:bg-gray-50">
-                <div className="bg-orange-100 p-2 rounded-lg text-orange-600"><FileText size={20} /></div>
-                <div className="text-left"><p className="font-bold text-gray-800 text-sm">Fiches de Paie</p></div>
+      {/* SECTION RH */}
+      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6 md:p-8">
+        <h3 className="font-black text-gray-800 mb-6 flex items-center gap-2 text-sm uppercase tracking-wide">
+            <Users size={20} className="text-blue-500"/> Ressources Humaines
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <button onClick={() => setShowPayrollModal(true)} className="p-6 border-2 border-gray-100 rounded-3xl flex items-center gap-4 hover:border-orange-200 hover:bg-orange-50 transition-all group">
+                <div className="bg-orange-100 p-4 rounded-2xl text-orange-600 group-hover:scale-110 transition-transform"><FileText size={24} /></div>
+                <div className="text-left">
+                    <p className="font-black text-gray-900 text-lg">Fiches de Paie</p>
+                    <p className="text-xs text-gray-500 font-bold">Générer les bulletins mensuels</p>
+                </div>
              </button>
-             <button onClick={() => { setShowEmployeeModal(true); setIsAddingEmployee(false); }} className="p-4 border border-gray-200 rounded-xl flex items-center gap-3 hover:bg-gray-50">
-                <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><Users size={20} /></div>
-                <div className="text-left"><p className="font-bold text-gray-800 text-sm">Gérer Effectif</p></div>
+             <button onClick={() => { setShowEmployeeModal(true); setIsAddingEmployee(false); }} className="p-6 border-2 border-gray-100 rounded-3xl flex items-center gap-4 hover:border-blue-200 hover:bg-blue-50 transition-all group">
+                <div className="bg-blue-100 p-4 rounded-2xl text-blue-600 group-hover:scale-110 transition-transform"><Users size={24} /></div>
+                <div className="text-left">
+                    <p className="font-black text-gray-900 text-lg">Gestion Effectif</p>
+                    <p className="text-xs text-gray-500 font-bold">Ajouter ou modifier des employés</p>
+                </div>
              </button>
         </div>
       </div>
 
+      {/* --- MODAL TRANSACTION (RECETTE/DEPENSE) --- */}
+      {showTransactionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 md:p-10 animate-scale-in shadow-2xl">
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h3 className={`text-2xl font-black uppercase tracking-tighter ${transactionType === 'Recette' ? 'text-green-600' : 'text-red-600'}`}>
+                            {transactionType === 'Recette' ? 'Encaisser Recette' : 'Saisir Dépense'}
+                        </h3>
+                        <p className="text-gray-400 font-bold text-xs uppercase tracking-widest mt-1">Mise à jour caisse</p>
+                    </div>
+                    <button onClick={() => setShowTransactionModal(false)} className="p-3 bg-gray-100 rounded-full hover:bg-gray-200"><X size={20}/></button>
+                </div>
+
+                <div className="space-y-6">
+                    {/* Amount Input */}
+                    <div className="relative">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Montant (FCFA)</label>
+                        <input 
+                            type="number" 
+                            autoFocus
+                            placeholder="0" 
+                            className={`w-full p-4 rounded-2xl font-black text-3xl outline-none border-4 transition-all ${transactionType === 'Recette' ? 'bg-green-50 text-green-700 border-green-100 focus:border-green-400' : 'bg-red-50 text-red-700 border-red-100 focus:border-red-400'}`}
+                            value={newTransaction.amount} 
+                            onChange={e => setNewTransaction({...newTransaction, amount: e.target.value})}
+                        />
+                    </div>
+
+                    {/* Category Select */}
+                    <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Catégorie</label>
+                        <div className="grid grid-cols-2 gap-3">
+                            {(transactionType === 'Recette' 
+                                ? ['Prestation', 'Vente Matériel', 'Acompte', 'Autre'] 
+                                : ['Achat Matériel', 'Transport', 'Salaire', 'Loyer', 'Repas', 'Divers']
+                            ).map(cat => (
+                                <button
+                                    key={cat}
+                                    onClick={() => setNewTransaction({...newTransaction, category: cat})}
+                                    className={`py-3 px-2 rounded-xl text-xs font-black uppercase tracking-wide border-2 transition-all ${newTransaction.category === cat ? 'border-gray-800 bg-gray-800 text-white' : 'border-gray-100 bg-white text-gray-500 hover:bg-gray-50'}`}
+                                >
+                                    {cat}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Libellé / Détails</label>
+                        <input 
+                            type="text" 
+                            placeholder="Ex: Facture Client #123 ou Achat Câbles" 
+                            className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-gray-800 outline-none border-2 border-transparent focus:border-gray-300"
+                            value={newTransaction.description} 
+                            onChange={e => setNewTransaction({...newTransaction, description: e.target.value})}
+                        />
+                    </div>
+
+                    {/* Meta Data Row */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Date</label>
+                             <div className="relative">
+                                <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"/>
+                                <input 
+                                    type="date" 
+                                    className="w-full pl-10 p-3 bg-gray-50 rounded-xl font-bold text-sm outline-none"
+                                    value={newTransaction.date}
+                                    onChange={e => setNewTransaction({...newTransaction, date: e.target.value})}
+                                />
+                             </div>
+                        </div>
+                        <div>
+                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Site</label>
+                             <select 
+                                className="w-full p-3 bg-gray-50 rounded-xl font-bold text-sm outline-none appearance-none"
+                                value={newTransaction.site}
+                                onChange={e => setNewTransaction({...newTransaction, site: e.target.value as any})}
+                             >
+                                 <option value="Abidjan">Abidjan</option>
+                                 <option value="Bouaké">Bouaké</option>
+                             </select>
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={handleSaveTransaction} 
+                        disabled={isSaving}
+                        className={`w-full py-5 text-white rounded-2xl font-black uppercase text-sm tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 ${transactionType === 'Recette' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+                    >
+                        {isSaving ? <Loader2 className="animate-spin"/> : (transactionType === 'Recette' ? <PlusCircle size={20}/> : <Briefcase size={20}/>)}
+                        {isSaving ? 'Enregistrement...' : 'Valider la transaction'}
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
       {/* --- MODAL PAIE (Mobile optimized) --- */}
       {showPayrollModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm flex flex-col overflow-hidden animate-slide-up">
-            <div className="p-5 bg-orange-50 border-b border-orange-100 flex justify-between items-center">
-                <h3 className="font-black text-gray-800">Paie Mensuelle</h3>
-                <button onClick={() => setShowPayrollModal(false)}><X size={20}/></button>
+          <div className="bg-white rounded-[2.5rem] shadow-xl w-full max-w-sm flex flex-col overflow-hidden animate-slide-up">
+            <div className="p-8 bg-orange-50 border-b border-orange-100 flex justify-between items-center">
+                <h3 className="font-black text-gray-800 text-xl">Paie Mensuelle</h3>
+                <button onClick={() => setShowPayrollModal(false)} className="p-2 bg-white rounded-full text-gray-400"><X size={20}/></button>
             </div>
-            <div className="p-6 space-y-4">
-               <div className="bg-blue-50 p-4 rounded-xl text-sm text-blue-800 font-medium">Prêt à générer pour ce mois.</div>
-               <button onClick={handleGeneratePaie} disabled={isGenerating} className="w-full py-3 bg-orange-600 text-white font-bold rounded-xl flex justify-center gap-2">
+            <div className="p-8 space-y-6">
+               <div className="bg-blue-50 p-6 rounded-2xl text-center">
+                   <FileText size={40} className="mx-auto text-blue-500 mb-2"/>
+                   <p className="text-blue-900 font-bold">Génération des bulletins</p>
+                   <p className="text-xs text-blue-600 mt-1">Période: Mois en cours</p>
+               </div>
+               <button onClick={handleGeneratePaie} disabled={isGenerating} className="w-full py-4 bg-gray-900 text-white font-black uppercase tracking-widest rounded-2xl flex justify-center gap-2 shadow-lg active:scale-95 transition-all">
                    {isGenerating ? <Loader2 className="animate-spin"/> : 'Lancer Traitement'}
                </button>
             </div>
@@ -172,27 +410,40 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
         </div>
       )}
 
-      {/* --- MODAL EMPLOYES (Mobile optimized) --- */}
+      {/* --- MODAL EMPLOYES --- */}
       {showEmployeeModal && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 backdrop-blur-sm">
            <div className="bg-white w-full h-[90vh] md:h-auto md:max-h-[85vh] md:max-w-3xl rounded-t-[2.5rem] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-slide-up">
-             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
-                <h3 className="text-xl font-black text-gray-900">{isAddingEmployee ? 'Nouveau' : 'Effectif'}</h3>
-                <button onClick={() => setShowEmployeeModal(false)} className="p-2 bg-gray-100 rounded-full"><X size={20}/></button>
+             <div className="p-6 md:p-8 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                <div>
+                    <h3 className="text-2xl font-black text-gray-900 tracking-tight">{isAddingEmployee ? 'Nouvel Employé' : 'Effectif EBF'}</h3>
+                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Gestion du personnel</p>
+                </div>
+                <button onClick={() => setShowEmployeeModal(false)} className="p-3 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"><X size={20}/></button>
              </div>
 
-             <div className="p-6 flex-1 overflow-y-auto custom-scrollbar bg-white">
+             <div className="p-6 md:p-8 flex-1 overflow-y-auto custom-scrollbar bg-white">
                  {!isAddingEmployee ? (
                    <>
-                     <button onClick={() => setIsAddingEmployee(true)} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold mb-4">+ Ajouter Employé</button>
+                     <button onClick={() => setIsAddingEmployee(true)} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs mb-6 shadow-lg flex items-center justify-center gap-2 transition-all">
+                        <PlusCircle size={18} /> Ajouter un collaborateur
+                     </button>
                      <div className="space-y-3">
                          {employees.map(emp => (
-                             <div key={emp.id} className="p-4 border border-gray-100 rounded-2xl flex justify-between items-center bg-gray-50">
-                                 <div>
-                                     <p className="font-bold text-gray-900">{emp.name}</p>
-                                     <p className="text-xs text-gray-500">{emp.role} • {emp.site}</p>
+                             <div key={emp.id} className="p-4 border-2 border-gray-100 rounded-2xl flex justify-between items-center bg-white hover:border-gray-200 transition-colors">
+                                 <div className="flex items-center gap-4">
+                                     <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-black text-xs border border-gray-200">
+                                         {emp.name.substring(0,2).toUpperCase()}
+                                     </div>
+                                     <div>
+                                        <p className="font-bold text-gray-900">{emp.name}</p>
+                                        <p className="text-xs text-gray-500 font-bold uppercase">{emp.role} • {emp.site}</p>
+                                     </div>
                                  </div>
-                                 <button onClick={() => handleToggleStatus(emp.id)} className={`text-xs font-bold px-3 py-1 rounded-full ${emp.status === 'Actif' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                                 <button 
+                                    onClick={() => handleToggleStatus(emp.id)} 
+                                    className={`text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider border ${emp.status === 'Actif' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}
+                                 >
                                      {emp.status}
                                  </button>
                              </div>
@@ -200,12 +451,29 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                      </div>
                    </>
                  ) : (
-                   <div className="space-y-4">
-                      <input type="text" placeholder="Nom complet" className="w-full p-4 bg-gray-50 rounded-xl font-bold outline-none" value={newEmployeeData.name} onChange={e => setNewEmployeeData({...newEmployeeData, name: e.target.value})}/>
-                      <input type="text" placeholder="Poste" className="w-full p-4 bg-gray-50 rounded-xl font-bold outline-none" value={newEmployeeData.role} onChange={e => setNewEmployeeData({...newEmployeeData, role: e.target.value})}/>
-                      <div className="flex gap-2">
-                         <button onClick={() => setIsAddingEmployee(false)} className="flex-1 py-3 bg-gray-100 text-gray-500 font-bold rounded-xl">Annuler</button>
-                         <button onClick={handleSaveEmployee} className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl">Enregistrer</button>
+                   <div className="space-y-6">
+                      <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nom Complet</label>
+                          <input type="text" placeholder="Ex: Kouassi Jean" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all" value={newEmployeeData.name} onChange={e => setNewEmployeeData({...newEmployeeData, name: e.target.value})}/>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Poste</label>
+                              <input type="text" placeholder="Ex: Technicien" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all" value={newEmployeeData.role} onChange={e => setNewEmployeeData({...newEmployeeData, role: e.target.value})}/>
+                          </div>
+                          <div className="space-y-2">
+                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Site</label>
+                              <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all appearance-none" value={newEmployeeData.site} onChange={e => setNewEmployeeData({...newEmployeeData, site: e.target.value})}>
+                                  <option value="Abidjan">Abidjan</option>
+                                  <option value="Bouaké">Bouaké</option>
+                              </select>
+                          </div>
+                      </div>
+
+                      <div className="flex gap-4 pt-4">
+                         <button onClick={() => setIsAddingEmployee(false)} className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-500 font-black uppercase text-xs tracking-widest rounded-2xl transition-colors">Annuler</button>
+                         <button onClick={handleSaveEmployee} className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-xs tracking-widest rounded-2xl shadow-lg transition-colors">Enregistrer</button>
                       </div>
                    </div>
                  )}
