@@ -95,14 +95,19 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
 
     // Répartition par Site pour le graphe comparatif
     const bySite = [
-        { name: 'Abidjan', income: 0, expense: 0 },
-        { name: 'Bouaké', income: 0, expense: 0 }
+        { name: 'Abidjan', income: 0, expense: 0, profit: 0 },
+        { name: 'Bouaké', income: 0, expense: 0, profit: 0 }
     ];
 
     data.forEach(t => {
         const siteIndex = t.site === 'Bouaké' ? 1 : 0;
         if (t.type === 'Recette') bySite[siteIndex].income += t.amount;
         else bySite[siteIndex].expense += t.amount;
+    });
+
+    // Calcul du bénéfice par site
+    bySite.forEach(item => {
+        item.profit = item.income - item.expense;
     });
 
     // Répartition par Catégorie (Pie Chart)
@@ -245,7 +250,7 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
                       </h3>
                       <div className="h-[300px]">
                           <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={detailedData.bySite} barSize={40}>
+                              <BarChart data={detailedData.bySite} barSize={30}>
                                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12, fontWeight: 'bold'}} />
                                   <Tooltip 
@@ -254,9 +259,9 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
                                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', padding: '12px', fontWeight: 'bold' }}
                                   />
                                   <Legend wrapperStyle={{paddingTop: '20px'}}/>
-                                  {/* UPDATE COULEUR: BLUE pour Recettes */}
                                   <Bar dataKey="income" name="Recettes" fill="#3b82f6" radius={[6, 6, 0, 0]} />
                                   <Bar dataKey="expense" name="Dépenses" fill="#ef4444" radius={[6, 6, 0, 0]} />
+                                  <Bar dataKey="profit" name="Bénéfice" fill="#22c55e" radius={[6, 6, 0, 0]} />
                               </BarChart>
                           </ResponsiveContainer>
                       </div>
@@ -422,12 +427,10 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
                     />
                     <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{fontSize: '12px', fontWeight: 'bold'}}/>
                     
-                    {/* Barres pour CA et Dépenses (UPDATE COULEURS) */}
-                    <Bar dataKey="turnover" name="Chiffre d'Affaires" fill="#3b82f6" barSize={20} radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="expense" name="Dépenses" fill="#ef4444" barSize={20} radius={[4, 4, 0, 0]} />
-                    
-                    {/* Ligne pour Bénéfice Net */}
-                    <Line type="monotone" dataKey="profit" name="Bénéfice Net" stroke="#22c55e" strokeWidth={3} dot={{r: 4}} />
+                    {/* Barres pour CA, Dépenses et Bénéfices */}
+                    <Bar dataKey="turnover" name="Chiffre d'Affaires" fill="#3b82f6" barSize={15} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="expense" name="Dépenses" fill="#ef4444" barSize={15} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="profit" name="Bénéfice Net" fill="#22c55e" barSize={15} radius={[4, 4, 0, 0]} />
                 </ComposedChart>
             </ResponsiveContainer>
           ) : (
