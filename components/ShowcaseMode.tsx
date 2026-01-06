@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { StockItem, Intervention, TickerMessage } from '../types';
+import { supabase } from '../lib/supabase';
 import { 
   X, 
   Zap, 
@@ -14,7 +16,8 @@ import {
   Layers,
   Volume2,
   VolumeX,
-  Play
+  Play,
+  Maximize2
 } from 'lucide-react';
 
 interface ShowcaseModeProps {
@@ -35,7 +38,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const [planningPage, setPlanningPage] = useState(0);
   
   // Audio state
-  const [isMuted, setIsMuted] = useState(false); // On tente le son activé par défaut
+  const [isMuted, setIsMuted] = useState(false);
   const [audioSrc, setAudioSrc] = useState('');
   const [autoplayFailed, setAutoplayFailed] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -44,11 +47,42 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const planning = liveInterventions.length > 0 ? liveInterventions : [];
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
-  // Chargement de la musique depuis les paramètres (localStorage)
+  // 0. DETECTION PLEIN ECRAN AUTOMATIQUE
   useEffect(() => {
-    const savedMusic = localStorage.getItem('ebf_tv_music_url');
-    // URL par défaut si rien n'est configuré
-    setAudioSrc(savedMusic || 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=corporate-ambient-14224.mp3');
+    // Tenter le plein écran au montage (souvent bloqué par le navigateur sans geste user)
+    const requestFullScreen = async () => {
+        try {
+            if (!document.fullscreenElement) {
+                await document.documentElement.requestFullscreen();
+            }
+        } catch (e) {
+            console.log("Plein écran auto bloqué par le navigateur (requiert interaction).");
+        }
+    };
+    requestFullScreen();
+  }, []);
+
+  // 1. Chargement de la musique depuis SUPABASE
+  useEffect(() => {
+    const fetchMusic = async () => {
+        try {
+            const { data } = await supabase
+                .from('tv_settings')
+                .select('value')
+                .eq('key', 'background_music')
+                .single();
+            
+            if (data && data.value) {
+                setAudioSrc(data.value);
+            } else {
+                // Fallback URL par défaut
+                setAudioSrc('https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=corporate-ambient-14224.mp3');
+            }
+        } catch (e) {
+            console.error("Erreur lecture musique DB", e);
+        }
+    };
+    fetchMusic();
   }, []);
 
   // Gestion Audio et Autoplay
@@ -67,7 +101,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
              } catch (error) {
                  console.log("Autoplay bloqué, attente interaction utilisateur");
                  setAutoplayFailed(true);
-                 setIsMuted(true); // On passe en muet pour éviter l'erreur visuelle
+                 setIsMuted(true);
              }
         };
 
@@ -75,11 +109,23 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     }
   }, [audioSrc, isMuted]);
 
-  const handleForceUnmute = () => {
+  // Fonction combinée : Active le son ET le plein écran
+  const handleStartShow = async () => {
     setIsMuted(false);
     setAutoplayFailed(false);
+    
+    // 1. Audio
     if(audioRef.current) {
         audioRef.current.play().catch(console.error);
+    }
+
+    // 2. Plein écran
+    try {
+        if (!document.fullscreenElement) {
+            await document.documentElement.requestFullscreen();
+        }
+    } catch (e) {
+        console.error("Erreur plein écran manuel:", e);
     }
   };
 
@@ -106,7 +152,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return "text-lg md:text-3xl lg:text-4xl xl:text-5xl"; 
   };
 
-  // 1. Alternance automatique (60s)
+  // Alternance modes et produits (inchangé)
   useEffect(() => {
     const modeInterval = setInterval(() => {
       setActiveMode((prev) => (prev === 'PUBLICITE' ? 'PLANNING' : 'PUBLICITE'));
@@ -114,7 +160,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return () => clearInterval(modeInterval);
   }, []);
 
-  // 2. Rotation Produits (10s)
   useEffect(() => {
     if (activeMode !== 'PUBLICITE' || products.length === 0) return;
     const interval = setInterval(() => {
@@ -123,7 +168,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return () => clearInterval(interval);
   }, [activeMode, products.length]);
 
-  // 3. Rotation Planning (20s)
   const itemsPerPage = 3;
   const totalPlanningPages = Math.ceil(planning.length / itemsPerPage) || 1;
 
@@ -149,13 +193,15 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
       {/* BOUTON OVERLAY SI AUTOPLAY BLOQUÉ */}
       {autoplayFailed && (
-          <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[600] animate-bounce">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[600] animate-bounce flex flex-col items-center gap-4">
               <button 
-                onClick={handleForceUnmute}
-                className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-full font-bold shadow-[0_0_20px_rgba(34,197,94,0.6)] flex items-center gap-2"
+                onClick={handleStartShow}
+                className="bg-green-600 hover:bg-green-500 text-white px-10 py-6 rounded-[2rem] font-black text-2xl shadow-[0_0_50px_rgba(34,197,94,0.6)] flex items-center gap-4 hover:scale-110 transition-transform"
               >
-                  <Play size={16} fill="currentColor" /> ACTIVER LE SON
+                  <Play size={32} fill="currentColor" /> 
+                  <span>LANCER LA TV</span>
               </button>
+              <p className="text-white/70 font-bold uppercase tracking-widest bg-black/50 px-4 py-2 rounded-xl">Cliquez pour le son et le plein écran</p>
           </div>
       )}
 
@@ -203,6 +249,10 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                 className={`p-3 rounded-full border transition-all ${isMuted ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-green-500/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'}`}
               >
                   {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              </button>
+              
+              <button onClick={() => document.documentElement.requestFullscreen().catch(console.error)} className="hidden md:block p-3 rounded-full border bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10">
+                 <Maximize2 size={20}/>
               </button>
 
               <div className="hidden md:flex bg-green-600/10 px-4 py-2 rounded-full border border-green-500/30 items-center gap-3">

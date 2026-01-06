@@ -34,6 +34,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const [newMessage, setNewMessage] = useState('');
   const [selectedColor, setSelectedColor] = useState<'green' | 'yellow' | 'red' | 'neutral'>('neutral');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSavingMusic, setIsSavingMusic] = useState(false);
   const [showSql, setShowSql] = useState(false);
   
   // State pour la musique
@@ -43,13 +44,28 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Charger la musique sauvegardée au chargement
-    const savedMusic = localStorage.getItem('ebf_tv_music_url');
-    if (savedMusic) {
-        setMusicUrl(savedMusic);
-    } else {
-        setMusicUrl(MUSIC_PRESETS[0].url);
-    }
+    // Charger la musique depuis Supabase (Table tv_settings)
+    const loadMusicSettings = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('tv_settings')
+                .select('value')
+                .eq('key', 'background_music')
+                .single();
+            
+            if (data && data.value) {
+                setMusicUrl(data.value);
+            } else {
+                setMusicUrl(MUSIC_PRESETS[0].url);
+            }
+        } catch (error) {
+            console.error("Erreur chargement musique:", error);
+            // Fallback localStorage si Supabase échoue ou table inexistante
+            const local = localStorage.getItem('ebf_tv_music_url');
+            if (local) setMusicUrl(local);
+        }
+    };
+    loadMusicSettings();
   }, []);
 
   // Gestion du test audio
@@ -67,14 +83,31 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     }
   }, [isPlayingTest, musicUrl]);
 
-  const handleSaveMusic = () => {
-    if (musicUrl) {
-        try {
-            localStorage.setItem('ebf_tv_music_url', musicUrl);
-            alert("Musique sauvegardée ! Elle sera jouée lors de la prochaine diffusion TV.");
-        } catch (e) {
-            alert("Erreur : Le fichier est peut-être trop volumineux pour le stockage local. Essayez un fichier plus petit (< 3Mo).");
+  const handleSaveMusic = async () => {
+    if (!musicUrl) return;
+    
+    setIsSavingMusic(true);
+    try {
+        // Sauvegarde dans Supabase
+        const { error } = await supabase
+            .from('tv_settings')
+            .upsert({ key: 'background_music', value: musicUrl }, { onConflict: 'key' });
+
+        if (error) {
+             // Si erreur (ex: table n'existe pas), on propose le SQL
+             if (error.code === '42P01') { 
+                 alert("Erreur : La table 'tv_settings' n'existe pas.\n\nVeuillez exécuter le script SQL mis à jour (Bouton 'Configurer SQL').");
+             } else {
+                 throw error;
+             }
+        } else {
+            alert("Musique sauvegardée dans la base de données !");
         }
+    } catch (e: any) {
+        console.error(e);
+        alert("Erreur sauvegarde : " + e.message);
+    } finally {
+        setIsSavingMusic(false);
     }
   };
 
@@ -82,9 +115,9 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Vérification taille (limite localStorage ~5MB, on vise 3.5MB max pour la sécurité)
-    if (file.size > 3.5 * 1024 * 1024) {
-        alert("Le fichier est trop volumineux pour être stocké dans le navigateur. Veuillez choisir un MP3 de moins de 3.5 Mo ou utiliser une URL.");
+    // Limite Supabase Payload (souvent 6MB par défaut, on reste prudent à 4.5MB)
+    if (file.size > 4.5 * 1024 * 1024) {
+        alert("Le fichier est trop volumineux pour la base de données (Max 4.5 Mo). Veuillez compresser le MP3 ou utiliser un lien URL.");
         return;
     }
 
@@ -92,7 +125,6 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     reader.onload = (e) => {
         const result = e.target?.result as string;
         setMusicUrl(result);
-        // On arrête le test s'il jouait
         setIsPlayingTest(false);
     };
     reader.readAsDataURL(file);
@@ -155,22 +187,30 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   };
 
   const getFullSchemaScript = () => `
--- 0. NETTOYAGE (ATTENTION : Supprime les tables existantes pour éviter les erreurs)
+-- 0. NETTOYAGE
 drop publication if exists supabase_realtime;
 drop table if exists public.stock cascade;
 drop table if exists public.interventions cascade;
 drop table if exists public.transactions cascade;
 drop table if exists public.employees cascade;
 drop table if exists public.ticker_messages cascade;
+drop table if exists public.tv_settings cascade; -- Nouvelle table
 
 -- 1. Activer le Temps Réel (Realtime)
 create publication supabase_realtime for all tables;
 
--- 2. Création de la table STOCK
+-- 2. Création de la table TV_SETTINGS (Pour la musique)
+create table public.tv_settings (
+  key text primary key,
+  value text,
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+-- 3. Création de la table STOCK
 create table public.stock (
   id text primary key,
   name text not null,
-  description text, -- Nouveau champ
+  description text,
   category text,
   quantity integer default 0,
   threshold integer default 5,
@@ -178,30 +218,30 @@ create table public.stock (
   supplier text,
   site text,
   "imageUrls" text[],
-  "technicalSheetUrl" text, -- Nouveau champ
+  "technicalSheetUrl" text,
   specs jsonb default '{}'::jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 3. Création de la table INTERVENTIONS (Techniciens)
+-- 4. Création de la table INTERVENTIONS
 create table public.interventions (
   id text primary key,
   client text,
-  "clientPhone" text, -- Requis pour l'app
-  domain text,        -- Requis pour l'app
-  "interventionType" text, -- Requis pour l'app
+  "clientPhone" text,
+  domain text,
+  "interventionType" text,
   description text,
   technician text,
-  status text, -- 'En cours', 'Terminé', etc.
+  status text,
   date date,
   site text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 4. Création de la table TRANSACTIONS (Comptabilité/Caisse)
+-- 5. Création de la table TRANSACTIONS
 create table public.transactions (
   id text primary key,
-  type text, -- 'Recette' ou 'Dépense'
+  type text,
   category text,
   amount numeric default 0,
   date date,
@@ -210,47 +250,45 @@ create table public.transactions (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 5. Création de la table EMPLOYEES (RH)
+-- 6. Création de la table EMPLOYEES
 create table public.employees (
   id text primary key,
   name text,
   role text,
   site text,
-  status text, -- 'Actif', 'Congés'
+  status text,
   "entryDate" date,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 6. Création de la table TICKER_MESSAGES (Bandeau TV)
+-- 7. Création de la table TICKER_MESSAGES
 create table public.ticker_messages (
   id bigint generated by default as identity primary key,
   content text not null,
-  color text default 'neutral', -- Requis pour l'app
+  color text default 'neutral',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 7. Configuration de la sécurité (Row Level Security)
--- Stock
+-- 8. Configuration de la sécurité (RLS)
+alter table public.tv_settings enable row level security;
+create policy "Public Access Settings" on public.tv_settings for all using (true) with check (true);
+
 alter table public.stock enable row level security;
 create policy "Public Access Stock" on public.stock for all using (true) with check (true);
 
--- Interventions
 alter table public.interventions enable row level security;
 create policy "Public Access Interventions" on public.interventions for all using (true) with check (true);
 
--- Transactions
 alter table public.transactions enable row level security;
 create policy "Public Access Transactions" on public.transactions for all using (true) with check (true);
 
--- Employees
 alter table public.employees enable row level security;
 create policy "Public Access Employees" on public.employees for all using (true) with check (true);
 
--- Messages TV
 alter table public.ticker_messages enable row level security;
 create policy "Public Access Ticker" on public.ticker_messages for all using (true) with check (true);
 
--- 8. INSERTION DE DONNÉES DE DÉMARRAGE
+-- 9. INSERTION DE DONNÉES DE DÉMARRAGE
 insert into public.stock (id, name, description, category, quantity, threshold, "unitPrice", supplier, site, "imageUrls", specs)
 values 
 ('STK-001', 'Câble R2V 3G2.5mm²', 'Câble électrique rigide pour installation fixe industrielle ou domestique.', 'Électricité', 500, 100, 25000, 'ElecPro', 'Abidjan', ARRAY['https://images.unsplash.com/photo-1558402529-d2638a7023e9?auto=format&fit=crop&q=80&w=1200'], '{"Type": "R2V"}'::jsonb),
@@ -300,7 +338,7 @@ insert into public.ticker_messages (content, color) values
                       <h4 className="font-black text-xl tracking-tight">Base de Données</h4>
                   </div>
                   <p className="text-blue-100 text-sm font-medium opacity-90">
-                    Générer les tables Supabase requises.
+                    Générer les tables Supabase requises (dont Musique).
                   </p>
               </div>
               <button 
@@ -322,7 +360,7 @@ insert into public.ticker_messages (content, color) values
                       <h4 className="font-black text-xl tracking-tight">Ambiance TV</h4>
                   </div>
                   <p className="text-purple-100 text-sm font-medium opacity-90">
-                    Choisir la musique de fond du mode diffusion.
+                    Musique de fond synchronisée (Stockage BDD).
                   </p>
               </div>
               
@@ -346,7 +384,7 @@ insert into public.ticker_messages (content, color) values
                       <button 
                         onClick={() => fileInputRef.current?.click()}
                         className="bg-purple-500 hover:bg-purple-400 text-white p-2 rounded-xl transition-colors"
-                        title="Importer depuis le PC"
+                        title="Importer depuis le PC (Max 4.5Mo)"
                       >
                           <Upload size={16} />
                       </button>
@@ -372,9 +410,11 @@ insert into public.ticker_messages (content, color) values
                   </div>
                   <button 
                     onClick={handleSaveMusic}
-                    className="w-full px-4 py-2 bg-white text-purple-700 rounded-xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform flex items-center justify-center gap-2"
+                    disabled={isSavingMusic}
+                    className="w-full px-4 py-2 bg-white text-purple-700 rounded-xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
                   >
-                     <Save size={14} /> Sauvegarder
+                     {isSavingMusic ? <Loader2 size={14} className="animate-spin"/> : <Save size={14} />} 
+                     {isSavingMusic ? 'Sauvegarde...' : 'Sauvegarder en Base de Données'}
                   </button>
               </div>
           </div>
