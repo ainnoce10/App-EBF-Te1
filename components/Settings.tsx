@@ -25,9 +25,6 @@ interface SettingsProps {
   onUpdateMessages?: (messages: TickerMessage[]) => void;
 }
 
-// Suppression des presets par défaut pour ne montrer que la DB
-const MUSIC_PRESETS: { name: string; url: string }[] = [];
-
 const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const [newMessage, setNewMessage] = useState('');
   const [selectedColor, setSelectedColor] = useState<'green' | 'yellow' | 'red' | 'neutral'>('neutral');

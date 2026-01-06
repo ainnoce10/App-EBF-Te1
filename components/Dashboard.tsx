@@ -14,7 +14,6 @@ import {
   ComposedChart,
   Line
 } from 'recharts';
-import { COLORS } from '../constants';
 import { Period, Site, Transaction, Intervention } from '../types';
 import { 
   Activity, 
