@@ -428,7 +428,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                 <div className="flex w-full p-6 md:p-16 animate-fade-in flex-col h-full min-h-0 overflow-hidden">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 md:mb-8 shrink-0 border-b border-white/10 pb-4 md:pb-6 gap-4">
                         <div className="flex flex-col md:flex-row md:items-baseline gap-4 md:gap-8">
-                          <h2 className="text-2xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white uppercase italic truncate drop-shadow-lg">
+                          <h2 className="text-2xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white uppercase italic truncate drop-shadow-lg pr-4">
                               Chantiers EBF
                           </h2>
                           <span className="text-orange-500 font-black text-xl md:text-5xl uppercase tracking-widest drop-shadow-md">
@@ -461,19 +461,19 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                               {inter.status}
                                             </span>
                                             {inter.site && (
-                                                <span className="px-3 py-2 bg-white/20 rounded-lg text-white font-bold text-xs uppercase flex items-center gap-1">
-                                                    <MapPin size={12} /> {inter.site}
+                                                <span className="px-3 py-2 bg-white/20 rounded-lg text-white font-bold text-sm md:text-base uppercase flex items-center gap-1">
+                                                    <MapPin size={14} /> {inter.site}
                                                 </span>
                                             )}
                                         </div>
                                         <div className="flex flex-wrap gap-2">
                                             {inter.domain && (
-                                                <span className="text-[10px] md:text-xs font-bold uppercase text-white/70 bg-black/20 px-2 py-1 rounded border border-white/5">
+                                                <span className="text-xs md:text-sm font-bold uppercase text-white/70 bg-black/20 px-2 py-1 rounded border border-white/5">
                                                    {inter.domain}
                                                 </span>
                                             )}
                                             {inter.interventionType && (
-                                                <span className="text-[10px] md:text-xs font-bold uppercase text-blue-200 bg-blue-900/20 px-2 py-1 rounded border border-blue-500/20">
+                                                <span className="text-xs md:text-sm font-bold uppercase text-blue-200 bg-blue-900/20 px-2 py-1 rounded border border-blue-500/20">
                                                    {inter.interventionType}
                                                 </span>
                                             )}
@@ -515,9 +515,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                     )}
 
                                     {/* 4. DETAILS (Description) */}
-                                    <div className="bg-black/20 p-4 rounded-xl border border-white/5 flex-1 min-h-0 overflow-hidden relative">
-                                        <div className="absolute top-2 right-2 opacity-20"><Info size={20}/></div>
-                                        <p className="text-gray-300 text-sm md:text-lg font-medium leading-relaxed line-clamp-4">
+                                    <div className="bg-black/20 p-3 rounded-xl border border-white/5 flex-1 min-h-0 overflow-hidden relative">
+                                        <div className="absolute top-2 right-2 opacity-20"><Info size={16}/></div>
+                                        <p className="text-gray-300 text-xs md:text-base font-medium leading-relaxed line-clamp-4">
                                             {inter.description}
                                         </p>
                                     </div>
