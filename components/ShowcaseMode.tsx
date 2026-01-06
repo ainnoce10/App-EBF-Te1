@@ -49,28 +49,32 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
   // 0. DETECTION PLEIN ECRAN AUTOMATIQUE
   useEffect(() => {
-    // Tenter le plein écran au montage (souvent bloqué par le navigateur sans geste user)
+    // Tenter le plein écran au montage
     const requestFullScreen = async () => {
         try {
             if (!document.fullscreenElement) {
                 await document.documentElement.requestFullscreen();
             }
         } catch (e) {
-            console.log("Plein écran auto bloqué par le navigateur (requiert interaction).");
+            console.log("Plein écran auto bloqué (attente interaction).");
         }
     };
+    
+    // Essayer immédiatement + un petit délai pour les Smart TV lentes
     requestFullScreen();
+    setTimeout(requestFullScreen, 1000);
   }, []);
 
-  // 1. Chargement de la musique depuis SUPABASE
+  // 1. Chargement de la musique depuis SUPABASE (Avec Realtime)
   useEffect(() => {
+    // Charge initial
     const fetchMusic = async () => {
         try {
             const { data } = await supabase
                 .from('tv_settings')
                 .select('value')
                 .eq('key', 'background_music')
-                .single();
+                .maybeSingle(); // maybeSingle est plus sûr que single
             
             if (data && data.value) {
                 setAudioSrc(data.value);
@@ -83,23 +87,49 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
         }
     };
     fetchMusic();
+
+    // ÉCOUTE EN TEMPS RÉEL (Realtime)
+    const channel = supabase.channel('tv-music-update')
+        .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'tv_settings' },
+            (payload) => {
+                // Si la clé modifiée est 'background_music', on met à jour
+                if ((payload.new as any)?.key === 'background_music') {
+                    const newVal = (payload.new as any).value;
+                    if (newVal) {
+                        console.log("Nouvelle musique reçue !");
+                        setAudioSrc(newVal);
+                    }
+                }
+            }
+        )
+        .subscribe();
+
+    return () => {
+        supabase.removeChannel(channel);
+    };
   }, []);
 
-  // Gestion Audio et Autoplay
+  // 2. Gestion Playback Robuste
   useEffect(() => {
     if (audioRef.current && audioSrc) {
         audioRef.current.volume = 0.3; // Volume doux
         
+        // Force le rechargement de la source audio
+        audioRef.current.load();
+
         const tryPlay = async () => {
              try {
                  if (!isMuted) {
-                    await audioRef.current?.play();
-                    setAutoplayFailed(false);
-                 } else {
-                    audioRef.current?.pause();
+                    const playPromise = audioRef.current?.play();
+                    if (playPromise !== undefined) {
+                        await playPromise;
+                        setAutoplayFailed(false);
+                    }
                  }
              } catch (error) {
-                 console.log("Autoplay bloqué, attente interaction utilisateur");
+                 console.log("Autoplay bloqué par le navigateur:", error);
                  setAutoplayFailed(true);
                  setIsMuted(true);
              }
@@ -107,7 +137,18 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
         tryPlay();
     }
-  }, [audioSrc, isMuted]);
+  }, [audioSrc]); // Déclenché quand la source change
+
+  // 3. Gestion Mute/Unmute séparée
+  useEffect(() => {
+      if (audioRef.current) {
+          if (isMuted) {
+              audioRef.current.pause();
+          } else {
+              audioRef.current.play().catch(() => setAutoplayFailed(true));
+          }
+      }
+  }, [isMuted]);
 
   // Fonction combinée : Active le son ET le plein écran
   const handleStartShow = async () => {
@@ -188,8 +229,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   return (
     <div className="fixed inset-0 z-[500] bg-black flex flex-col overflow-hidden font-sans select-none text-white">
       
-      {/* Musique de fond */}
-      {audioSrc && <audio ref={audioRef} loop src={audioSrc} />}
+      {/* Musique de fond avec AutoPlay */}
+      {audioSrc && <audio ref={audioRef} loop src={audioSrc} autoPlay playsInline />}
 
       {/* BOUTON OVERLAY SI AUTOPLAY BLOQUÉ */}
       {autoplayFailed && (
@@ -241,10 +282,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                 onClick={() => {
                     const newState = !isMuted;
                     setIsMuted(newState);
-                    if (!newState) {
-                        setAutoplayFailed(false);
-                        audioRef.current?.play().catch(() => setAutoplayFailed(true));
-                    }
                 }}
                 className={`p-3 rounded-full border transition-all ${isMuted ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-green-500/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'}`}
               >
