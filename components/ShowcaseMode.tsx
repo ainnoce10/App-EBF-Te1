@@ -17,7 +17,11 @@ import {
   Volume2,
   VolumeX,
   Play,
-  Maximize2
+  Maximize2,
+  Settings,
+  Minus,
+  Plus,
+  Monitor
 } from 'lucide-react';
 
 interface ShowcaseModeProps {
@@ -43,12 +47,22 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const [autoplayFailed, setAutoplayFailed] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // TV Settings State (Overscan fix)
+  const [overscanPadding, setOverscanPadding] = useState(4); // Marge par défaut 4%
+  const [showTvSettings, setShowTvSettings] = useState(false);
+
   const products = liveStock.length > 0 ? liveStock : [];
   const planning = liveInterventions.length > 0 ? liveInterventions : [];
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
-  // 0. DETECTION PLEIN ECRAN AUTOMATIQUE
+  // 0. CHARGEMENT REGLAGES TV & DETECTION PLEIN ECRAN
   useEffect(() => {
+    // Charger la marge sauvegardée
+    const savedPadding = localStorage.getItem('ebf_tv_padding');
+    if (savedPadding) {
+        setOverscanPadding(parseFloat(savedPadding));
+    }
+
     // Tenter le plein écran au montage
     const requestFullScreen = async () => {
         try {
@@ -60,14 +74,20 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
         }
     };
     
-    // Essayer immédiatement + un petit délai pour les Smart TV lentes
     requestFullScreen();
     setTimeout(requestFullScreen, 1000);
   }, []);
 
+  const updateOverscan = (delta: number) => {
+      setOverscanPadding(prev => {
+          const newVal = Math.max(0, Math.min(15, prev + delta)); // Limite entre 0% et 15%
+          localStorage.setItem('ebf_tv_padding', newVal.toString());
+          return newVal;
+      });
+  };
+
   // 1. Chargement de la musique depuis SUPABASE (Avec Realtime)
   useEffect(() => {
-    // Charge initial
     const fetchMusic = async () => {
         try {
             const { data } = await supabase
@@ -87,7 +107,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     };
     fetchMusic();
 
-    // ÉCOUTE EN TEMPS RÉEL (Realtime)
     const channel = supabase.channel('tv-music-update')
         .on(
             'postgres_changes',
@@ -96,7 +115,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                 if ((payload.new as any)?.key === 'background_music') {
                     const newVal = (payload.new as any).value;
                     if (newVal) {
-                        console.log("Nouvelle musique reçue !");
                         setAudioSrc(newVal);
                     }
                 }
@@ -204,9 +222,16 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const currentProduct = products[productIdx];
   const currentPlanningSlice = planning.slice(planningPage * itemsPerPage, (planningPage + 1) * itemsPerPage);
 
-  // AJOUT DE "p-[2vmin]" SUR LE CONTENEUR PRINCIPAL POUR GÉRER L'OVERSCAN TV
+  // Style dynamique pour la marge
+  const containerStyle = {
+      padding: `${overscanPadding}vmin`
+  };
+
   return (
-    <div className="fixed inset-0 z-[500] bg-black flex flex-col overflow-hidden font-sans select-none text-white p-[2vmin] box-border">
+    <div 
+        className="fixed inset-0 z-[500] bg-black flex flex-col overflow-hidden font-sans select-none text-white transition-all duration-300 box-border"
+        style={containerStyle}
+    >
       
       {/* Container interne qui prend tout l'espace restant après le padding de sécurité */}
       <div className="w-full h-full flex flex-col relative overflow-hidden bg-black rounded-xl md:rounded-3xl shadow-2xl ring-1 ring-white/10">
@@ -257,6 +282,42 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               </div>
 
               <div className="flex items-center gap-4 md:gap-8 absolute top-4 right-4 md:static">
+                  {/* BOUTON REGLAGE TV */}
+                  <div className="relative">
+                      <button 
+                        onClick={() => setShowTvSettings(!showTvSettings)}
+                        className={`p-3 rounded-full border transition-all ${showTvSettings ? 'bg-orange-600 text-white border-orange-500' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white'}`}
+                      >
+                          <Settings size={20} className={showTvSettings ? "animate-spin-slow" : ""} />
+                      </button>
+
+                      {/* POPUP DE REGLAGE */}
+                      {showTvSettings && (
+                          <div className="absolute top-16 right-0 bg-gray-900 border border-gray-700 p-6 rounded-2xl shadow-2xl w-64 z-[100] animate-fade-in">
+                              <h4 className="flex items-center gap-2 text-white font-black uppercase text-sm mb-4 border-b border-gray-700 pb-2">
+                                  <Monitor size={16} className="text-orange-500"/> Ajuster Écran TV
+                              </h4>
+                              
+                              <div className="space-y-4">
+                                  <div>
+                                      <div className="flex justify-between text-xs font-bold text-gray-400 mb-2">
+                                          <span>Marge de sécurité</span>
+                                          <span className="text-white">{overscanPadding}%</span>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                          <button onClick={() => updateOverscan(-0.5)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Minus size={16}/></button>
+                                          <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                                              <div className="h-full bg-orange-500 transition-all" style={{ width: `${(overscanPadding / 15) * 100}%` }}></div>
+                                          </div>
+                                          <button onClick={() => updateOverscan(0.5)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Plus size={16}/></button>
+                                      </div>
+                                      <p className="text-[10px] text-gray-500 mt-2 italic">Ajustez si les bords sont coupés.</p>
+                                  </div>
+                              </div>
+                          </div>
+                      )}
+                  </div>
+
                   <button 
                     onClick={() => { const newState = !isMuted; setIsMuted(newState); }}
                     className={`p-3 rounded-full border transition-all ${isMuted ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-green-500/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'}`}
@@ -454,6 +515,13 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
         }
         .animate-float {
           animation: float 6s ease-in-out infinite;
+        }
+        .animate-spin-slow {
+          animation: spin 3s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
         .no-scrollbar::-webkit-scrollbar {
           display: none;
