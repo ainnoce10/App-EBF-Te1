@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Intervention, Transaction } from '../types';
 import { supabase } from '../lib/supabase';
@@ -31,6 +30,9 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
   const [showCaisseModal, setShowCaisseModal] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
 
+  // Catégories spécifiques au Secrétariat pour isoler la caisse
+  const SECRETARIAT_CATS = ['Prestation', 'Acompte', 'Service', 'Caisse', 'Facture'];
+
   const clients: DerivedClient[] = useMemo(() => {
     const uniqueClients = new Map<string, DerivedClient>();
     liveInterventions.forEach(inter => {
@@ -48,21 +50,26 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
     return Array.from(uniqueClients.values());
   }, [liveInterventions]);
 
-  const currentBalance = useMemo(() => {
-      const income = liveTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
-      const outcome = liveTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
-      return income - outcome;
+  // --- FILTRAGE DES TRANSACTIONS ---
+  const secretariatTransactions = useMemo(() => {
+    return liveTransactions.filter(t => SECRETARIAT_CATS.includes(t.category));
   }, [liveTransactions]);
+
+  const currentBalance = useMemo(() => {
+      const income = secretariatTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
+      const outcome = secretariatTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
+      return income - outcome;
+  }, [secretariatTransactions]);
 
   const todayIncome = useMemo(() => {
       const today = new Date().toISOString().split('T')[0];
-      return liveTransactions.filter(t => t.type === 'Recette' && t.date === today).reduce((acc, t) => acc + t.amount, 0);
-  }, [liveTransactions]);
+      return secretariatTransactions.filter(t => t.type === 'Recette' && t.date === today).reduce((acc, t) => acc + t.amount, 0);
+  }, [secretariatTransactions]);
 
   const todayOutcome = useMemo(() => {
       const today = new Date().toISOString().split('T')[0];
-      return liveTransactions.filter(t => t.type === 'Dépense' && t.date === today).reduce((acc, t) => acc + t.amount, 0);
-  }, [liveTransactions]);
+      return secretariatTransactions.filter(t => t.type === 'Dépense' && t.date === today).reduce((acc, t) => acc + t.amount, 0);
+  }, [secretariatTransactions]);
 
   const [newTransaction, setNewTransaction] = useState<{type: 'in'|'out', amount: string, reason: string}>({ type: 'out', amount: '', reason: '' });
 
@@ -74,7 +81,8 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
     const globalTransaction: Transaction = {
         id: newId,
         type: newTransaction.type === 'in' ? 'Recette' : 'Dépense',
-        category: 'Caisse',
+        // Catégorie forcée pour rester dans le scope Secrétariat
+        category: newTransaction.type === 'in' ? 'Caisse' : 'Service', 
         amount: parseInt(newTransaction.amount),
         date: new Date().toISOString().split('T')[0],
         description: newTransaction.reason,
@@ -155,11 +163,11 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
        {/* --- CAISSE WIDGET --- */}
        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
             <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide">
-                <Wallet className="text-gray-600" size={18} /> Caisse
+                <Wallet className="text-gray-600" size={18} /> Caisse Secrétariat
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="p-3 bg-gray-900 rounded-xl text-center text-white col-span-2 md:col-span-1">
-                    <p className="text-gray-400 text-[10px] uppercase font-bold">Solde</p>
+                    <p className="text-gray-400 text-[10px] uppercase font-bold">Solde Caisse</p>
                     <p className="text-2xl font-black">{currentBalance.toLocaleString()} F</p>
                 </div>
                  <div className="p-3 bg-green-50 rounded-xl text-center border border-green-100">
@@ -171,7 +179,7 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
                     <p className="text-lg font-black text-red-600">-{todayOutcome.toLocaleString()}</p>
                 </div>
                 <button onClick={() => setShowCaisseModal(true)} className="p-3 bg-orange-500 rounded-xl text-white font-bold shadow-md flex flex-col items-center justify-center active:scale-95 col-span-2 md:col-span-1">
-                    <Plus size={20} /> <span className="text-xs uppercase mt-1">Opération</span>
+                    <Plus size={20} /> <span className="text-xs uppercase mt-1">Opération Caisse</span>
                 </button>
             </div>
        </div>

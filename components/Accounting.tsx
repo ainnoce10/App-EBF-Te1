@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MOCK_EMPLOYEES } from '../constants';
 import { Transaction, Employee, Site } from '../types';
 import { supabase } from '../lib/supabase';
@@ -48,6 +48,9 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Catégories spécifiques à la Comptabilité Générale
+  const ACCOUNTING_CATS = ['Salaire', 'Loyer', 'Transport', 'Repas', 'Charges', 'Impots', 'Divers', 'Virement Bancaire', 'Autre'];
+
   useEffect(() => {
     if (liveEmployees.length > 0) setEmployees(liveEmployees);
     else if (employees.length === 0) setEmployees(MOCK_EMPLOYEES);
@@ -59,7 +62,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
     setTransactionType(type);
     setNewTransaction({
         amount: '',
-        category: type === 'Recette' ? 'Prestation' : 'Achat Matériel',
+        category: type === 'Recette' ? 'Virement Bancaire' : 'Charges', // Defaults spécifiques Compta
         description: '',
         site: 'Abidjan',
         date: new Date().toISOString().split('T')[0]
@@ -127,22 +130,28 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
   };
 
   const handleExport = () => {
-    // Simulation export CSV
+    // Export GLOBAL (Tout) car la compta peut vouloir tout voir en CSV
     const headers = ['Date', 'Type', 'Catégorie', 'Description', 'Montant', 'Site'];
     const rows = liveTransactions.map(t => [t.date, t.type, t.category, t.description, t.amount, t.site].join(','));
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "transactions_ebf.csv");
+    link.setAttribute("download", "transactions_ebf_global.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const displayedTransactions = showAllTransactions ? liveTransactions : liveTransactions.slice(0, 5);
-  const totalRevenue = liveTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
-  const totalExpense = liveTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
+  // --- FILTRAGE COMPTA ---
+  const accountingTransactions = useMemo(() => {
+    // La comptabilité voit les charges structurelles, pas le détail de la caisse magasin
+    return liveTransactions.filter(t => ACCOUNTING_CATS.includes(t.category));
+  }, [liveTransactions]);
+
+  const displayedTransactions = showAllTransactions ? accountingTransactions : accountingTransactions.slice(0, 5);
+  const totalRevenue = accountingTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
+  const totalExpense = accountingTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
   const netMargin = totalRevenue - totalExpense;
   const marginPercent = totalRevenue > 0 ? ((netMargin / totalRevenue) * 100).toFixed(0) : 0;
 
@@ -153,30 +162,30 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-black text-gray-900 tracking-tight">Comptabilité & RH</h2>
-          <p className="text-gray-500 font-bold text-sm">Pilotage financier et gestion du personnel</p>
+          <p className="text-gray-500 font-bold text-sm">Gestion Structurelle & Sociale</p>
         </div>
         <button onClick={handleExport} className="bg-white border border-gray-200 text-gray-700 px-5 py-3 rounded-2xl flex items-center gap-2 shadow-sm text-xs font-black uppercase tracking-widest hover:bg-gray-50 active:scale-95 transition-all">
-            <Download size={16} /> Exporter Données
+            <Download size={16} /> Exporter Global
         </button>
       </div>
 
-      {/* KPI CARDS */}
+      {/* KPI CARDS (Specifique Compta) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><ArrowUpCircle size={80} className="text-green-600"/></div>
-          <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Recettes Totales</p>
+          <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Entrées Générales</p>
           <h3 className="text-3xl font-black text-gray-900 tracking-tighter">{totalRevenue.toLocaleString()} <span className="text-sm text-gray-400">FCFA</span></h3>
         </div>
         
         <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><ArrowDownCircle size={80} className="text-red-600"/></div>
-          <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Dépenses Totales</p>
+          <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Charges Structure</p>
           <h3 className="text-3xl font-black text-gray-900 tracking-tighter">{totalExpense.toLocaleString()} <span className="text-sm text-gray-400">FCFA</span></h3>
         </div>
         
         <div className="bg-gray-900 p-6 rounded-[2rem] shadow-lg border border-gray-800 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10"><Wallet size={80} className="text-white"/></div>
-          <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Marge Nette ({marginPercent}%)</p>
+          <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Solde Opérationnel</p>
           <h3 className={`text-3xl font-black tracking-tighter ${netMargin >= 0 ? 'text-white' : 'text-red-400'}`}>
               {netMargin > 0 && '+'}{netMargin.toLocaleString()} <span className="text-sm text-gray-600">FCFA</span>
           </h3>
@@ -194,8 +203,8 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                       <PlusCircle size={24} />
                   </div>
                   <div className="text-left">
-                      <h4 className="font-black text-green-900 uppercase text-sm tracking-wide">Nouvelle Recette</h4>
-                      <p className="text-green-600 text-xs font-bold">Encaisser un paiement</p>
+                      <h4 className="font-black text-green-900 uppercase text-sm tracking-wide">Virement / Apport</h4>
+                      <p className="text-green-600 text-xs font-bold">Injecter fonds</p>
                   </div>
               </div>
               <ArrowUpCircle className="text-green-300 group-hover:text-green-500 transition-colors" size={32} />
@@ -210,8 +219,8 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                       <Briefcase size={24} />
                   </div>
                   <div className="text-left">
-                      <h4 className="font-black text-red-900 uppercase text-sm tracking-wide">Nouvelle Dépense</h4>
-                      <p className="text-red-600 text-xs font-bold">Régler une facture / Achat</p>
+                      <h4 className="font-black text-red-900 uppercase text-sm tracking-wide">Payer Charge</h4>
+                      <p className="text-red-600 text-xs font-bold">Loyer, Salaire, Facture</p>
                   </div>
               </div>
               <ArrowDownCircle className="text-red-300 group-hover:text-red-500 transition-colors" size={32} />
@@ -223,7 +232,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
         <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
           <div className="flex items-center gap-2">
              <TrendingUp size={20} className="text-orange-500"/>
-             <h3 className="font-black text-gray-800 text-sm uppercase tracking-wide">Historique Transactions</h3>
+             <h3 className="font-black text-gray-800 text-sm uppercase tracking-wide">Journal Général</h3>
           </div>
           <button onClick={() => setShowAllTransactions(!showAllTransactions)} className="bg-white border border-gray-200 px-4 py-2 rounded-xl text-orange-600 text-[10px] font-black uppercase tracking-widest hover:bg-orange-50 transition-colors">
             {showAllTransactions ? 'Réduire' : 'Voir tout'}
@@ -259,7 +268,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                   </td>
                 </tr>
               )) : (
-                <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-300 font-bold">Aucune transaction enregistrée</td></tr>
+                <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-300 font-bold">Aucune transaction structurelle enregistrée</td></tr>
               )}
             </tbody>
           </table>
@@ -296,9 +305,9 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h3 className={`text-2xl font-black uppercase tracking-tighter ${transactionType === 'Recette' ? 'text-green-600' : 'text-red-600'}`}>
-                            {transactionType === 'Recette' ? 'Encaisser Recette' : 'Saisir Dépense'}
+                            {transactionType === 'Recette' ? 'Apport / Virement' : 'Charge / Dépense'}
                         </h3>
-                        <p className="text-gray-400 font-bold text-xs uppercase tracking-widest mt-1">Mise à jour caisse</p>
+                        <p className="text-gray-400 font-bold text-xs uppercase tracking-widest mt-1">Comptabilité Générale</p>
                     </div>
                     <button onClick={() => setShowTransactionModal(false)} className="p-3 bg-gray-100 rounded-full hover:bg-gray-200"><X size={20}/></button>
                 </div>
@@ -319,11 +328,11 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
 
                     {/* Category Select */}
                     <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Catégorie</label>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Type de Charge/Produit</label>
                         <div className="grid grid-cols-2 gap-3">
                             {(transactionType === 'Recette' 
-                                ? ['Prestation', 'Vente Matériel', 'Acompte', 'Autre'] 
-                                : ['Achat Matériel', 'Transport', 'Salaire', 'Loyer', 'Repas', 'Divers']
+                                ? ['Virement Bancaire', 'Apport Capital', 'Divers', 'Autre'] 
+                                : ['Salaire', 'Loyer', 'Transport', 'Repas', 'Charges', 'Impots']
                             ).map(cat => (
                                 <button
                                     key={cat}
@@ -341,7 +350,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Libellé / Détails</label>
                         <input 
                             type="text" 
-                            placeholder="Ex: Facture Client #123 ou Achat Câbles" 
+                            placeholder="Ex: Salaire Mars 2024 ou Facture CIE" 
                             className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-gray-800 outline-none border-2 border-transparent focus:border-gray-300"
                             value={newTransaction.description} 
                             onChange={e => setNewTransaction({...newTransaction, description: e.target.value})}

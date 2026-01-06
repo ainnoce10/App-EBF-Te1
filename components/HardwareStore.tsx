@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { StockItem, Transaction } from '../types';
 import { supabase } from '../lib/supabase';
@@ -37,26 +36,33 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
   // Refs pour les inputs de fichiers cachés
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
+  // Catégories spécifiques à la quincaillerie pour l'isolation des données
+  const HARDWARE_CATS = ['Vente Magasin', 'Achat Stock', 'Outillage', 'Électricité', 'Plomberie', 'Divers Stock'];
+
   useEffect(() => {
     if (initialData.length > 0) setInventory(initialData);
   }, [initialData]);
 
-  // --- CALCULS CAISSE ---
-  const currentBalance = useMemo(() => {
-      const income = liveTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
-      const outcome = liveTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
-      return income - outcome;
+  // --- CALCULS CAISSE (FILTRÉS) ---
+  const storeTransactions = useMemo(() => {
+    return liveTransactions.filter(t => HARDWARE_CATS.includes(t.category) || t.description.toLowerCase().includes('vente'));
   }, [liveTransactions]);
+
+  const currentBalance = useMemo(() => {
+      const income = storeTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
+      const outcome = storeTransactions.filter(t => t.type === 'Dépense').reduce((acc, t) => acc + t.amount, 0);
+      return income - outcome;
+  }, [storeTransactions]);
 
   const todayIncome = useMemo(() => {
       const today = new Date().toISOString().split('T')[0];
-      return liveTransactions.filter(t => t.type === 'Recette' && t.date === today).reduce((acc, t) => acc + t.amount, 0);
-  }, [liveTransactions]);
+      return storeTransactions.filter(t => t.type === 'Recette' && t.date === today).reduce((acc, t) => acc + t.amount, 0);
+  }, [storeTransactions]);
 
   const todayOutcome = useMemo(() => {
       const today = new Date().toISOString().split('T')[0];
-      return liveTransactions.filter(t => t.type === 'Dépense' && t.date === today).reduce((acc, t) => acc + t.amount, 0);
-  }, [liveTransactions]);
+      return storeTransactions.filter(t => t.type === 'Dépense' && t.date === today).reduce((acc, t) => acc + t.amount, 0);
+  }, [storeTransactions]);
 
   const filteredItems = inventory.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -122,6 +128,7 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
     const globalTransaction: Transaction = {
         id: newId,
         type: newTransaction.type === 'in' ? 'Recette' : 'Dépense',
+        // Catégorie forcée pour rester dans le scope Quincaillerie
         category: newTransaction.type === 'in' ? 'Vente Magasin' : 'Achat Stock',
         amount: parseInt(newTransaction.amount),
         date: new Date().toISOString().split('T')[0],
@@ -216,7 +223,7 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="p-3 bg-gray-900 rounded-xl text-center text-white col-span-2 md:col-span-1">
-                    <p className="text-gray-400 text-[10px] uppercase font-bold">Solde Global</p>
+                    <p className="text-gray-400 text-[10px] uppercase font-bold">Solde Magasin</p>
                     <p className="text-2xl font-black">{currentBalance.toLocaleString()} F</p>
                 </div>
                  <div className="p-3 bg-green-50 rounded-xl text-center border border-green-100">
@@ -224,14 +231,14 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
                     <p className="text-lg font-black text-green-700">+{todayIncome.toLocaleString()}</p>
                 </div>
                  <div className="p-3 bg-red-50 rounded-xl text-center border border-red-100">
-                    <p className="text-red-500 text-[10px] uppercase font-bold">Achats du jour</p>
+                    <p className="text-red-500 text-[10px] uppercase font-bold">Achats Stock</p>
                     <p className="text-lg font-black text-red-600">-{todayOutcome.toLocaleString()}</p>
                 </div>
                 <button 
                   onClick={() => { setNewTransaction({ type: 'in', amount: '', reason: '' }); setShowCaisseModal(true); }}
                   className="p-3 bg-orange-500 hover:bg-orange-600 rounded-xl text-white font-bold shadow-md flex flex-col items-center justify-center active:scale-95 col-span-2 md:col-span-1 transition-colors"
                 >
-                    <Plus size={20} /> <span className="text-xs uppercase mt-1">Opération Caisse</span>
+                    <Plus size={20} /> <span className="text-xs uppercase mt-1">Vente / Achat</span>
                 </button>
             </div>
       </div>
