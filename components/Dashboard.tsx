@@ -11,8 +11,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   AreaChart,
   Area
 } from 'recharts';
@@ -79,7 +77,6 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
   // --- 2. LOGIQUE DE CATÉGORISATION (SOURCE) ---
   const getTransactionSource = (t: Transaction): 'hardware' | 'secretariat' | 'accounting' => {
       const cat = t.category.toLowerCase();
-      const desc = t.description.toLowerCase();
       // Quincaillerie : Vente Magasin, Achat Stock, ou mot clé spécifique
       if (cat.includes('magasin') || cat.includes('stock') || cat.includes('vente comptoir') || cat.includes('outillage')) return 'hardware';
       // Secrétariat : Prestation, Caisse, Acompte, Service
