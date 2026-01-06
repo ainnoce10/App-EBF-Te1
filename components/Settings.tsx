@@ -146,7 +146,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
         const filePath = `${fileName}`;
 
         // 1. Upload
-        const { data, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
             .from('assets')
             .upload(filePath, file, {
                 cacheControl: '3600',
