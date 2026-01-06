@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NAV_ITEMS, Logo } from '../constants';
 import ScrollingTicker from './ScrollingTicker';
 import { TickerMessage } from '../types';
-import { Menu, X, LogOut, Bell, User, Wifi, WifiOff, ChevronRight } from 'lucide-react';
+import { Menu, X, LogOut, Bell, User, Wifi, WifiOff, ChevronRight, Volume2, VolumeX, Play, Pause } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -15,6 +15,7 @@ interface LayoutProps {
   tickerMessages: TickerMessage[];
   isLive?: boolean;
   customLogo?: string;
+  musicUrl?: string;
 }
 
 const Layout: React.FC<LayoutProps> = ({ 
@@ -27,9 +28,27 @@ const Layout: React.FC<LayoutProps> = ({
   onPeriodChange,
   tickerMessages,
   isLive = false,
-  customLogo
+  customLogo,
+  musicUrl
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Audio Player State
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (audioRef.current) {
+        if (isPlaying) {
+            audioRef.current.play().catch(e => {
+                console.warn("Lecture auto bloquée par le navigateur (Action requise)", e);
+                setIsPlaying(false);
+            });
+        } else {
+            audioRef.current.pause();
+        }
+    }
+  }, [isPlaying, musicUrl]);
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
@@ -58,7 +77,32 @@ const Layout: React.FC<LayoutProps> = ({
           ))}
         </nav>
 
-        <div className="p-6 border-t border-gray-100 bg-gray-50/50">
+        <div className="p-6 border-t border-gray-100 bg-gray-50/50 space-y-4">
+          
+          {/* Lecteur Radio EBF */}
+          {musicUrl && (
+              <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-3">
+                  <audio ref={audioRef} src={musicUrl} loop />
+                  <button 
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className={`p-3 rounded-xl transition-all ${isPlaying ? 'bg-orange-500 text-white shadow-md' : 'bg-gray-100 text-gray-400 hover:text-orange-500'}`}
+                  >
+                      {isPlaying ? <Pause size={16} className="animate-pulse" /> : <Play size={16} />}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-gray-800 uppercase tracking-widest truncate">Radio EBF</p>
+                      <p className="text-[10px] text-gray-400 font-bold truncate">{isPlaying ? 'Lecture en cours...' : 'En pause'}</p>
+                  </div>
+                  {isPlaying && (
+                      <div className="flex gap-0.5 h-3 items-end">
+                          <div className="w-1 bg-orange-500 animate-[bounce_1s_infinite] h-full"></div>
+                          <div className="w-1 bg-orange-500 animate-[bounce_1.2s_infinite] h-2/3"></div>
+                          <div className="w-1 bg-orange-500 animate-[bounce_0.8s_infinite] h-1/2"></div>
+                      </div>
+                  )}
+              </div>
+          )}
+
           <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-gray-200 shadow-sm">
             <div className="bg-green-100 p-2 rounded-full text-green-700">
                 <User size={18} />
@@ -68,7 +112,7 @@ const Layout: React.FC<LayoutProps> = ({
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Directeur</p>
             </div>
           </div>
-          <button className="w-full mt-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-red-500 py-2 transition-colors">
+          <button className="w-full flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-red-500 py-2 transition-colors">
             <LogOut size={16} /> Déconnexion
           </button>
         </div>
@@ -218,24 +262,23 @@ const Layout: React.FC<LayoutProps> = ({
                  {children}
             </div>
         </div>
-      </main>
 
-      <style>{`
-        .animate-slide-right {
-          animation: slideRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        @keyframes slideRight {
-          from { transform: translateX(-100%); }
-          to { transform: translateX(0); }
-        }
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
+        <style>{`
+          .animate-slide-right {
+            animation: slideRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+          @keyframes slideRight {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+          }
+          .no-scrollbar::-webkit-scrollbar {
+            display: none;
+          }
+          .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+        `}</style>
     </div>
   );
 };

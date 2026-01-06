@@ -29,8 +29,9 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   
-  // Custom Branding
+  // Custom Branding & Media
   const [customLogo, setCustomLogo] = useState<string>('');
+  const [backgroundMusic, setBackgroundMusic] = useState<string>('');
   
   // Indicateur de connexion
   const [isLive, setIsLive] = useState(false);
@@ -60,7 +61,6 @@ const App: React.FC = () => {
             console.log('Change received!', payload);
             // Recharger la table concernée (stratégie simple pour v1)
             if (payload.table === 'ticker_messages') {
-                 // AJOUT DE L'ID DANS LA REQUETE REALTIME
                  supabase.from('ticker_messages').select('id, content, color').order('created_at', { ascending: false })
                  .then(({ data }) => {
                     if (data) {
@@ -84,10 +84,11 @@ const App: React.FC = () => {
                  supabase.from('employees').select('*').order('name')
                  .then(({ data }) => data && setEmployees(data as Employee[]));
             } else if (payload.table === 'tv_settings') {
-                 // Check if logo changed
-                 if ((payload.new as any)?.key === 'company_logo') {
-                     setCustomLogo((payload.new as any).value);
-                 }
+                 const newKey = (payload.new as any)?.key;
+                 const newValue = (payload.new as any)?.value;
+                 
+                 if (newKey === 'company_logo') setCustomLogo(newValue);
+                 if (newKey === 'background_music') setBackgroundMusic(newValue);
             }
         })
         .subscribe();
@@ -107,7 +108,6 @@ const App: React.FC = () => {
             .order('created_at', { ascending: false });
             
         if (tickerData) {
-            // Mapping sécurisé
             const formattedMessages: TickerMessage[] = tickerData.map(t => ({
                 id: t.id,
                 content: t.content,
@@ -144,13 +144,18 @@ const App: React.FC = () => {
             .order('name');
         if (empData) setEmployees(empData as Employee[]);
         
-        // 6. Settings (Logo)
+        // 6. Settings (Logo & Music)
         const { data: settingsData } = await supabase
             .from('tv_settings')
-            .select('value')
-            .eq('key', 'company_logo')
-            .maybeSingle();
-        if (settingsData && settingsData.value) setCustomLogo(settingsData.value);
+            .select('key, value')
+            .in('key', ['company_logo', 'background_music']);
+            
+        if (settingsData) {
+             const logo = settingsData.find(s => s.key === 'company_logo');
+             const music = settingsData.find(s => s.key === 'background_music');
+             if (logo?.value) setCustomLogo(logo.value);
+             if (music?.value) setBackgroundMusic(music.value);
+        }
 
         setIsLive(true);
     } catch (error) {
@@ -167,6 +172,7 @@ const App: React.FC = () => {
         liveInterventions={interventions}
         liveMessages={tickerMessages}
         customLogo={customLogo}
+        initialMusicUrl={backgroundMusic}
       />
     );
   }
@@ -227,6 +233,7 @@ const App: React.FC = () => {
         tickerMessages={tickerMessages}
         isLive={isLive}
         customLogo={customLogo}
+        musicUrl={backgroundMusic}
       >
         {renderContent()}
       </Layout>

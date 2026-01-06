@@ -20,7 +20,8 @@ import {
   Monitor,
   Scan,
   Phone,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react';
 import { Logo } from '../constants';
 
@@ -30,6 +31,7 @@ interface ShowcaseModeProps {
   liveInterventions?: Intervention[];
   liveMessages?: TickerMessage[];
   customLogo?: string;
+  initialMusicUrl?: string;
 }
 
 const ShowcaseMode: React.FC<ShowcaseModeProps> = ({ 
@@ -37,7 +39,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   liveStock = [], 
   liveInterventions = [], 
   liveMessages = [],
-  customLogo
+  customLogo,
+  initialMusicUrl
 }) => {
   const [activeMode, setActiveMode] = useState<'PUBLICITE' | 'PLANNING'>('PUBLICITE');
   const [productIdx, setProductIdx] = useState(0);
@@ -45,8 +48,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   
   // Audio state
   const [isMuted, setIsMuted] = useState(false);
-  const [audioSrc, setAudioSrc] = useState('');
+  const [audioSrc, setAudioSrc] = useState(initialMusicUrl || '');
   const [autoplayFailed, setAutoplayFailed] = useState(false);
+  const [audioLoading, setAudioLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // TV Settings State (Overscan & Zoom)
@@ -58,29 +62,17 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const planning = liveInterventions.length > 0 ? liveInterventions : [];
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
-  // 0. CHARGEMENT REGLAGES TV & DETECTION PLEIN ECRAN
+  // 0. CHARGEMENT REGLAGES TV
   useEffect(() => {
-    // Charger réglages sauvegardés
     const savedPadding = localStorage.getItem('ebf_tv_padding');
     if (savedPadding) setOverscanPadding(parseFloat(savedPadding));
 
     const savedZoom = localStorage.getItem('ebf_tv_zoom');
     if (savedZoom) setZoomLevel(parseFloat(savedZoom));
-
-    // Tenter le plein écran au montage
-    const requestFullScreen = async () => {
-        try {
-            if (!document.fullscreenElement) {
-                await document.documentElement.requestFullscreen();
-            }
-        } catch (e) {
-            console.log("Plein écran auto bloqué (attente interaction).");
-        }
-    };
     
-    requestFullScreen();
-    setTimeout(requestFullScreen, 1000);
-  }, []);
+    // Si la musique change via les props (depuis App.tsx)
+    if (initialMusicUrl) setAudioSrc(initialMusicUrl);
+  }, [initialMusicUrl]);
 
   const updateOverscan = (delta: number) => {
       setOverscanPadding(prev => {
@@ -98,37 +90,16 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       });
   };
 
-  // 1. Chargement de la musique depuis SUPABASE (Avec Realtime)
+  // 1. Ecoute Realtime pour la musique (Si change sans rechargement)
   useEffect(() => {
-    const fetchMusic = async () => {
-        try {
-            const { data } = await supabase
-                .from('tv_settings')
-                .select('value')
-                .eq('key', 'background_music')
-                .maybeSingle();
-            
-            if (data && data.value) {
-                setAudioSrc(data.value);
-            } else {
-                setAudioSrc('https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=corporate-ambient-14224.mp3');
-            }
-        } catch (e) {
-            console.error("Erreur lecture musique DB", e);
-        }
-    };
-    fetchMusic();
-
-    const channel = supabase.channel('tv-music-update')
+    const channel = supabase.channel('tv-music-showcase')
         .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'tv_settings' },
             (payload) => {
                 if ((payload.new as any)?.key === 'background_music') {
                     const newVal = (payload.new as any).value;
-                    if (newVal) {
-                        setAudioSrc(newVal);
-                    }
+                    if (newVal) setAudioSrc(newVal);
                 }
             }
         )
@@ -142,45 +113,47 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   // 2. Gestion Playback Robuste
   useEffect(() => {
     if (audioRef.current && audioSrc) {
-        audioRef.current.volume = 0.3;
-        audioRef.current.load();
+        setAudioLoading(true);
+        audioRef.current.volume = 0.5;
+        
         const tryPlay = async () => {
              try {
                  if (!isMuted) {
-                    const playPromise = audioRef.current?.play();
-                    if (playPromise !== undefined) {
-                        await playPromise;
-                        setAutoplayFailed(false);
-                    }
+                    await audioRef.current?.play();
+                    setAutoplayFailed(false);
                  }
              } catch (error) {
-                 console.log("Autoplay bloqué par le navigateur:", error);
+                 console.log("Autoplay bloqué, attente interaction utilisateur.", error);
                  setAutoplayFailed(true);
                  setIsMuted(true);
+             } finally {
+                 setAudioLoading(false);
              }
         };
         tryPlay();
     }
   }, [audioSrc]);
 
-  // 3. Gestion Mute/Unmute
-  useEffect(() => {
-      if (audioRef.current) {
-          if (isMuted) {
-              audioRef.current.pause();
-          } else {
-              audioRef.current.play().catch(() => setAutoplayFailed(true));
-          }
-      }
-  }, [isMuted]);
-
   const handleStartShow = async () => {
     setIsMuted(false);
     setAutoplayFailed(false);
-    if(audioRef.current) audioRef.current.play().catch(console.error);
+    if(audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(console.error);
+    }
     try {
         if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
     } catch (e) { console.error("Erreur plein écran manuel:", e); }
+  };
+
+  const toggleMute = () => {
+      if (isMuted) {
+          setIsMuted(false);
+          audioRef.current?.play().catch(() => setAutoplayFailed(true));
+      } else {
+          setIsMuted(true);
+          audioRef.current?.pause();
+      }
   };
 
   const getMessageColorClass = (color: string) => {
@@ -234,19 +207,15 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const currentProduct = products[productIdx];
   const currentPlanningSlice = planning.slice(planningPage * itemsPerPage, (planningPage + 1) * itemsPerPage);
 
-  // --- STYLE CALCULÉ POUR LE ZOOM ET L'OVERSCAN ---
   const outerStyle = {
       padding: `${overscanPadding}vmin`
   };
 
-  // Astuce pour le zoom : On scale le contenu, mais on augmente la largeur/hauteur inversement
-  // pour que le contenu remplisse toujours l'écran une fois scalé.
   const innerContentStyle: React.CSSProperties = {
       transform: `scale(${zoomLevel})`,
       transformOrigin: 'center center',
       width: `${100 / zoomLevel}%`,
       height: `${100 / zoomLevel}%`,
-      // On centre le contenu scalé s'il est plus petit que le conteneur visuel
       display: 'flex',
       flexDirection: 'column'
   };
@@ -260,7 +229,16 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       {/* WRAPPER DE MISE A L'ECHELLE (ZOOM) */}
       <div className="relative overflow-hidden bg-black rounded-xl md:rounded-3xl shadow-2xl ring-1 ring-white/10" style={innerContentStyle}>
 
-          {audioSrc && <audio ref={audioRef} loop src={audioSrc} autoPlay playsInline />}
+          {audioSrc && (
+              <audio 
+                ref={audioRef} 
+                loop 
+                src={audioSrc} 
+                preload="auto"
+                onPlay={() => setAutoplayFailed(false)}
+                onError={(e) => console.error("Erreur lecture audio:", e)}
+              />
+          )}
 
           {autoplayFailed && (
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[600] animate-bounce flex flex-col items-center gap-4">
@@ -269,9 +247,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                     className="bg-green-600 hover:bg-green-500 text-white px-10 py-6 rounded-[2rem] font-black text-2xl shadow-[0_0_50px_rgba(34,197,94,0.6)] flex items-center gap-4 hover:scale-110 transition-transform"
                   >
                       <Play size={32} fill="currentColor" /> 
-                      <span>LANCER LA TV</span>
+                      <span>LANCER LA TV & SON</span>
                   </button>
-                  <p className="text-white/70 font-bold uppercase tracking-widest bg-black/50 px-4 py-2 rounded-xl">Cliquez pour le son et le plein écran</p>
+                  <p className="text-white/70 font-bold uppercase tracking-widest bg-black/50 px-4 py-2 rounded-xl">Cliquez pour activer l'ambiance sonore</p>
               </div>
           )}
 
@@ -355,10 +333,10 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                   </div>
 
                   <button 
-                    onClick={() => { const newState = !isMuted; setIsMuted(newState); }}
+                    onClick={toggleMute}
                     className={`p-3 rounded-full border transition-all ${isMuted ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-green-500/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'}`}
                   >
-                      {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                      {audioLoading ? <Loader2 size={20} className="animate-spin" /> : (isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />)}
                   </button>
                   
                   <button onClick={() => document.documentElement.requestFullscreen().catch(console.error)} className="hidden md:block p-3 rounded-full border bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10">
@@ -515,9 +493,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                     )}
 
                                     {/* 4. DETAILS (Description) */}
-                                    <div className="bg-black/20 p-3 rounded-xl border border-white/5 flex-1 min-h-0 overflow-hidden relative">
-                                        <div className="absolute top-2 right-2 opacity-20"><Info size={16}/></div>
-                                        <p className="text-gray-300 text-xs md:text-base font-medium leading-relaxed line-clamp-4">
+                                    <div className="bg-black/20 p-4 rounded-xl border border-white/5 flex-1 min-h-0 overflow-hidden relative">
+                                        <div className="absolute top-2 right-2 opacity-20"><Info size={24}/></div>
+                                        <p className="text-gray-200 text-sm md:text-xl lg:text-2xl font-bold leading-snug line-clamp-4">
                                             {inter.description}
                                         </p>
                                     </div>
