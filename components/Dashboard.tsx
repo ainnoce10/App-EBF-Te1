@@ -155,7 +155,9 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
     };
   }, [dateFilteredTransactions]);
 
-  const PIE_COLORS = [COLORS.primary, COLORS.secondary, '#eab308', '#3b82f6', '#ef4444', '#8b5cf6'];
+  // Palette Pie Chart
+  const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+  
   const periodLabel = period === 'Personnalisé' 
     ? `Du ${new Date(customStartDate || '').toLocaleDateString('fr-FR')} au ${new Date(customEndDate || '').toLocaleDateString('fr-FR')}`
     : `${period} en cours`;
@@ -219,7 +221,7 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
                   <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
                       <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Total Entrées</p>
                       <h3 className="text-3xl font-black text-gray-800">{detailedData.income.toLocaleString()} <span className="text-sm text-gray-400">F</span></h3>
-                      <div className="mt-2 text-xs font-bold text-green-600 bg-green-50 inline-block px-2 py-1 rounded-lg">Recettes {detailFilter === 'all' ? 'Globales' : detailFilter}</div>
+                      <div className="mt-2 text-xs font-bold text-blue-600 bg-blue-50 inline-block px-2 py-1 rounded-lg">Recettes {detailFilter === 'all' ? 'Globales' : detailFilter}</div>
                   </div>
                   <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
                       <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Total Sorties</p>
@@ -253,7 +255,8 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
                                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', padding: '12px', fontWeight: 'bold' }}
                                   />
                                   <Legend wrapperStyle={{paddingTop: '20px'}}/>
-                                  <Bar dataKey="income" name="Recettes" fill={COLORS.primary} radius={[6, 6, 0, 0]} />
+                                  {/* UPDATE COULEUR: BLUE pour Recettes */}
+                                  <Bar dataKey="income" name="Recettes" fill="#3b82f6" radius={[6, 6, 0, 0]} />
                                   <Bar dataKey="expense" name="Dépenses" fill="#ef4444" radius={[6, 6, 0, 0]} />
                               </BarChart>
                           </ResponsiveContainer>
@@ -364,7 +367,8 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
             <p className="text-gray-400 text-xs font-black uppercase tracking-wider mb-1">C.A. Global</p>
             <h3 className="text-2xl md:text-3xl font-black text-gray-800 tracking-tight">{(summaryData.turnover).toLocaleString()} <span className="text-sm text-gray-400">F</span></h3>
           </div>
-          <div className="bg-orange-50 p-3 rounded-2xl text-orange-600">
+          {/* UPDATE COULEUR: ICONE BLEUE */}
+          <div className="bg-blue-50 p-3 rounded-2xl text-blue-600">
             <DollarSign size={28} />
           </div>
         </div>
@@ -419,8 +423,8 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
                     />
                     <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{fontSize: '12px', fontWeight: 'bold'}}/>
                     
-                    {/* Barres pour CA et Dépenses */}
-                    <Bar dataKey="turnover" name="Chiffre d'Affaires" fill={COLORS.primary} barSize={20} radius={[4, 4, 0, 0]} />
+                    {/* Barres pour CA et Dépenses (UPDATE COULEURS) */}
+                    <Bar dataKey="turnover" name="Chiffre d'Affaires" fill="#3b82f6" barSize={20} radius={[4, 4, 0, 0]} />
                     <Bar dataKey="expense" name="Dépenses" fill="#ef4444" barSize={20} radius={[4, 4, 0, 0]} />
                     
                     {/* Ligne pour Bénéfice Net */}
