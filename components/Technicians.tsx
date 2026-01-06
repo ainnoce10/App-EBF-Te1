@@ -52,7 +52,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const [newIntervention, setNewIntervention] = useState({
     client: '',
     clientPhone: '',
-    domain: 'Électricité' as 'Électricité' | 'Bâtiment' | 'Froid',
+    domain: 'Électricité' as 'Électricité' | 'Bâtiment' | 'Froid' | 'Plomberie',
     interventionType: 'Dépannage' as any,
     description: '',
     site: 'Abidjan' as Site,
@@ -488,8 +488,9 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Domaine d'activité</label>
                     <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-green-500 transition-all appearance-none" value={newIntervention.domain} onChange={e => setNewIntervention({...newIntervention, domain: e.target.value as any})}>
                         <option value="Électricité">⚡ Électricité</option>
-                        <option value="Bâtiment">🏠 Bâtiment / GC</option>
+                        <option value="Bâtiment">🏠 Bâtiment</option>
                         <option value="Froid">❄️ Froid & Clim</option>
+                        <option value="Plomberie">💧 Plomberie</option>
                     </select>
                   </div>
 
@@ -497,11 +498,18 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nature de l'intervention</label>
                     <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-green-500 transition-all appearance-none" value={newIntervention.interventionType} onChange={e => setNewIntervention({...newIntervention, interventionType: e.target.value as any})}>
-                        <option value="Dépannage">Dépannage Urgent</option>
+                        <option value="Dépannage">Dépannage</option>
                         <option value="Installation">Installation</option>
-                        <option value="Expertise">Expertise / Devis</option>
-                        <option value="Entretien">Entretien / Maintenance</option>
+                        <option value="Désinstallation">Désinstallation</option>
+                        <option value="Entretien">Entretien</option>
                         <option value="Tuyauterie">Tuyauterie</option>
+                        <option value="Appareillage">Appareillage</option>
+                        <option value="Fillerie">Fillerie</option>
+                        <option value="Rénovation">Rénovation</option>
+                        <option value="Réhabilitation">Réhabilitation</option>
+                        <option value="Expertise">Expertise</option>
+                        <option value="Devis">Devis</option>
+                        <option value="Maintenance">Maintenance</option>
                     </select>
                   </div>
 

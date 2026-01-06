@@ -18,9 +18,9 @@ export interface DashboardData {
 export interface Intervention {
   id: string;
   client: string;
-  clientPhone?: string; // Nouveau
-  domain?: 'Électricité' | 'Bâtiment' | 'Froid'; // Nouveau
-  interventionType?: 'Dépannage' | 'Expertise' | 'Installation' | 'Tuyauterie' | 'Appareillage' | 'Fillerie' | 'Entretien' | 'Désinstallation'; // Nouveau
+  clientPhone?: string;
+  domain?: 'Électricité' | 'Bâtiment' | 'Froid' | 'Plomberie';
+  interventionType?: 'Dépannage' | 'Installation' | 'Désinstallation' | 'Entretien' | 'Tuyauterie' | 'Appareillage' | 'Fillerie' | 'Rénovation' | 'Réhabilitation' | 'Expertise' | 'Devis' | 'Maintenance';
   description: string;
   technician: string;
   status: 'En cours' | 'Terminé' | 'En attente';
