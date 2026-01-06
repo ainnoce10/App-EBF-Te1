@@ -426,9 +426,10 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                     >
                         {currentPlanningSlice.map((inter) => (
                             <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-6 md:p-8 rounded-3xl flex flex-col gap-4 shadow-2xl h-full relative overflow-hidden group">
-                                {/* NOUVEAU HEADER: STATUS & SITE (ENORME) */}
-                                <div className="flex justify-between items-start mb-4">
-                                     <span className={`px-4 py-2 md:px-6 md:py-3 rounded-2xl font-black text-sm md:text-2xl uppercase tracking-widest inline-block text-center shadow-lg
+                                {/* NOUVEAU HEADER: STATUS & SITE */}
+                                <div className="flex justify-between items-start mb-2">
+                                     {/* STATUT - TRES PETIT */}
+                                     <span className={`px-2 py-0.5 md:px-3 md:py-1 rounded-lg font-black text-[8px] md:text-[10px] uppercase tracking-widest inline-block text-center shadow-lg
                                       ${inter.status === 'Terminé' ? 'bg-green-500 text-white' : 
                                         inter.status === 'En cours' ? 'bg-orange-500 text-white' : 
                                         inter.status === 'En attente' ? 'bg-blue-600 text-white' :
@@ -436,11 +437,11 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                       {inter.status}
                                     </span>
                                     
-                                    {/* SITE AGRANDI VISIBILITE LOINTAINE */}
+                                    {/* SITE - TRES REDUIT */}
                                     {inter.site && (
-                                        <div className="flex items-center gap-2 md:gap-4 bg-white/10 px-4 py-2 md:px-6 md:py-3 rounded-2xl border border-white/10 backdrop-blur-md animate-pulse-soft">
-                                            <MapPin className="w-6 h-6 md:w-10 md:h-10 text-orange-500" />
-                                            <span className="text-xl md:text-4xl font-black text-white uppercase tracking-tighter">
+                                        <div className="flex items-center gap-1 md:gap-2 bg-white/10 px-2 py-0.5 md:px-3 md:py-1 rounded-lg border border-white/10 backdrop-blur-md animate-pulse-soft">
+                                            <MapPin className="w-3 h-3 md:w-4 md:h-4 text-orange-500" />
+                                            <span className="text-[10px] md:text-sm font-black text-white uppercase tracking-tighter">
                                                 {inter.site}
                                             </span>
                                         </div>
@@ -448,10 +449,10 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                 </div>
 
                                 {/* Body Information */}
-                                <div className="flex-1 flex flex-col justify-center min-h-0 space-y-4">
-                                    {/* 1. CLIENT */}
-                                    <div className="border-l-4 md:border-l-8 border-orange-500 pl-4 md:pl-6">
-                                        <h4 className="text-white text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-none drop-shadow-md uppercase truncate">
+                                <div className="flex-1 flex flex-col justify-center min-h-0 space-y-2">
+                                    {/* 1. CLIENT - TRES REDUIT */}
+                                    <div className="border-l-2 md:border-l-4 border-orange-500 pl-3 md:pl-4">
+                                        <h4 className="text-white text-lg md:text-2xl lg:text-3xl font-black tracking-tight leading-none drop-shadow-md uppercase truncate">
                                             {inter.client}
                                         </h4>
                                     </div>
