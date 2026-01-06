@@ -355,28 +355,36 @@ create table if not exists public.accounting_transactions (
 
 -- 5. SECURITE (RLS) - Activation pour toutes les tables
 alter table public.tv_settings enable row level security;
+drop policy if exists "Public Access Settings" on public.tv_settings;
 create policy "Public Access Settings" on public.tv_settings for all using (true) with check (true);
 
 alter table public.ticker_messages enable row level security;
+drop policy if exists "Public Access Ticker" on public.ticker_messages;
 create policy "Public Access Ticker" on public.ticker_messages for all using (true) with check (true);
 
 alter table public.stock enable row level security;
+drop policy if exists "Public Access Stock" on public.stock;
 create policy "Public Access Stock" on public.stock for all using (true) with check (true);
 
 alter table public.interventions enable row level security;
+drop policy if exists "Public Access Interventions" on public.interventions;
 create policy "Public Access Interventions" on public.interventions for all using (true) with check (true);
 
 alter table public.employees enable row level security;
+drop policy if exists "Public Access Employees" on public.employees;
 create policy "Public Access Employees" on public.employees for all using (true) with check (true);
 
 -- RLS pour les tables financières
 alter table public.hardware_transactions enable row level security;
+drop policy if exists "Public Access Hardware Trx" on public.hardware_transactions;
 create policy "Public Access Hardware Trx" on public.hardware_transactions for all using (true) with check (true);
 
 alter table public.secretariat_transactions enable row level security;
+drop policy if exists "Public Access Secretariat Trx" on public.secretariat_transactions;
 create policy "Public Access Secretariat Trx" on public.secretariat_transactions for all using (true) with check (true);
 
 alter table public.accounting_transactions enable row level security;
+drop policy if exists "Public Access Accounting Trx" on public.accounting_transactions;
 create policy "Public Access Accounting Trx" on public.accounting_transactions for all using (true) with check (true);
 `;
 
