@@ -10,8 +10,6 @@ import {
   LayoutGrid,
   ClipboardList,
   MapPin,
-  Briefcase,
-  Layers,
   Volume2,
   VolumeX,
   Play,
