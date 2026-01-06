@@ -146,7 +146,7 @@ export const TICKER_MESSAGES: TickerMessage[] = [
   { content: "EBF Abidjan & Bouaké : Ouvert du Lundi au Samedi de 08h à 18h.", color: "neutral" },
 ];
 
-export const Logo = ({ url, size = 'md', theme = 'light' }: { url?: string; size?: 'sm' | 'md' | 'lg'; theme?: 'light' | 'dark' }) => {
+export const Logo = ({ url, size = 'md', theme = 'light', label }: { url?: string; size?: 'sm' | 'md' | 'lg'; theme?: 'light' | 'dark'; label?: string }) => {
     // Dimensions mapping
     const dims = {
         sm: { h: 'h-8', w: 'w-8', text: 'text-lg', badge: 'w-3 h-3', innerText: 'text-[0.6rem]' },
@@ -156,13 +156,12 @@ export const Logo = ({ url, size = 'md', theme = 'light' }: { url?: string; size
     
     const s = dims[size];
     const textColor = theme === 'dark' ? 'text-white' : 'text-gray-800';
-    const fColor = theme === 'dark' ? 'text-white' : 'text-gray-700';
 
     if (url) {
         return (
             <div className="flex items-center gap-3">
                  <img src={url} alt="Logo" className={`${s.h} w-auto object-contain rounded-lg shadow-sm bg-white`} />
-                 <span className={`font-black ${s.text} tracking-tighter ${textColor}`}>EBF</span>
+                 {label && <span className={`font-black ${s.text} tracking-tighter ${textColor}`}>{label}</span>}
             </div>
         );
     }
@@ -172,11 +171,11 @@ export const Logo = ({ url, size = 'md', theme = 'light' }: { url?: string; size
                 <span className={`text-white ${s.innerText} font-black`}>EBF</span>
                 <div className={`absolute -bottom-1 -right-1 ${s.badge} bg-green-600 rounded-full border-2 border-white`}></div>
             </div>
-            <div className="leading-none">
-                <span className="text-orange-600 font-black">E</span>
-                <span className="text-green-600 font-black">B</span>
-                <span className={`${fColor} font-black`}>F</span>
-            </div>
+            {label && (
+                <div className="leading-none">
+                    <span className={`${textColor} font-black`}>{label}</span>
+                </div>
+            )}
         </div>
     );
 };

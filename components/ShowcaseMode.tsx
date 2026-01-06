@@ -279,7 +279,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           <div className="bg-gray-950 px-4 py-4 md:px-10 md:h-28 flex flex-col md:flex-row items-center justify-between border-b-4 md:border-b-[8px] border-orange-600 shadow-2xl z-50 gap-4 md:gap-0 shrink-0 transition-colors duration-500">
               <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 w-full md:w-auto">
                   <div className="bg-white/10 px-4 py-2 md:px-6 md:py-4 rounded-xl md:rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-                    <Logo url={customLogo} size="lg" theme="dark" />
+                    <Logo url={customLogo} size="lg" theme="dark" label="TV" />
                   </div>
                   
                   <div className="flex gap-2 md:gap-4 bg-white/5 p-1.5 md:p-2 rounded-2xl md:rounded-3xl border border-white/10 w-full md:w-auto justify-center">

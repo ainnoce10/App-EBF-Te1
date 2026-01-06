@@ -36,7 +36,7 @@ const Layout: React.FC<LayoutProps> = ({
       {/* Sidebar Desktop */}
       <aside className="hidden md:flex flex-col w-72 bg-white border-r border-gray-200 shadow-sm z-20">
         <div className="p-8 flex justify-center border-b border-gray-100">
-          <Logo url={customLogo} />
+          <Logo url={customLogo} size="lg" />
         </div>
         
         <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar">
