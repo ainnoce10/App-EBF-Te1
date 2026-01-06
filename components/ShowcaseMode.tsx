@@ -21,7 +21,8 @@ import {
   Settings,
   Minus,
   Plus,
-  Monitor
+  Monitor,
+  Scan
 } from 'lucide-react';
 
 interface ShowcaseModeProps {
@@ -47,8 +48,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const [autoplayFailed, setAutoplayFailed] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // TV Settings State (Overscan fix)
-  const [overscanPadding, setOverscanPadding] = useState(4); // Marge par défaut 4%
+  // TV Settings State (Overscan & Zoom)
+  const [overscanPadding, setOverscanPadding] = useState(4); // Marge %
+  const [zoomLevel, setZoomLevel] = useState(1); // Echelle (1 = 100%)
   const [showTvSettings, setShowTvSettings] = useState(false);
 
   const products = liveStock.length > 0 ? liveStock : [];
@@ -57,11 +59,12 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
   // 0. CHARGEMENT REGLAGES TV & DETECTION PLEIN ECRAN
   useEffect(() => {
-    // Charger la marge sauvegardée
+    // Charger réglages sauvegardés
     const savedPadding = localStorage.getItem('ebf_tv_padding');
-    if (savedPadding) {
-        setOverscanPadding(parseFloat(savedPadding));
-    }
+    if (savedPadding) setOverscanPadding(parseFloat(savedPadding));
+
+    const savedZoom = localStorage.getItem('ebf_tv_zoom');
+    if (savedZoom) setZoomLevel(parseFloat(savedZoom));
 
     // Tenter le plein écran au montage
     const requestFullScreen = async () => {
@@ -80,8 +83,16 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
   const updateOverscan = (delta: number) => {
       setOverscanPadding(prev => {
-          const newVal = Math.max(0, Math.min(15, prev + delta)); // Limite entre 0% et 15%
+          const newVal = Math.max(0, Math.min(15, prev + delta)); 
           localStorage.setItem('ebf_tv_padding', newVal.toString());
+          return newVal;
+      });
+  };
+
+  const updateZoom = (delta: number) => {
+      setZoomLevel(prev => {
+          const newVal = Math.max(0.5, Math.min(1.5, parseFloat((prev + delta).toFixed(2))));
+          localStorage.setItem('ebf_tv_zoom', newVal.toString());
           return newVal;
       });
   };
@@ -222,19 +233,31 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const currentProduct = products[productIdx];
   const currentPlanningSlice = planning.slice(planningPage * itemsPerPage, (planningPage + 1) * itemsPerPage);
 
-  // Style dynamique pour la marge
-  const containerStyle = {
+  // --- STYLE CALCULÉ POUR LE ZOOM ET L'OVERSCAN ---
+  const outerStyle = {
       padding: `${overscanPadding}vmin`
+  };
+
+  // Astuce pour le zoom : On scale le contenu, mais on augmente la largeur/hauteur inversement
+  // pour que le contenu remplisse toujours l'écran une fois scalé.
+  const innerContentStyle: React.CSSProperties = {
+      transform: `scale(${zoomLevel})`,
+      transformOrigin: 'center center',
+      width: `${100 / zoomLevel}%`,
+      height: `${100 / zoomLevel}%`,
+      // On centre le contenu scalé s'il est plus petit que le conteneur visuel
+      display: 'flex',
+      flexDirection: 'column'
   };
 
   return (
     <div 
-        className="fixed inset-0 z-[500] bg-black flex flex-col overflow-hidden font-sans select-none text-white transition-all duration-300 box-border"
-        style={containerStyle}
+        className="fixed inset-0 z-[500] bg-black flex items-center justify-center overflow-hidden font-sans select-none text-white transition-all duration-300 box-border"
+        style={outerStyle}
     >
       
-      {/* Container interne qui prend tout l'espace restant après le padding de sécurité */}
-      <div className="w-full h-full flex flex-col relative overflow-hidden bg-black rounded-xl md:rounded-3xl shadow-2xl ring-1 ring-white/10">
+      {/* WRAPPER DE MISE A L'ECHELLE (ZOOM) */}
+      <div className="relative overflow-hidden bg-black rounded-xl md:rounded-3xl shadow-2xl ring-1 ring-white/10" style={innerContentStyle}>
 
           {audioSrc && <audio ref={audioRef} loop src={audioSrc} autoPlay playsInline />}
 
@@ -293,15 +316,16 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
                       {/* POPUP DE REGLAGE */}
                       {showTvSettings && (
-                          <div className="absolute top-16 right-0 bg-gray-900 border border-gray-700 p-6 rounded-2xl shadow-2xl w-64 z-[100] animate-fade-in">
+                          <div className="absolute top-16 right-0 bg-gray-900 border border-gray-700 p-6 rounded-2xl shadow-2xl w-72 z-[100] animate-fade-in">
                               <h4 className="flex items-center gap-2 text-white font-black uppercase text-sm mb-4 border-b border-gray-700 pb-2">
                                   <Monitor size={16} className="text-orange-500"/> Ajuster Écran TV
                               </h4>
                               
-                              <div className="space-y-4">
+                              <div className="space-y-6">
+                                  {/* Marge Control */}
                                   <div>
                                       <div className="flex justify-between text-xs font-bold text-gray-400 mb-2">
-                                          <span>Marge de sécurité</span>
+                                          <span>Marge noire (Overscan)</span>
                                           <span className="text-white">{overscanPadding}%</span>
                                       </div>
                                       <div className="flex items-center gap-3">
@@ -311,7 +335,23 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                           </div>
                                           <button onClick={() => updateOverscan(0.5)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Plus size={16}/></button>
                                       </div>
-                                      <p className="text-[10px] text-gray-500 mt-2 italic">Ajustez si les bords sont coupés.</p>
+                                  </div>
+
+                                  {/* Zoom Control */}
+                                  <div>
+                                      <div className="flex justify-between text-xs font-bold text-gray-400 mb-2">
+                                          <span>Zoom Contenu</span>
+                                          <span className="text-white">{Math.round(zoomLevel * 100)}%</span>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                          <button onClick={() => updateZoom(-0.05)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Scan size={16}/></button>
+                                          <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                                              {/* 0.5 to 1.5 range mapping */}
+                                              <div className="h-full bg-blue-500 transition-all" style={{ width: `${((zoomLevel - 0.5) / 1) * 100}%` }}></div>
+                                          </div>
+                                          <button onClick={() => updateZoom(0.05)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Maximize2 size={16}/></button>
+                                      </div>
+                                      <p className="text-[10px] text-gray-500 mt-2 italic text-center">Utilisez le Zoom si le contenu est trop gros.</p>
                                   </div>
                               </div>
                           </div>
@@ -341,11 +381,11 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               </div>
           </div>
 
-          {/* CONTENU PRINCIPAL */}
-          <div className={`flex-1 flex overflow-hidden relative transition-colors duration-1000 ease-in-out ${activeMode === 'PLANNING' ? 'bg-[#0f172a]' : 'bg-gray-900'}`}>
+          {/* CONTENU PRINCIPAL - FLEX-1 POUR PRENDRE JUSTE L'ESPACE RESTANT */}
+          <div className={`flex-1 flex flex-col overflow-hidden relative transition-colors duration-1000 ease-in-out min-h-0 ${activeMode === 'PLANNING' ? 'bg-[#0f172a]' : 'bg-gray-900'}`}>
               
               {activeMode === 'PUBLICITE' && currentProduct ? (
-                <div className="flex flex-col lg:flex-row w-full animate-fade-in h-full">
+                <div className="flex flex-col lg:flex-row w-full animate-fade-in h-full min-h-0">
                     {/* ZONE IMAGE */}
                     <div className="w-full lg:w-[45%] h-[45%] lg:h-full relative flex items-center justify-center p-4 md:p-8 bg-gray-950 overflow-hidden shrink-0">
                         <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/10 to-transparent opacity-50"></div>
@@ -362,12 +402,12 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                     {/* ZONE TEXTE */}
                     <div className="w-full lg:w-[55%] h-[55%] lg:h-full bg-white text-gray-950 flex flex-col p-6 md:p-16 justify-center shadow-[-20px_0_100px_rgba(0,0,0,0.4)] relative overflow-hidden">
                         <div className="flex flex-col h-full justify-between space-y-4 md:space-y-8 animate-slide-up relative z-10 max-h-full">
-                            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar flex flex-col">
-                                <div className="m-auto w-full pt-4 md:pt-0">
+                            <div className="flex-1 min-h-0 flex flex-col justify-center">
+                                <div className="w-full">
                                     <span className="px-4 py-1.5 md:px-8 md:py-3 bg-orange-600 text-white rounded-lg md:rounded-xl text-xs md:text-2xl font-black uppercase mb-2 md:mb-6 inline-block shadow-lg tracking-widest shrink-0">
                                     {currentProduct.category}
                                     </span>
-                                    <h1 className={`${getTitleSizeClass(currentProduct.name)} font-black leading-tight md:leading-[0.95] tracking-tighter mb-4 md:mb-8 text-gray-950 uppercase italic line-clamp-5`}>
+                                    <h1 className={`${getTitleSizeClass(currentProduct.name)} font-black leading-tight md:leading-[0.95] tracking-tighter mb-4 md:mb-8 text-gray-950 uppercase italic line-clamp-4`}>
                                     {currentProduct.name}
                                     </h1>
                                     <div className="flex flex-wrap items-center gap-4 md:gap-10 text-gray-400 font-black text-xs md:text-2xl uppercase tracking-widest shrink-0 pb-2">
@@ -389,8 +429,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                     </div>
                 </div>
               ) : activeMode === 'PLANNING' ? (
-                <div className="flex w-full p-6 md:p-16 animate-fade-in flex-col h-full overflow-hidden">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 md:mb-10 shrink-0 border-b border-white/10 pb-6 gap-4">
+                <div className="flex w-full p-6 md:p-16 animate-fade-in flex-col h-full min-h-0 overflow-hidden">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 md:mb-8 shrink-0 border-b border-white/10 pb-4 md:pb-6 gap-4">
                         <div className="flex flex-col md:flex-row md:items-baseline gap-4 md:gap-8">
                           <h2 className="text-2xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white uppercase italic truncate drop-shadow-lg">
                               Chantiers EBF
@@ -406,14 +446,15 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                         </div>
                     </div>
                     
+                    {/* GRILLE ELASTIQUE QUI NE DEBORDE PAS VERTICALEMENT */}
                     <div 
                         key={planningPage} 
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 overflow-hidden content-start pb-20 animate-slide-up"
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 min-h-0 animate-slide-up"
                     >
                         {currentPlanningSlice.map((inter) => (
-                            <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-6 md:p-10 rounded-3xl flex flex-col justify-between gap-4 shadow-2xl hover:bg-white/15 transition-all duration-300 hover:-translate-y-2 h-full min-h-[350px]">
-                                <div className="flex justify-between items-start">
-                                    <div className="flex flex-col gap-2">
+                            <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-6 md:p-8 rounded-3xl flex flex-col justify-between gap-2 md:gap-4 shadow-2xl h-full">
+                                <div className="flex justify-between items-start shrink-0">
+                                    <div className="flex flex-col gap-1 md:gap-2">
                                         <span className={`px-4 py-2 rounded-xl font-black text-xs md:text-sm uppercase tracking-widest inline-block text-center shadow-lg
                                           ${inter.status === 'Terminé' ? 'bg-green-500 text-white' : 
                                             inter.status === 'En cours' ? 'bg-orange-500 text-white' : 
@@ -431,25 +472,25 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                     </div>
                                 </div>
 
-                                <div className="flex flex-wrap gap-2 my-2">
+                                <div className="flex flex-wrap gap-2 my-1 md:my-2 shrink-0">
                                     {inter.domain && (
-                                        <span className="flex items-center gap-2 px-4 py-2 bg-black/30 rounded-lg text-white/90 text-sm font-bold uppercase border border-white/10">
-                                          <Briefcase size={16}/> {inter.domain}
+                                        <span className="flex items-center gap-2 px-4 py-2 bg-black/30 rounded-lg text-white/90 text-xs md:text-sm font-bold uppercase border border-white/10">
+                                          <Briefcase size={14}/> {inter.domain}
                                         </span>
                                     )}
                                     {inter.interventionType && (
-                                        <span className="flex items-center gap-2 px-4 py-2 bg-black/30 rounded-lg text-white/90 text-sm font-bold uppercase border border-white/10">
-                                          <Layers size={16}/> {inter.interventionType}
+                                        <span className="flex items-center gap-2 px-4 py-2 bg-black/30 rounded-lg text-white/90 text-xs md:text-sm font-bold uppercase border border-white/10">
+                                          <Layers size={14}/> {inter.interventionType}
                                         </span>
                                     )}
                                 </div>
 
-                                <div className="flex-1 flex flex-col justify-center py-4">
-                                    <h4 className="text-white text-2xl md:text-4xl font-black tracking-tight leading-none mb-4 line-clamp-2 drop-shadow-md">{inter.client}</h4>
-                                    <p className="text-gray-200 text-base md:text-xl font-medium leading-relaxed line-clamp-4">{inter.description}</p>
+                                <div className="flex-1 flex flex-col justify-center py-2 md:py-4 min-h-0 overflow-hidden">
+                                    <h4 className="text-white text-xl md:text-3xl font-black tracking-tight leading-none mb-2 md:mb-4 line-clamp-2 drop-shadow-md">{inter.client}</h4>
+                                    <p className="text-gray-200 text-sm md:text-lg font-medium leading-relaxed line-clamp-3 md:line-clamp-4">{inter.description}</p>
                                 </div>
                                 
-                                <div className="pt-6 border-t border-white/10 flex justify-between items-center text-white/50 text-sm font-mono mt-auto">
+                                <div className="pt-4 md:pt-6 border-t border-white/10 flex justify-between items-center text-white/50 text-xs md:text-sm font-mono mt-auto shrink-0">
                                     <span>ID: {inter.id}</span>
                                     <span className="flex items-center gap-2 text-blue-300"><Clock size={16}/> {inter.technician}</span>
                                 </div>
@@ -457,7 +498,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                         ))}
                         
                         {Array.from({ length: Math.max(0, 3 - currentPlanningSlice.length) }).map((_, i) => (
-                            <div key={`empty-${i}`} className="border-2 border-dashed border-white/5 rounded-3xl flex items-center justify-center opacity-10">
+                            <div key={`empty-${i}`} className="border-2 border-dashed border-white/5 rounded-3xl flex items-center justify-center opacity-10 h-full">
                                 <span className="text-white font-black text-4xl uppercase">EBF</span>
                             </div>
                         ))}
