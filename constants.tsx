@@ -146,25 +146,36 @@ export const TICKER_MESSAGES: TickerMessage[] = [
   { content: "EBF Abidjan & Bouaké : Ouvert du Lundi au Samedi de 08h à 18h.", color: "neutral" },
 ];
 
-export const Logo = ({ url }: { url?: string }) => {
+export const Logo = ({ url, size = 'md', theme = 'light' }: { url?: string; size?: 'sm' | 'md' | 'lg'; theme?: 'light' | 'dark' }) => {
+    // Dimensions mapping
+    const dims = {
+        sm: { h: 'h-8', w: 'w-8', text: 'text-lg', badge: 'w-3 h-3', innerText: 'text-[0.6rem]' },
+        md: { h: 'h-10', w: 'w-10', text: 'text-2xl', badge: 'w-4 h-4', innerText: 'text-xs' },
+        lg: { h: 'h-12 md:h-20', w: 'w-12 md:w-20', text: 'text-3xl md:text-6xl', badge: 'w-4 h-4 md:w-6 md:h-6', innerText: 'text-sm md:text-xl' },
+    };
+    
+    const s = dims[size];
+    const textColor = theme === 'dark' ? 'text-white' : 'text-gray-800';
+    const fColor = theme === 'dark' ? 'text-white' : 'text-gray-700';
+
     if (url) {
         return (
             <div className="flex items-center gap-3">
-                 <img src={url} alt="Logo" className="h-10 w-auto object-contain rounded-lg shadow-sm bg-white" />
-                 <span className="font-black text-2xl tracking-tighter text-gray-800">EBF</span>
+                 <img src={url} alt="Logo" className={`${s.h} w-auto object-contain rounded-lg shadow-sm bg-white`} />
+                 <span className={`font-black ${s.text} tracking-tighter ${textColor}`}>EBF</span>
             </div>
         );
     }
     return (
-        <div className="flex items-center gap-2 font-bold text-2xl tracking-tighter select-none">
-            <div className="relative w-10 h-10 bg-orange-500 rounded-tr-lg rounded-bl-lg flex items-center justify-center shadow-md">
-                <span className="text-white text-xs font-black">EBF</span>
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-600 rounded-full border-2 border-white"></div>
+        <div className={`flex items-center gap-2 font-bold ${s.text} tracking-tighter select-none`}>
+            <div className={`relative ${s.w} ${s.h} bg-orange-500 rounded-tr-lg rounded-bl-lg flex items-center justify-center shadow-md shrink-0`}>
+                <span className={`text-white ${s.innerText} font-black`}>EBF</span>
+                <div className={`absolute -bottom-1 -right-1 ${s.badge} bg-green-600 rounded-full border-2 border-white`}></div>
             </div>
-            <div>
-            <span className="text-orange-600 font-black">E</span>
-            <span className="text-green-600 font-black">B</span>
-            <span className="text-gray-700 font-black">F</span>
+            <div className="leading-none">
+                <span className="text-orange-600 font-black">E</span>
+                <span className="text-green-600 font-black">B</span>
+                <span className={`${fColor} font-black`}>F</span>
             </div>
         </div>
     );
