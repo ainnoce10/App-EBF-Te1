@@ -20,7 +20,6 @@ import {
   Monitor,
   Scan,
   Phone,
-  Info,
   Loader2
 } from 'lucide-react';
 import { Logo } from '../constants';
