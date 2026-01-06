@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { StockItem, Intervention, TickerMessage } from '../types';
 import { supabase } from '../lib/supabase';
@@ -10,7 +9,6 @@ import {
   Megaphone,
   LayoutGrid,
   ClipboardList,
-  Clock,
   MapPin,
   Briefcase,
   Layers,
