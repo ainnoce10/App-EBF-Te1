@@ -36,6 +36,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSavingMusic, setIsSavingMusic] = useState(false);
   const [isSavingLogo, setIsSavingLogo] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [showSql, setShowSql] = useState(false);
   
   // State pour la musique
@@ -131,26 +132,70 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'music' | 'logo') => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'music' | 'logo') => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 4.5 * 1024 * 1024) {
-        alert("Le fichier est trop volumineux pour la base de données (Max 4.5 Mo).");
-        return;
-    }
+    // MÉTHODE 1 : Upload vers Supabase Storage (Recommandé pour gros fichiers)
+    // On essaie d'uploader dans le bucket 'assets'.
+    setIsUploading(true);
+    
+    try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${type}_${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const result = e.target?.result as string;
+        // 1. Upload
+        const { data, error: uploadError } = await supabase.storage
+            .from('assets')
+            .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false
+            });
+
+        if (uploadError) {
+             // Si le bucket n'existe pas ou erreur d'upload, on fallback sur la méthode Base64 si le fichier est petit
+             console.warn("Upload Storage échoué (Bucket 'assets' manquant ?), tentative Base64...", uploadError.message);
+             
+             if (file.size > 4.5 * 1024 * 1024) {
+                 alert("Erreur: Le stockage de fichiers 'assets' n'est pas configuré et ce fichier est trop gros pour la base de données.\n\nVeuillez exécuter le script SQL mis à jour pour activer le stockage de gros fichiers.");
+                 setIsUploading(false);
+                 return;
+             }
+             
+             // Fallback Base64 (Ancienne méthode pour petits fichiers)
+             const reader = new FileReader();
+             reader.onload = (e) => {
+                const result = e.target?.result as string;
+                if (type === 'music') {
+                    setMusicUrl(result);
+                    setIsPlayingTest(false);
+                } else {
+                    setLogoUrl(result);
+                }
+                setIsUploading(false);
+             };
+             reader.readAsDataURL(file);
+             return;
+        }
+
+        // 2. Get URL si upload réussi
+        const { data: { publicUrl } } = supabase.storage
+            .from('assets')
+            .getPublicUrl(filePath);
+
         if (type === 'music') {
-            setMusicUrl(result);
+            setMusicUrl(publicUrl);
             setIsPlayingTest(false);
         } else {
-            setLogoUrl(result);
+            setLogoUrl(publicUrl);
         }
-    };
-    reader.readAsDataURL(file);
+        
+    } catch (error: any) {
+        alert("Erreur upload: " + error.message);
+    } finally {
+        setIsUploading(false);
+    }
   };
 
   const handleAddMessage = async () => {
@@ -194,29 +239,31 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   };
 
   const getFullSchemaScript = () => `
--- 0. NETTOYAGE
+-- 0. NETTOYAGE (Optionnel, supprime les données existantes)
 drop publication if exists supabase_realtime;
--- Attention: ces lignes suppriment les données existantes.
--- Commentez les 'drop table' si vous voulez juste mettre à jour la structure.
-drop table if exists public.stock cascade;
-drop table if exists public.interventions cascade;
-drop table if exists public.transactions cascade;
-drop table if exists public.employees cascade;
-drop table if exists public.ticker_messages cascade;
-drop table if exists public.tv_settings cascade; 
 
 -- 1. Activer le Temps Réel (Realtime)
 create publication supabase_realtime for all tables;
 
--- 2. Création de la table TV_SETTINGS (Pour musique et logo)
-create table public.tv_settings (
+-- 2. Configuration du Stockage (Pour fichiers > 5Mo)
+insert into storage.buckets (id, name, public) 
+values ('assets', 'assets', true)
+on conflict (id) do nothing;
+
+-- Politique d'accès au stockage (Lecture/Ecriture Publique)
+create policy "Public Access Assets" 
+on storage.objects for all 
+using ( bucket_id = 'assets' ) 
+with check ( bucket_id = 'assets' );
+
+-- 3. Tables de données
+create table if not exists public.tv_settings (
   key text primary key,
   value text,
   updated_at timestamp with time zone default timezone('utc'::text, now())
 );
 
--- 3. Création de la table STOCK
-create table public.stock (
+create table if not exists public.stock (
   id text primary key,
   name text not null,
   description text,
@@ -232,15 +279,14 @@ create table public.stock (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 4. Création de la table INTERVENTIONS (Avec Location)
-create table public.interventions (
+create table if not exists public.interventions (
   id text primary key,
   client text,
   "clientPhone" text,
   domain text,
   "interventionType" text,
   description text,
-  location text, -- Nouvelle colonne
+  location text, 
   technician text,
   status text,
   date date,
@@ -248,8 +294,7 @@ create table public.interventions (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 5. Création de la table TRANSACTIONS
-create table public.transactions (
+create table if not exists public.transactions (
   id text primary key,
   type text,
   category text,
@@ -260,8 +305,7 @@ create table public.transactions (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 6. Création de la table EMPLOYEES
-create table public.employees (
+create table if not exists public.employees (
   id text primary key,
   name text,
   role text,
@@ -271,15 +315,14 @@ create table public.employees (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 7. Création de la table TICKER_MESSAGES
-create table public.ticker_messages (
+create table if not exists public.ticker_messages (
   id bigint generated by default as identity primary key,
   content text not null,
   color text default 'neutral',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 8. Configuration de la sécurité (RLS - Public Access pour démo)
+-- 4. Sécurité (RLS - Public Access pour démo)
 alter table public.tv_settings enable row level security;
 create policy "Public Access Settings" on public.tv_settings for all using (true) with check (true);
 
@@ -297,19 +340,11 @@ create policy "Public Access Employees" on public.employees for all using (true)
 
 alter table public.ticker_messages enable row level security;
 create policy "Public Access Ticker" on public.ticker_messages for all using (true) with check (true);
-
--- 9. Données initiales
-insert into public.stock (id, name, description, category, quantity, threshold, "unitPrice", supplier, site, "imageUrls", specs)
-values ('STK-001', 'Câble R2V 3G2.5mm²', 'Câble électrique.', 'Électricité', 500, 100, 25000, 'ElecPro', 'Abidjan', ARRAY['https://images.unsplash.com/photo-1558402529-d2638a7023e9?auto=format&fit=crop&q=80&w=1200'], '{"Type": "R2V"}'::jsonb);
-
-insert into public.ticker_messages (content, color) values 
-('Bienvenue chez EBF.', 'neutral'),
-('Promotion : -15% sur les câbles.', 'green');
 `;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(getFullSchemaScript());
-    alert("Script SQL copié !");
+    alert("Script SQL copié ! Exécutez-le dans Supabase pour activer le stockage de gros fichiers.");
   };
 
   const getColorClass = (color: string) => {
@@ -328,7 +363,12 @@ insert into public.ticker_messages (content, color) values
           <h2 className="text-2xl font-bold text-gray-800">Paramètres</h2>
           <p className="text-gray-500 text-sm">Configuration Système & Base de Données</p>
         </div>
-        {isUpdating && <Loader2 size={24} className="text-orange-500 animate-spin" />}
+        {(isUpdating || isUploading) && (
+            <div className="flex items-center gap-2 text-orange-500 font-bold animate-pulse">
+                <Loader2 size={24} className="animate-spin" />
+                {isUploading ? 'Transfert du fichier...' : 'Mise à jour...'}
+            </div>
+        )}
       </div>
 
       {/* Audio element caché pour le test */}
@@ -346,7 +386,7 @@ insert into public.ticker_messages (content, color) values
                       <h4 className="font-black text-xl tracking-tight">Base de Données</h4>
                   </div>
                   <p className="text-blue-100 text-sm font-medium opacity-90">
-                    Générer les tables Supabase (dont colonne Location et Logo).
+                    Configurer les tables et le stockage de fichiers volumineux.
                   </p>
               </div>
               <button 
@@ -370,8 +410,8 @@ insert into public.ticker_messages (content, color) values
                   
                   <div className="space-y-3">
                     <div className="flex gap-2">
-                        <button onClick={() => fileInputRef.current?.click()} className="flex-1 bg-purple-500 hover:bg-purple-400 text-white p-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2">
-                            <Upload size={14} /> Importer MP3
+                        <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="flex-1 bg-purple-500 hover:bg-purple-400 text-white p-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50">
+                            <Upload size={14} /> {isUploading ? '...' : 'MP3 (Max 50Mo)'}
                         </button>
                         <input type="file" ref={fileInputRef} accept="audio/*" className="hidden" onChange={(e) => handleFileUpload(e, 'music')} />
                         <button onClick={() => setIsPlayingTest(!isPlayingTest)} className="p-2 bg-purple-800 rounded-xl">
@@ -400,8 +440,8 @@ insert into public.ticker_messages (content, color) values
                           {logoUrl ? <img src={logoUrl} className="w-full h-full object-contain" /> : <span className="text-orange-600 font-bold text-xs">EBF</span>}
                       </div>
                       <div className="space-y-2 flex-1">
-                          <button onClick={() => logoInputRef.current?.click()} className="w-full bg-orange-500 hover:bg-orange-400 text-white p-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2">
-                              <Upload size={14} /> Choisir Logo
+                          <button onClick={() => logoInputRef.current?.click()} disabled={isUploading} className="w-full bg-orange-500 hover:bg-orange-400 text-white p-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50">
+                              <Upload size={14} /> {isUploading ? '...' : 'Choisir Logo'}
                           </button>
                           <input type="file" ref={logoInputRef} accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, 'logo')} />
                           <button onClick={handleSaveLogo} disabled={isSavingLogo} className="w-full bg-white text-orange-700 p-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2">
@@ -514,7 +554,7 @@ insert into public.ticker_messages (content, color) values
               </div>
               <div className="p-8">
                   <div className="mb-4 bg-yellow-50 p-4 rounded-xl border border-yellow-100 text-yellow-800 text-xs font-bold">
-                    ⚠️ Ce script supprime et recrée toutes les tables pour s'assurer que les nouvelles colonnes (Location) sont bien présentes.
+                    ⚠️ Mettez à jour votre base de données pour activer le stockage des fichiers volumineux (bucket 'assets').
                   </div>
                   <pre className="bg-gray-900 text-green-400 p-6 rounded-2xl text-xs md:text-sm font-mono overflow-auto max-h-60 mb-8 custom-scrollbar">
                         {getFullSchemaScript()}
