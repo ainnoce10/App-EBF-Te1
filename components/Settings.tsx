@@ -13,7 +13,9 @@ import {
   Upload,
   Play,
   Pause,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ListMusic,
+  CheckCircle2
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { TickerMessage } from '../types';
@@ -42,6 +44,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   // State pour la musique
   const [musicUrl, setMusicUrl] = useState('');
   const [isPlayingTest, setIsPlayingTest] = useState(false);
+  const [audioLibrary, setAudioLibrary] = useState<{name: string, url: string}[]>(MUSIC_PRESETS);
   const audioTestRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,7 +53,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Charger la musique et le logo depuis Supabase (Table tv_settings)
+    // 1. Charger les réglages actuels
     const loadSettings = async () => {
         try {
             const { data } = await supabase
@@ -71,7 +74,33 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
             console.error("Erreur chargement réglages:", error);
         }
     };
+
+    // 2. Charger la bibliothèque audio depuis le stockage
+    const loadAudioLibrary = async () => {
+        try {
+            const { data, error } = await supabase.storage.from('assets').list();
+            if (data) {
+                // Filtrer pour ne garder que les fichiers audio
+                const uploadedTracks = data
+                    .filter(file => file.name.toLowerCase().endsWith('.mp3') || file.metadata?.mimetype?.startsWith('audio'))
+                    .map(file => {
+                        const { data: publicUrlData } = supabase.storage.from('assets').getPublicUrl(file.name);
+                        return {
+                            name: file.name.replace('music_', '').replace(/\.[^/.]+$/, ""), // Nettoyage nom
+                            url: publicUrlData.publicUrl
+                        };
+                    });
+                
+                // Combiner Presets + Uploads
+                setAudioLibrary([...MUSIC_PRESETS, ...uploadedTracks]);
+            }
+        } catch (error) {
+            console.warn("Impossible de charger la bibliothèque audio (Bucket 'assets' peut-être manquant).");
+        }
+    };
+
     loadSettings();
+    loadAudioLibrary();
   }, []);
 
   // Gestion du test audio
@@ -136,12 +165,11 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // MÉTHODE 1 : Upload vers Supabase Storage (Recommandé pour gros fichiers)
-    // On essaie d'uploader dans le bucket 'assets'.
     setIsUploading(true);
     
     try {
         const fileExt = file.name.split('.').pop();
+        // Préfixe pour trier facilement si on regarde le bucket directement
         const fileName = `${type}_${Date.now()}.${fileExt}`;
         const filePath = `${fileName}`;
 
@@ -154,21 +182,19 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
             });
 
         if (uploadError) {
-             // Si le bucket n'existe pas ou erreur d'upload, on fallback sur la méthode Base64 si le fichier est petit
-             console.warn("Upload Storage échoué (Bucket 'assets' manquant ?), tentative Base64...", uploadError.message);
-             
+             console.warn("Upload Storage échoué, tentative Base64...", uploadError.message);
              if (file.size > 4.5 * 1024 * 1024) {
-                 alert("Erreur: Le stockage de fichiers 'assets' n'est pas configuré et ce fichier est trop gros pour la base de données.\n\nVeuillez exécuter le script SQL mis à jour pour activer le stockage de gros fichiers.");
+                 alert("Erreur: Le fichier est trop volumineux. Veuillez configurer le stockage SQL.");
                  setIsUploading(false);
                  return;
              }
-             
-             // Fallback Base64 (Ancienne méthode pour petits fichiers)
              const reader = new FileReader();
              reader.onload = (e) => {
                 const result = e.target?.result as string;
                 if (type === 'music') {
                     setMusicUrl(result);
+                    // Ajouter temporairement à la liste pour l'UX immédiate
+                    setAudioLibrary(prev => [{ name: 'Nouvel Upload (Local)', url: result }, ...prev]);
                     setIsPlayingTest(false);
                 } else {
                     setLogoUrl(result);
@@ -186,6 +212,8 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
 
         if (type === 'music') {
             setMusicUrl(publicUrl);
+            // Ajouter à la bibliothèque affichée
+            setAudioLibrary(prev => [{ name: file.name, url: publicUrl }, ...prev]);
             setIsPlayingTest(false);
         } else {
             setLogoUrl(publicUrl);
@@ -443,29 +471,56 @@ create policy "Public Access Accounting Trx" on public.accounting_transactions f
               </button>
           </div>
 
-          {/* Card Config Music TV */}
-          <div className="bg-purple-700 rounded-3xl shadow-lg p-6 flex flex-col justify-between text-white overflow-hidden relative min-h-[180px]">
+          {/* Card Config Music TV (MISE À JOUR) */}
+          <div className="bg-purple-700 rounded-3xl shadow-lg p-6 flex flex-col text-white overflow-hidden relative min-h-[400px]">
                <div className="absolute top-0 right-0 p-4 opacity-10">
                   <Music size={120} />
               </div>
               <div className="relative z-10 mb-4">
-                  <div className="flex items-center gap-3 mb-2">
-                      <Music size={24} className="text-purple-200" />
-                      <h4 className="font-black text-xl tracking-tight">Ambiance TV</h4>
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-2">
+                          <Music size={24} className="text-purple-200" />
+                          <h4 className="font-black text-xl tracking-tight">Ambiance TV</h4>
+                      </div>
+                      <div className="flex gap-2">
+                         <button onClick={() => setIsPlayingTest(!isPlayingTest)} className="p-2 bg-purple-900/50 hover:bg-purple-900 rounded-xl transition-colors">
+                            {isPlayingTest ? <Pause size={16}/> : <Play size={16}/>}
+                         </button>
+                      </div>
                   </div>
                   
-                  <div className="space-y-3">
+                  <div className="space-y-4">
+                    {/* Zone de sélection */}
+                    <div className="bg-purple-800/50 rounded-2xl p-3 border border-purple-500/30">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-purple-200 flex items-center gap-1">
+                                <ListMusic size={12}/> Bibliothèque Audio
+                            </span>
+                            <span className="text-[10px] text-purple-300">{audioLibrary.length} pistes</span>
+                        </div>
+                        <div className="max-h-32 overflow-y-auto custom-scrollbar space-y-1 pr-1">
+                            {audioLibrary.map((track, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => { setMusicUrl(track.url); setIsPlayingTest(false); }}
+                                    className={`w-full text-left p-2 rounded-lg text-xs font-bold truncate flex items-center justify-between transition-all ${musicUrl === track.url ? 'bg-white text-purple-700 shadow-sm' : 'hover:bg-purple-600/50 text-purple-100'}`}
+                                >
+                                    <span className="truncate">{track.name}</span>
+                                    {musicUrl === track.url && <CheckCircle2 size={12} className="shrink-0 ml-2"/>}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <div className="flex gap-2">
-                        <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="flex-1 bg-purple-500 hover:bg-purple-400 text-white p-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50">
-                            <Upload size={14} /> {isUploading ? '...' : 'MP3 (Max 50Mo)'}
+                        <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="flex-1 bg-purple-500 hover:bg-purple-400 text-white p-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-colors shadow-sm">
+                            <Upload size={14} /> {isUploading ? '...' : 'Ajouter MP3'}
                         </button>
                         <input type="file" ref={fileInputRef} accept="audio/*" className="hidden" onChange={(e) => handleFileUpload(e, 'music')} />
-                        <button onClick={() => setIsPlayingTest(!isPlayingTest)} className="p-2 bg-purple-800 rounded-xl">
-                            {isPlayingTest ? <Pause size={14}/> : <Play size={14}/>}
-                        </button>
                     </div>
-                    <button onClick={handleSaveMusic} disabled={isSavingMusic} className="w-full px-4 py-2 bg-white text-purple-700 rounded-xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform flex items-center justify-center gap-2">
-                        {isSavingMusic ? <Loader2 size={14} className="animate-spin"/> : <Save size={14} />} Sauver
+                    
+                    <button onClick={handleSaveMusic} disabled={isSavingMusic} className="w-full px-4 py-3 bg-white text-purple-700 rounded-xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 shadow-lg">
+                        {isSavingMusic ? <Loader2 size={14} className="animate-spin"/> : <Save size={14} />} Valider la sélection
                     </button>
                   </div>
               </div>
