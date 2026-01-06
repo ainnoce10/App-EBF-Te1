@@ -36,17 +36,12 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
   // Refs pour les inputs de fichiers cachés
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
-  // Catégories spécifiques à la quincaillerie pour l'isolation des données
-  const HARDWARE_CATS = ['Vente Magasin', 'Achat Stock', 'Outillage', 'Électricité', 'Plomberie', 'Divers Stock'];
-
   useEffect(() => {
     if (initialData.length > 0) setInventory(initialData);
   }, [initialData]);
 
-  // --- CALCULS CAISSE (FILTRÉS) ---
-  const storeTransactions = useMemo(() => {
-    return liveTransactions.filter(t => HARDWARE_CATS.includes(t.category) || t.description.toLowerCase().includes('vente'));
-  }, [liveTransactions]);
+  // Plus besoin de filtrer par catégorie, car liveTransactions contient déjà UNIQUEMENT les transactions hardware
+  const storeTransactions = liveTransactions;
 
   const currentBalance = useMemo(() => {
       const income = storeTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
@@ -124,19 +119,19 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
 
   const handleSaveTransaction = async () => {
     if (!newTransaction.amount) return;
-    const newId = `TRX-${Math.floor(Math.random() * 100000)}`;
-    const globalTransaction: Transaction = {
+    const newId = `TRX-HW-${Math.floor(Math.random() * 100000)}`;
+    const trx: Transaction = {
         id: newId,
         type: newTransaction.type === 'in' ? 'Recette' : 'Dépense',
-        // Catégorie forcée pour rester dans le scope Quincaillerie
         category: newTransaction.type === 'in' ? 'Vente Magasin' : 'Achat Stock',
         amount: parseInt(newTransaction.amount),
         date: new Date().toISOString().split('T')[0],
         description: newTransaction.reason || (newTransaction.type === 'in' ? 'Vente comptoir' : 'Dépense diverse'),
-        site: 'Abidjan' // Par défaut ou dynamique selon le contexte user
+        site: 'Abidjan'
     };
     try {
-        const { error } = await supabase.from('transactions').insert([globalTransaction]);
+        // Sauvegarde dans la table hardware_transactions
+        const { error } = await supabase.from('hardware_transactions').insert([trx]);
         if (error) throw error;
         setNewTransaction({ type: 'in', amount: '', reason: '' });
         setShowCaisseModal(false);

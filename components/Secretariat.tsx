@@ -30,9 +30,6 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
   const [showCaisseModal, setShowCaisseModal] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
 
-  // Catégories spécifiques au Secrétariat pour isoler la caisse
-  const SECRETARIAT_CATS = ['Prestation', 'Acompte', 'Service', 'Caisse', 'Facture'];
-
   const clients: DerivedClient[] = useMemo(() => {
     const uniqueClients = new Map<string, DerivedClient>();
     liveInterventions.forEach(inter => {
@@ -50,10 +47,8 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
     return Array.from(uniqueClients.values());
   }, [liveInterventions]);
 
-  // --- FILTRAGE DES TRANSACTIONS ---
-  const secretariatTransactions = useMemo(() => {
-    return liveTransactions.filter(t => SECRETARIAT_CATS.includes(t.category));
-  }, [liveTransactions]);
+  // Plus de filtrage nécessaire, liveTransactions ne contient que les données secrétariat
+  const secretariatTransactions = liveTransactions;
 
   const currentBalance = useMemo(() => {
       const income = secretariatTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);
@@ -77,11 +72,10 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
 
   const handleSaveTransaction = async () => {
     if (!newTransaction.amount) return;
-    const newId = `TRX-${Math.floor(Math.random() * 10000)}`;
-    const globalTransaction: Transaction = {
+    const newId = `TRX-SEC-${Math.floor(Math.random() * 10000)}`;
+    const trx: Transaction = {
         id: newId,
         type: newTransaction.type === 'in' ? 'Recette' : 'Dépense',
-        // Catégorie forcée pour rester dans le scope Secrétariat
         category: newTransaction.type === 'in' ? 'Caisse' : 'Service', 
         amount: parseInt(newTransaction.amount),
         date: new Date().toISOString().split('T')[0],
@@ -89,7 +83,8 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
         site: 'Abidjan' 
     };
     try {
-        const { error } = await supabase.from('transactions').insert([globalTransaction]);
+        // Sauvegarde dans secretariat_transactions
+        const { error } = await supabase.from('secretariat_transactions').insert([trx]);
         if (error) throw error;
         setNewTransaction({ type: 'out', amount: '', reason: '' });
         setShowCaisseModal(false);

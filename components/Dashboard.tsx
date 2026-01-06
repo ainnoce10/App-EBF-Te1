@@ -11,8 +11,8 @@ import {
   PieChart,
   Pie,
   Cell,
-  AreaChart,
-  Area
+  ComposedChart,
+  Line
 } from 'recharts';
 import { COLORS } from '../constants';
 import { Period, Site, Transaction, Intervention } from '../types';
@@ -67,7 +67,6 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
       }
 
       // Filtre Site (Uniquement si on est dans la vue Summary ou si on filtre par site globalement)
-      // Note: Dans la vue détaillée, on peut vouloir voir tous les sites pour comparer
       const matchSite = site === 'Global' ? true : t.site === site;
 
       return matchPeriod && matchSite;
@@ -77,11 +76,8 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
   // --- 2. LOGIQUE DE CATÉGORISATION (SOURCE) ---
   const getTransactionSource = (t: Transaction): 'hardware' | 'secretariat' | 'accounting' => {
       const cat = t.category.toLowerCase();
-      // Quincaillerie : Vente Magasin, Achat Stock, ou mot clé spécifique
       if (cat.includes('magasin') || cat.includes('stock') || cat.includes('vente comptoir') || cat.includes('outillage')) return 'hardware';
-      // Secrétariat : Prestation, Caisse, Acompte, Service
       if (cat.includes('prestation') || cat.includes('caisse') || cat.includes('acompte') || cat.includes('service')) return 'secretariat';
-      // Compta : Tout le reste (Salaire, Loyer, Transport, Charges...)
       return 'accounting';
   };
 
@@ -113,7 +109,6 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
     // Répartition par Catégorie (Pie Chart)
     const byCategoryMap = new Map<string, number>();
     data.forEach(t => {
-        // On s'intéresse surtout aux dépenses ou aux recettes selon le contexte, ici on mixe ou on prend le plus gros volume
         const val = t.amount;
         const current = byCategoryMap.get(t.category) || 0;
         byCategoryMap.set(t.category, current + val);
@@ -403,39 +398,34 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
         <div className="mb-4 md:mb-6 flex justify-between items-center">
             <div>
                 <h2 className="text-lg md:text-xl font-black text-gray-800 mb-1">Performance Financière</h2>
-                <p className="text-xs text-gray-500 font-medium">Evolution journalière (Tous départements confondus)</p>
+                <p className="text-xs text-gray-500 font-medium">Evolution journalière (CA, Dépenses et Bénéfices)</p>
             </div>
         </div>
         
         <div className="h-[300px] md:h-[400px] w-full -ml-2">
           {summaryData.chart.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                data={summaryData.chart}
-                margin={{ top: 20, right: 10, left: 0, bottom: 5 }}
+                <ComposedChart
+                    data={summaryData.chart}
+                    margin={{ top: 20, right: 10, left: 0, bottom: 5 }}
                 >
-                <defs>
-                    <linearGradient id="colorTurnover" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.secondary} stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor={COLORS.secondary} stopOpacity={0}/>
-                    </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="period" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 10}} dy={10} />
-                <YAxis orientation="left" stroke="#9ca3af" axisLine={false} tickLine={false} tick={{fontSize: 10}} tickFormatter={(value) => value >= 1000 ? `${value/1000}k` : value} />
-                <Tooltip 
-                    cursor={{fill: '#f9fafb'}}
-                    formatter={(value: number) => [`${value.toLocaleString()} F`]}
-                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', padding: '12px', fontWeight: 'bold' }}
-                />
-                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{fontSize: '12px', fontWeight: 'bold'}}/>
-                <Area type="monotone" dataKey="turnover" name="Chiffre d'Affaires" stroke={COLORS.primary} strokeWidth={3} fillOpacity={1} fill="url(#colorTurnover)" />
-                <Area type="monotone" dataKey="profit" name="Bénéfice Net" stroke={COLORS.secondary} strokeWidth={3} fillOpacity={1} fill="url(#colorProfit)" />
-                </AreaChart>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                    <XAxis dataKey="period" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 10}} dy={10} />
+                    <YAxis orientation="left" stroke="#9ca3af" axisLine={false} tickLine={false} tick={{fontSize: 10}} tickFormatter={(value) => value >= 1000 ? `${value/1000}k` : value} />
+                    <Tooltip 
+                        cursor={{fill: '#f9fafb'}}
+                        formatter={(value: number) => [`${value.toLocaleString()} F`]}
+                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', padding: '12px', fontWeight: 'bold' }}
+                    />
+                    <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{fontSize: '12px', fontWeight: 'bold'}}/>
+                    
+                    {/* Barres pour CA et Dépenses */}
+                    <Bar dataKey="turnover" name="Chiffre d'Affaires" fill={COLORS.primary} barSize={20} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="expense" name="Dépenses" fill="#ef4444" barSize={20} radius={[4, 4, 0, 0]} />
+                    
+                    {/* Ligne pour Bénéfice Net */}
+                    <Line type="monotone" dataKey="profit" name="Bénéfice Net" stroke="#22c55e" strokeWidth={3} dot={{r: 4}} />
+                </ComposedChart>
             </ResponsiveContainer>
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400 text-sm">Aucune donnée disponible</div>

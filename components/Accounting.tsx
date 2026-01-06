@@ -48,9 +48,6 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Catégories spécifiques à la Comptabilité Générale
-  const ACCOUNTING_CATS = ['Salaire', 'Loyer', 'Transport', 'Repas', 'Charges', 'Impots', 'Divers', 'Virement Bancaire', 'Autre'];
-
   useEffect(() => {
     if (liveEmployees.length > 0) setEmployees(liveEmployees);
     else if (employees.length === 0) setEmployees(MOCK_EMPLOYEES);
@@ -74,9 +71,9 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
     if (!newTransaction.amount || !newTransaction.description) return;
     
     setIsSaving(true);
-    const newId = `TRX-${Math.floor(Math.random() * 100000)}`;
+    const newId = `TRX-ACC-${Math.floor(Math.random() * 100000)}`;
     
-    const transactionToSave: Transaction = {
+    const trx: Transaction = {
         id: newId,
         type: transactionType,
         amount: parseInt(newTransaction.amount),
@@ -87,7 +84,8 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
     };
 
     try {
-        const { error } = await supabase.from('transactions').insert([transactionToSave]);
+        // Sauvegarde dans accounting_transactions
+        const { error } = await supabase.from('accounting_transactions').insert([trx]);
         if (error) throw error;
         setShowTransactionModal(false);
     } catch (error: any) {
@@ -144,10 +142,8 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
   };
 
   // --- FILTRAGE COMPTA ---
-  const accountingTransactions = useMemo(() => {
-    // La comptabilité voit les charges structurelles, pas le détail de la caisse magasin
-    return liveTransactions.filter(t => ACCOUNTING_CATS.includes(t.category));
-  }, [liveTransactions]);
+  // Plus de filtrage nécessaire, liveTransactions ne contient que la compta générale
+  const accountingTransactions = liveTransactions;
 
   const displayedTransactions = showAllTransactions ? accountingTransactions : accountingTransactions.slice(0, 5);
   const totalRevenue = accountingTransactions.filter(t => t.type === 'Recette').reduce((acc, t) => acc + t.amount, 0);

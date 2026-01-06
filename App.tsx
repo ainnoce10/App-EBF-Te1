@@ -26,7 +26,12 @@ const App: React.FC = () => {
   const [tickerMessages, setTickerMessages] = useState<TickerMessage[]>(TICKER_MESSAGES);
   const [stock, setStock] = useState<StockItem[]>([]);
   const [interventions, setInterventions] = useState<Intervention[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  
+  // Transactions séparées
+  const [hardwareTransactions, setHardwareTransactions] = useState<Transaction[]>([]);
+  const [secretariatTransactions, setSecretariatTransactions] = useState<Transaction[]>([]);
+  const [accountingTransactions, setAccountingTransactions] = useState<Transaction[]>([]);
+
   const [employees, setEmployees] = useState<Employee[]>([]);
   
   // Custom Branding & Media
@@ -55,38 +60,36 @@ const App: React.FC = () => {
     // Chargement initial des données
     fetchData();
 
-    // Configuration Realtime (Écoute globale des changements)
+    // Configuration Realtime (Écoute globale des changements sur toutes les tables)
     const channel = supabase.channel('global-changes')
         .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
             console.log('Change received!', payload);
-            // Recharger la table concernée (stratégie simple pour v1)
-            if (payload.table === 'ticker_messages') {
+            const table = payload.table;
+
+            if (table === 'ticker_messages') {
                  supabase.from('ticker_messages').select('id, content, color').order('created_at', { ascending: false })
-                 .then(({ data }) => {
-                    if (data) {
-                        setTickerMessages(data.map(t => ({
-                            id: t.id,
-                            content: t.content,
-                            color: t.color || 'neutral'
-                        })));
-                    }
-                 });
-            } else if (payload.table === 'stock') {
+                 .then(({ data }) => data && setTickerMessages(data.map(t => ({ id: t.id, content: t.content, color: t.color || 'neutral' }))));
+            } else if (table === 'stock') {
                  supabase.from('stock').select('*').order('name')
                  .then(({ data }) => data && setStock(data as StockItem[]));
-            } else if (payload.table === 'interventions') {
+            } else if (table === 'interventions') {
                  supabase.from('interventions').select('*').order('date', { ascending: false })
                  .then(({ data }) => data && setInterventions(data as Intervention[]));
-            } else if (payload.table === 'transactions') {
-                 supabase.from('transactions').select('*').order('date', { ascending: false })
-                 .then(({ data }) => data && setTransactions(data as Transaction[]));
-            } else if (payload.table === 'employees') {
+            } else if (table === 'hardware_transactions') {
+                 supabase.from('hardware_transactions').select('*').order('date', { ascending: false })
+                 .then(({ data }) => data && setHardwareTransactions(data as Transaction[]));
+            } else if (table === 'secretariat_transactions') {
+                 supabase.from('secretariat_transactions').select('*').order('date', { ascending: false })
+                 .then(({ data }) => data && setSecretariatTransactions(data as Transaction[]));
+            } else if (table === 'accounting_transactions') {
+                 supabase.from('accounting_transactions').select('*').order('date', { ascending: false })
+                 .then(({ data }) => data && setAccountingTransactions(data as Transaction[]));
+            } else if (table === 'employees') {
                  supabase.from('employees').select('*').order('name')
                  .then(({ data }) => data && setEmployees(data as Employee[]));
-            } else if (payload.table === 'tv_settings') {
+            } else if (table === 'tv_settings') {
                  const newKey = (payload.new as any)?.key;
                  const newValue = (payload.new as any)?.value;
-                 
                  if (newKey === 'company_logo') setCustomLogo(newValue);
                  if (newKey === 'background_music') setBackgroundMusic(newValue);
             }
@@ -117,39 +120,29 @@ const App: React.FC = () => {
         }
 
         // 2. Stock
-        const { data: stockData } = await supabase
-            .from('stock')
-            .select('*')
-            .order('name');
+        const { data: stockData } = await supabase.from('stock').select('*').order('name');
         if (stockData) setStock(stockData as StockItem[]);
 
         // 3. Interventions
-        const { data: intervData } = await supabase
-            .from('interventions')
-            .select('*')
-            .order('date', { ascending: false });
+        const { data: intervData } = await supabase.from('interventions').select('*').order('date', { ascending: false });
         if (intervData) setInterventions(intervData as Intervention[]);
 
-        // 4. Transactions
-        const { data: transData } = await supabase
-            .from('transactions')
-            .select('*')
-            .order('date', { ascending: false });
-        if (transData) setTransactions(transData as Transaction[]);
+        // 4. Transactions (CHARGEMENT SÉPARÉ)
+        const { data: hardTrx } = await supabase.from('hardware_transactions').select('*').order('date', { ascending: false });
+        if (hardTrx) setHardwareTransactions(hardTrx as Transaction[]);
+
+        const { data: secTrx } = await supabase.from('secretariat_transactions').select('*').order('date', { ascending: false });
+        if (secTrx) setSecretariatTransactions(secTrx as Transaction[]);
+
+        const { data: accTrx } = await supabase.from('accounting_transactions').select('*').order('date', { ascending: false });
+        if (accTrx) setAccountingTransactions(accTrx as Transaction[]);
 
         // 5. Employés
-        const { data: empData } = await supabase
-            .from('employees')
-            .select('*')
-            .order('name');
+        const { data: empData } = await supabase.from('employees').select('*').order('name');
         if (empData) setEmployees(empData as Employee[]);
         
-        // 6. Settings (Logo & Music)
-        const { data: settingsData } = await supabase
-            .from('tv_settings')
-            .select('key, value')
-            .in('key', ['company_logo', 'background_music']);
-            
+        // 6. Settings
+        const { data: settingsData } = await supabase.from('tv_settings').select('key, value').in('key', ['company_logo', 'background_music']);
         if (settingsData) {
              const logo = settingsData.find(s => s.key === 'company_logo');
              const music = settingsData.find(s => s.key === 'background_music');
@@ -163,6 +156,9 @@ const App: React.FC = () => {
         setIsLive(false);
     }
   };
+
+  // Pour le Dashboard, on combine tout, mais en gardant la trace de l'origine si besoin via la catégorie ou un champ custom si on voulait
+  const allTransactions = [...hardwareTransactions, ...secretariatTransactions, ...accountingTransactions];
 
   if (activeTab === 'showcase') {
     return (
@@ -189,7 +185,7 @@ const App: React.FC = () => {
                   period={period} 
                   customStartDate={customStartDate}
                   customEndDate={customEndDate}
-                  liveTransactions={transactions}
+                  liveTransactions={allTransactions}
                   liveInterventions={interventions}
                 />
               );
@@ -198,14 +194,14 @@ const App: React.FC = () => {
             case 'accounting':
               return (
                 <Accounting 
-                  liveTransactions={transactions} 
+                  liveTransactions={accountingTransactions} 
                   liveEmployees={employees} 
                 />
               );
             case 'secretariat':
-              return <Secretariat liveInterventions={interventions} liveTransactions={transactions} />;
+              return <Secretariat liveInterventions={interventions} liveTransactions={secretariatTransactions} />;
             case 'hardware':
-              return <HardwareStore initialData={stock} liveTransactions={transactions} />;
+              return <HardwareStore initialData={stock} liveTransactions={hardwareTransactions} />;
             case 'settings':
               return (
                 <Settings 
