@@ -47,7 +47,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     // Charger la musique depuis Supabase (Table tv_settings)
     const loadMusicSettings = async () => {
         try {
-            // Correction ici : suppression de 'error' qui était inutilisé
+            // CORRECTION: Suppression de la variable 'error' inutilisée
             const { data } = await supabase
                 .from('tv_settings')
                 .select('value')
