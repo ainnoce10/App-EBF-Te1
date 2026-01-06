@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MOCK_EMPLOYEES } from '../constants';
 import { Transaction, Employee, Site } from '../types';
 import { supabase } from '../lib/supabase';
