@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { StockItem, Intervention, TickerMessage } from '../types';
 import { supabase } from '../lib/supabase';
@@ -53,7 +54,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // TV Settings State (Overscan & Zoom)
-  const [overscanPadding, setOverscanPadding] = useState(4); // Marge %
+  // Augmentation de la marge par défaut à 5% pour être plus sûr sur les vieilles TV
+  const [overscanPadding, setOverscanPadding] = useState(5); 
   const [zoomLevel, setZoomLevel] = useState(1); // Echelle (1 = 100%)
   const [showTvSettings, setShowTvSettings] = useState(false);
 
@@ -221,7 +223,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
   return (
     <div 
-        className="fixed inset-0 z-[500] bg-black flex items-center justify-center overflow-hidden font-sans select-none text-white transition-all duration-300 box-border"
+        className="fixed top-0 left-0 w-full h-[100dvh] z-[500] bg-black flex items-center justify-center overflow-hidden font-sans select-none text-white transition-all duration-300 box-border"
         style={outerStyle}
     >
       

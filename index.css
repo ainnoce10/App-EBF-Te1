@@ -3,10 +3,28 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Variables pour les zones sûres (Safe Area) des TVs et Mobiles à encoche */
+  --sat: env(safe-area-inset-top);
+  --sar: env(safe-area-inset-right);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background-color: #f3f4f6;
+  /* Utilisation de dvh (Dynamic Viewport Height) pour éviter le scroll sur TV/Mobile avec barre d'adresse */
+  height: 100dvh; 
+  width: 100vw;
   overflow: hidden;
+  /* Empêche le rebond élastique sur Mac/iOS/TV */
+  overscroll-behavior: none; 
+}
+
+#root {
+  height: 100%;
+  width: 100%;
 }
 
 /* Custom scrollbar */

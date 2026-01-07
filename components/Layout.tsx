@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NAV_ITEMS, Logo } from '../constants';
 import ScrollingTicker from './ScrollingTicker';
 import { TickerMessage } from '../types';
-import { Menu, X, LogOut, Bell, User, Wifi, WifiOff, ChevronRight, Play, Pause } from 'lucide-react';
+import { Menu, X, LogOut, Bell, User, Wifi, WifiOff, ChevronRight, Play, Pause, Calendar as CalendarIcon } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -60,10 +60,10 @@ const Layout: React.FC<LayoutProps> = ({
   }, [isPlaying, musicUrl]);
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans" style={{ paddingLeft: 'var(--sal)', paddingRight: 'var(--sar)', paddingBottom: 'var(--sab)' }}>
       {/* Sidebar Desktop */}
       <aside className="hidden md:flex flex-col w-72 bg-white border-r border-gray-200 shadow-sm z-20">
-        <div className="p-8 flex justify-center border-b border-gray-100">
+        <div className="p-8 flex justify-center border-b border-gray-100" style={{ paddingTop: 'calc(2rem + var(--sat))' }}>
           <Logo url={customLogo} size="lg" />
         </div>
         
@@ -133,7 +133,7 @@ const Layout: React.FC<LayoutProps> = ({
         <div className="sticky top-0 z-30 w-full shadow-sm">
              <ScrollingTicker messages={tickerMessages} />
              
-             <header className="bg-white/90 backdrop-blur-md border-b border-gray-200 px-4 py-3 md:px-8 md:py-5 flex items-center justify-between gap-4">
+             <header className="bg-white/90 backdrop-blur-md border-b border-gray-200 px-4 py-3 md:px-8 md:py-5 flex items-center justify-between gap-4" style={{ paddingTop: 'max(1.25rem, var(--sat))' }}>
                 <div className="flex items-center gap-3">
                     <button 
                       className="md:hidden p-2 -ml-2 text-gray-600 active:scale-95 transition-transform"
@@ -270,7 +270,7 @@ const Layout: React.FC<LayoutProps> = ({
                   onClick={() => setMobileMenuOpen(false)}
                 />
                 <div className="absolute top-0 bottom-0 left-0 w-[80%] max-w-sm bg-white shadow-2xl flex flex-col animate-slide-right">
-                    <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-orange-50/50">
+                    <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-orange-50/50" style={{ paddingTop: 'calc(1.5rem + var(--sat))' }}>
                         <Logo url={customLogo} />
                         <button onClick={() => setMobileMenuOpen(false)} className="p-2 bg-white rounded-full shadow-sm text-gray-500 active:scale-90 transition-transform">
                             <X size={20} />
@@ -300,7 +300,7 @@ const Layout: React.FC<LayoutProps> = ({
                         ))}
                     </div>
 
-                    <div className="p-6 bg-gray-50 border-t border-gray-100">
+                    <div className="p-6 bg-gray-50 border-t border-gray-100" style={{ paddingBottom: 'calc(1.5rem + var(--sab))' }}>
                         <div className="flex items-center gap-3 mb-4">
                             <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-orange-500 font-black shadow-sm">
                                 AE
