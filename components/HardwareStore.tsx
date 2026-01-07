@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { StockItem, Transaction } from '../types';
 import { supabase } from '../lib/supabase';
@@ -31,7 +32,7 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
   
   // États pour la Caisse
   const [showCaisseModal, setShowCaisseModal] = useState(false);
-  const [newTransaction, setNewTransaction] = useState<{type: 'in'|'out', amount: string, reason: string}>({ type: 'in', amount: '', reason: '' });
+  const [newTransaction, setNewTransaction] = useState<{type: 'in'|'out', amount: string, reason: string, site: string}>({ type: 'in', amount: '', reason: '', site: 'Abidjan' });
 
   // Refs pour les inputs de fichiers cachés
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
@@ -112,7 +113,8 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
     setNewTransaction({ 
         type: 'in', 
         amount: item.unitPrice.toString(), 
-        reason: `Vente : ${item.name}` 
+        reason: `Vente : ${item.name}`,
+        site: item.site as string
     });
     setShowCaisseModal(true);
   };
@@ -127,13 +129,13 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
         amount: parseInt(newTransaction.amount),
         date: new Date().toISOString().split('T')[0],
         description: newTransaction.reason || (newTransaction.type === 'in' ? 'Vente comptoir' : 'Dépense diverse'),
-        site: 'Abidjan'
+        site: newTransaction.site
     };
     try {
         // Sauvegarde dans la table hardware_transactions
         const { error } = await supabase.from('hardware_transactions').insert([trx]);
         if (error) throw error;
-        setNewTransaction({ type: 'in', amount: '', reason: '' });
+        setNewTransaction({ type: 'in', amount: '', reason: '', site: 'Abidjan' });
         setShowCaisseModal(false);
     } catch (error) { console.error(error); alert("Erreur enregistrement: " + (error as any).message); }
   };
@@ -230,7 +232,7 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
                     <p className="text-lg font-black text-red-600">-{todayOutcome.toLocaleString()}</p>
                 </div>
                 <button 
-                  onClick={() => { setNewTransaction({ type: 'in', amount: '', reason: '' }); setShowCaisseModal(true); }}
+                  onClick={() => { setNewTransaction({ type: 'in', amount: '', reason: '', site: 'Abidjan' }); setShowCaisseModal(true); }}
                   className="p-3 bg-orange-500 hover:bg-orange-600 rounded-xl text-white font-bold shadow-md flex flex-col items-center justify-center active:scale-95 col-span-2 md:col-span-1 transition-colors"
                 >
                     <Plus size={20} /> <span className="text-xs uppercase mt-1">Vente / Achat</span>
@@ -337,6 +339,20 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
                     </div>
                     <input type="number" placeholder="Montant (FCFA)" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-xl outline-none" value={newTransaction.amount} onChange={e => setNewTransaction({...newTransaction, amount: e.target.value})} autoFocus/>
                     <input type="text" placeholder="Détails (ex: Nom du client)" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" value={newTransaction.reason} onChange={e => setNewTransaction({...newTransaction, reason: e.target.value})}/>
+                    
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Site de la transaction</label>
+                        <select 
+                            className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none appearance-none"
+                            value={newTransaction.site}
+                            onChange={e => setNewTransaction({...newTransaction, site: e.target.value})}
+                        >
+                            <option value="Abidjan">Abidjan</option>
+                            <option value="Bouaké">Bouaké</option>
+                            <option value="Korhogo">Korhogo</option>
+                        </select>
+                    </div>
+
                     <button onClick={handleSaveTransaction} className="w-full py-4 bg-gray-900 text-white rounded-xl font-bold uppercase shadow-lg">Valider l'opération</button>
                 </div>
             </div>
@@ -395,6 +411,19 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
                                  className="w-full p-4 bg-orange-50 text-orange-600 rounded-2xl font-black text-lg outline-none focus:ring-2 focus:ring-orange-500"
                                />
                            </div>
+                       </div>
+
+                       <div className="space-y-2">
+                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Site de Stockage Principal</label>
+                           <select 
+                                value={editForm.site} 
+                                onChange={(e) => setEditForm({...editForm, site: e.target.value})}
+                                className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-orange-500 appearance-none"
+                            >
+                                <option value="Abidjan">Abidjan</option>
+                                <option value="Bouaké">Bouaké</option>
+                                <option value="Korhogo">Korhogo</option>
+                            </select>
                        </div>
                        
                        <div className="grid grid-cols-2 gap-4">

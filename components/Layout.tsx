@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { NAV_ITEMS, Logo } from '../constants';
 import ScrollingTicker from './ScrollingTicker';
 import { TickerMessage } from '../types';
-import { Menu, X, LogOut, Bell, User, Wifi, WifiOff, ChevronRight, Play, Pause } from 'lucide-react';
+import { Menu, X, LogOut, Bell, User, Wifi, WifiOff, ChevronRight, Play, Pause, Calendar } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -153,16 +154,35 @@ const Layout: React.FC<LayoutProps> = ({
 
                 {/* Filters & Actions (Compact on Mobile) */}
                 <div className="flex items-center gap-2 md:gap-4">
-                    <div className="hidden md:block relative">
-                        <select 
-                            value={site} 
-                            onChange={(e) => onSiteChange(e.target.value)}
-                            className="bg-gray-50 border-none text-gray-700 text-sm rounded-xl focus:ring-2 focus:ring-orange-500 block py-2.5 pl-4 pr-10 font-bold outline-none cursor-pointer hover:bg-gray-100 transition-colors"
-                        >
-                            <option value="Global">🌍 Global</option>
-                            <option value="Abidjan">📍 Abidjan</option>
-                            <option value="Bouaké">📍 Bouaké</option>
-                        </select>
+                    <div className="hidden md:flex items-center gap-2">
+                        {/* Period Select Desktop */}
+                        <div className="relative">
+                            <select 
+                                value={period} 
+                                onChange={(e) => onPeriodChange(e.target.value)}
+                                className="bg-gray-50 border-none text-gray-700 text-sm rounded-xl focus:ring-2 focus:ring-orange-500 block py-2.5 pl-4 pr-10 font-bold outline-none cursor-pointer hover:bg-gray-100 transition-colors"
+                            >
+                                <option value="Jour">☀️ Jour</option>
+                                <option value="Semaine">📅 Semaine</option>
+                                <option value="Mois">📅 Mois</option>
+                                <option value="Année">📅 Année</option>
+                                <option value="Personnalisé">⚙️ Personnalisé</option>
+                            </select>
+                        </div>
+
+                        {/* Site Select Desktop */}
+                        <div className="relative">
+                            <select 
+                                value={site} 
+                                onChange={(e) => onSiteChange(e.target.value)}
+                                className="bg-gray-50 border-none text-gray-700 text-sm rounded-xl focus:ring-2 focus:ring-orange-500 block py-2.5 pl-4 pr-10 font-bold outline-none cursor-pointer hover:bg-gray-100 transition-colors"
+                            >
+                                <option value="Global">🌍 Global</option>
+                                <option value="Abidjan">📍 Abidjan</option>
+                                <option value="Bouaké">📍 Bouaké</option>
+                                <option value="Korhogo">📍 Korhogo</option>
+                            </select>
+                        </div>
                     </div>
 
                     <button className="relative p-2.5 text-gray-400 hover:text-orange-500 transition-colors bg-gray-50 rounded-xl hover:bg-orange-50 border border-transparent hover:border-orange-200 active:scale-95">
@@ -183,20 +203,23 @@ const Layout: React.FC<LayoutProps> = ({
                 <select 
                     value={site} 
                     onChange={(e) => onSiteChange(e.target.value)}
-                    className="bg-gray-50 border border-gray-100 text-gray-600 text-xs rounded-lg py-1.5 px-3 font-bold outline-none"
+                    className="bg-gray-50 border border-gray-100 text-gray-600 text-xs rounded-lg py-1.5 px-3 font-bold outline-none shrink-0"
                 >
                     <option value="Global">🌍 Global</option>
                     <option value="Abidjan">📍 Abidjan</option>
                     <option value="Bouaké">📍 Bouaké</option>
+                    <option value="Korhogo">📍 Korhogo</option>
                 </select>
                 <select 
                     value={period} 
                     onChange={(e) => onPeriodChange(e.target.value)}
-                    className="bg-gray-50 border border-gray-100 text-gray-600 text-xs rounded-lg py-1.5 px-3 font-bold outline-none"
+                    className="bg-gray-50 border border-gray-100 text-gray-600 text-xs rounded-lg py-1.5 px-3 font-bold outline-none shrink-0"
                 >
+                    <option value="Jour">☀️ Jour</option>
                     <option value="Semaine">📅 Semaine</option>
                     <option value="Mois">📅 Mois</option>
                     <option value="Année">📅 Année</option>
+                    <option value="Personnalisé">⚙️ Perso.</option>
                 </select>
             </div>
         </div>

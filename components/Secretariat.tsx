@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Intervention, Transaction } from '../types';
 import { supabase } from '../lib/supabase';
@@ -37,7 +38,7 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
             uniqueClients.set(inter.client, {
                 id: `CL-${inter.client.substring(0,3).toUpperCase()}`,
                 name: inter.client,
-                phone: '+225 XX XX XX XX',
+                phone: inter.clientPhone || '+225 XX XX XX XX',
                 email: 'contact@client.com',
                 location: inter.site,
                 lastInteraction: new Date(inter.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
@@ -68,7 +69,13 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
 
   const [newTransaction, setNewTransaction] = useState<{type: 'in'|'out', amount: string, reason: string}>({ type: 'out', amount: '', reason: '' });
 
-  const handleCall = (phone: string, name: string) => alert(`Appel ${name} (${phone})...`);
+  const handleCall = (phone: string) => {
+    if (!phone || phone.includes('X')) {
+        alert("Numéro non disponible ou invalide.");
+        return;
+    }
+    window.location.href = `tel:${phone}`;
+  };
 
   const handleSaveTransaction = async () => {
     if (!newTransaction.amount) return;
@@ -127,6 +134,11 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
                                 <span className="text-[10px] px-2 py-0.5 rounded bg-white border border-gray-200">{item.status}</span>
                             </div>
                             <p className="text-xs text-gray-500 truncate">{item.description}</p>
+                            {item.clientPhone && (
+                                <a href={`tel:${item.clientPhone}`} className="text-[10px] text-blue-600 font-black hover:underline mt-1 block">
+                                    {item.clientPhone}
+                                </a>
+                            )}
                         </div>
                     </div>
                 )) : <div className="text-center text-gray-400 py-8 text-sm">Rien de prévu</div>}
@@ -145,9 +157,10 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
                             <div className="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-xs">{client.name.substring(0,2)}</div>
                             <div className="min-w-0">
                                 <p className="text-sm font-bold text-gray-800 truncate">{client.name}</p>
+                                <p className="text-[10px] text-gray-400 font-bold truncate">{client.phone}</p>
                             </div>
                         </div>
-                        <button onClick={() => handleCall(client.phone, client.name)} className="p-2 bg-gray-100 rounded-full text-green-600"><Phone size={14}/></button>
+                        <button onClick={() => handleCall(client.phone)} className="p-2 bg-gray-100 rounded-full text-green-600 hover:bg-green-600 hover:text-white transition-colors"><Phone size={14}/></button>
                     </div>
                 ))}
             </div>
@@ -212,8 +225,11 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50">
                     {filteredClients.map(c => (
                         <div key={c.id} className="bg-white p-4 rounded-xl flex items-center justify-between shadow-sm">
-                            <span className="font-bold text-gray-800">{c.name}</span>
-                            <button onClick={() => handleCall(c.phone, c.name)} className="text-green-600 font-bold text-xs bg-green-50 px-3 py-1.5 rounded-lg">Appeler</button>
+                            <div className="flex flex-col">
+                                <span className="font-bold text-gray-800">{c.name}</span>
+                                <span className="text-xs text-gray-500">{c.phone}</span>
+                            </div>
+                            <button onClick={() => handleCall(c.phone)} className="text-green-600 font-bold text-xs bg-green-50 px-3 py-1.5 rounded-lg hover:bg-green-600 hover:text-white transition-colors">Appeler</button>
                         </div>
                     ))}
                 </div>

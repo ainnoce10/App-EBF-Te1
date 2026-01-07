@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { MOCK_EMPLOYEES } from '../constants';
 import { Transaction, Employee, Site } from '../types';
@@ -142,7 +143,6 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
   };
 
   // --- FILTRAGE COMPTA ---
-  // Plus de filtrage nécessaire, liveTransactions ne contient que la compta générale
   const accountingTransactions = liveTransactions;
 
   const displayedTransactions = showAllTransactions ? accountingTransactions : accountingTransactions.slice(0, 5);
@@ -375,6 +375,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                              >
                                  <option value="Abidjan">Abidjan</option>
                                  <option value="Bouaké">Bouaké</option>
+                                 <option value="Korhogo">Korhogo</option>
                              </select>
                         </div>
                     </div>
@@ -471,6 +472,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                               <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all appearance-none" value={newEmployeeData.site} onChange={e => setNewEmployeeData({...newEmployeeData, site: e.target.value})}>
                                   <option value="Abidjan">Abidjan</option>
                                   <option value="Bouaké">Bouaké</option>
+                                  <option value="Korhogo">Korhogo</option>
                               </select>
                           </div>
                       </div>

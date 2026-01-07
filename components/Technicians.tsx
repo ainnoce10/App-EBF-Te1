@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Intervention, Site } from '../types';
 import { supabase } from '../lib/supabase';
@@ -119,7 +120,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                 description: editIntervention.description,
                 technician: editIntervention.technician,
                 date: editIntervention.date,
-                location: editIntervention.location
+                location: editIntervention.location,
+                clientPhone: editIntervention.clientPhone
             })
             .eq('id', editIntervention.id);
 
@@ -266,12 +268,20 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
             </div>
             
             <h3 className="font-black text-xl mb-1 text-gray-900 leading-tight">{inter.client}</h3>
-            {inter.location && (
-                 <div className="flex items-center gap-1 text-gray-400 text-xs font-bold mb-2">
-                     <MapPin size={12} className="text-orange-500"/>
-                     {inter.location}
-                 </div>
-            )}
+            <div className="flex flex-col gap-1 mb-2">
+                {inter.location && (
+                    <div className="flex items-center gap-1 text-gray-400 text-xs font-bold">
+                        <MapPin size={12} className="text-orange-500"/>
+                        {inter.location}
+                    </div>
+                )}
+                {inter.clientPhone && (
+                    <a href={`tel:${inter.clientPhone}`} className="flex items-center gap-1 text-blue-600 text-xs font-black hover:underline">
+                        <Phone size={12} className="text-blue-500"/>
+                        {inter.clientPhone}
+                    </a>
+                )}
+            </div>
             <p className="text-gray-500 text-sm mb-6 line-clamp-2 min-h-[2.5rem]">{inter.description}</p>
             
             <div className="space-y-2 mb-6">
@@ -384,6 +394,16 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                            type="text" 
                            value={editIntervention.location || ''} 
                            onChange={(e) => setEditIntervention({...editIntervention, location: e.target.value})}
+                           className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-gray-300"
+                       />
+                   </div>
+
+                   <div className="space-y-2">
+                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Téléphone Client</label>
+                       <input
+                           type="tel" 
+                           value={editIntervention.clientPhone || ''} 
+                           onChange={(e) => setEditIntervention({...editIntervention, clientPhone: e.target.value})}
                            className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-gray-300"
                        />
                    </div>
@@ -528,11 +548,11 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Site EBF</label>
                     <div className="flex gap-2">
-                        {(['Abidjan', 'Bouaké'] as Site[]).map(s => (
+                        {(['Abidjan', 'Bouaké', 'Korhogo'] as Site[]).map(s => (
                             <button 
                                 key={s} 
                                 onClick={() => setNewIntervention({...newIntervention, site: s})}
-                                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all border-2 ${newIntervention.site === s ? 'bg-orange-50 border-orange-500 text-orange-600' : 'bg-gray-50 border-transparent text-gray-400'}`}
+                                className={`flex-1 py-3 rounded-xl font-bold text-[10px] md:text-xs transition-all border-2 ${newIntervention.site === s ? 'bg-orange-50 border-orange-500 text-orange-600' : 'bg-gray-50 border-transparent text-gray-400'}`}
                             >
                                 {s}
                             </button>

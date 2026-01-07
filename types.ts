@@ -1,5 +1,5 @@
 
-export type Site = 'Abidjan' | 'Bouaké' | 'Global';
+export type Site = 'Abidjan' | 'Bouaké' | 'Korhogo' | 'Global';
 export type Period = 'Jour' | 'Semaine' | 'Mois' | 'Année' | 'Personnalisé';
 
 export interface TickerMessage {
