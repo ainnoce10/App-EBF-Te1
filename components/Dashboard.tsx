@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import {
   BarChart,
@@ -10,24 +11,14 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell,
-  ComposedChart
+  Cell
 } from 'recharts';
 import { Period, Site, Transaction, Intervention } from '../types';
 import { 
-  Activity, 
   TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  PieChart as PieIcon, 
   Calendar,
   ArrowRight,
-  ArrowLeft,
-  Store,
-  Briefcase,
-  Calculator,
-  LayoutGrid,
-  MapPin
+  ArrowLeft
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -41,7 +32,7 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, customEndDate, liveTransactions = [], liveInterventions = [] }) => {
   const [viewMode, setViewMode] = useState<'summary' | 'detailed'>('summary');
-  const [detailFilter, setDetailFilter] = useState<'all' | 'hardware' | 'secretariat' | 'accounting'>('all');
+  const detailFilter = 'all'; // Variable statique car le setter n'était pas utilisé
 
   // Helper pour obtenir le numéro de semaine ISO
   const getWeekNumber = (d: Date) => {
@@ -159,7 +150,7 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
         .slice(0, 6);
 
     return { income, expense, profit, bySite: Array.from(bySiteMap.values()), byCategory, transactions: baseData, chartData };
-  }, [dateFilteredTransactions, detailFilter, period]);
+  }, [dateFilteredTransactions, period]); // detailFilter est constant 'all', retiré des dépendances
 
 
   // --- 3. DATA POUR VUE SOMMAIRE (CUMUL UNIQUE) ---
