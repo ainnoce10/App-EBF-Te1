@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NAV_ITEMS, Logo } from '../constants';
 import ScrollingTicker from './ScrollingTicker';
 import { TickerMessage } from '../types';
-import { Menu, X, LogOut, Bell, User, Wifi, WifiOff, ChevronRight, Play, Pause } from 'lucide-react';
+import { Menu, X, LogOut, Bell, User, Wifi, WifiOff, ChevronRight, Play, Pause, Calendar as CalendarIcon } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,6 +13,10 @@ interface LayoutProps {
   onSiteChange: (site: string) => void;
   period: string;
   onPeriodChange: (period: string) => void;
+  customStartDate?: string;
+  onCustomStartDateChange?: (date: string) => void;
+  customEndDate?: string;
+  onCustomEndDateChange?: (date: string) => void;
   tickerMessages: TickerMessage[];
   isLive?: boolean;
   customLogo?: string;
@@ -27,6 +31,10 @@ const Layout: React.FC<LayoutProps> = ({
   onSiteChange, 
   period, 
   onPeriodChange,
+  customStartDate,
+  onCustomStartDateChange,
+  customEndDate,
+  onCustomEndDateChange,
   tickerMessages,
   isLive = false,
   customLogo,
@@ -155,6 +163,29 @@ const Layout: React.FC<LayoutProps> = ({
                 {/* Filters & Actions (Compact on Mobile) */}
                 <div className="flex items-center gap-2 md:gap-4">
                     <div className="hidden md:flex items-center gap-2">
+                        {/* Custom Date Inputs */}
+                        {period === 'Personnalisé' && onCustomStartDateChange && onCustomEndDateChange && (
+                            <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                                <div className="relative">
+                                    <input 
+                                        type="date"
+                                        value={customStartDate}
+                                        onChange={(e) => onCustomStartDateChange(e.target.value)}
+                                        className="bg-transparent text-gray-700 text-xs font-bold py-1.5 px-2 outline-none"
+                                    />
+                                </div>
+                                <span className="text-gray-400 font-bold">-</span>
+                                <div className="relative">
+                                    <input 
+                                        type="date"
+                                        value={customEndDate}
+                                        onChange={(e) => onCustomEndDateChange(e.target.value)}
+                                        className="bg-transparent text-gray-700 text-xs font-bold py-1.5 px-2 outline-none"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
                         {/* Period Select Desktop */}
                         <div className="relative">
                             <select 
@@ -199,7 +230,7 @@ const Layout: React.FC<LayoutProps> = ({
             </header>
             
             {/* Mobile Filters Bar (Sub-header) */}
-            <div className="md:hidden bg-white border-b border-gray-100 px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar">
+            <div className="md:hidden bg-white border-b border-gray-100 px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar items-center">
                 <select 
                     value={site} 
                     onChange={(e) => onSiteChange(e.target.value)}
@@ -221,6 +252,13 @@ const Layout: React.FC<LayoutProps> = ({
                     <option value="Année">📅 Année</option>
                     <option value="Personnalisé">⚙️ Perso.</option>
                 </select>
+
+                {period === 'Personnalisé' && onCustomStartDateChange && onCustomEndDateChange && (
+                     <div className="flex gap-1 shrink-0">
+                        <input type="date" value={customStartDate} onChange={e => onCustomStartDateChange(e.target.value)} className="bg-gray-50 border border-gray-100 text-[10px] rounded-lg p-1 font-bold w-24" />
+                        <input type="date" value={customEndDate} onChange={e => onCustomEndDateChange(e.target.value)} className="bg-gray-50 border border-gray-100 text-[10px] rounded-lg p-1 font-bold w-24" />
+                     </div>
+                )}
             </div>
         </div>
 

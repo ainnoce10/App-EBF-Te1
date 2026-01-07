@@ -18,7 +18,8 @@ import {
   TrendingUp, 
   Calendar,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  Filter
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -32,7 +33,7 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, customEndDate, liveTransactions = [], liveInterventions = [] }) => {
   const [viewMode, setViewMode] = useState<'summary' | 'detailed'>('summary');
-  const detailFilter = 'all'; // Variable statique car le setter n'était pas utilisé
+  const [detailFilter, setDetailFilter] = useState<'all' | 'hardware' | 'secretariat' | 'accounting'>('all');
 
   // Helper pour obtenir le numéro de semaine ISO
   const getWeekNumber = (d: Date) => {
@@ -73,7 +74,7 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
 
   const getTransactionSource = (t: Transaction): 'hardware' | 'secretariat' | 'accounting' => {
       const cat = t.category.toLowerCase();
-      if (cat.includes('magasin') || cat.includes('stock') || cat.includes('vente comptoir') || cat.includes('outillage')) return 'hardware';
+      if (cat.includes('magasin') || cat.includes('stock') || cat.includes('vente comptoir') || cat.includes('outillage') || cat.includes('vente magasin') || cat.includes('achat stock')) return 'hardware';
       if (cat.includes('prestation') || cat.includes('caisse') || cat.includes('acompte') || cat.includes('service')) return 'secretariat';
       return 'accounting';
   };
@@ -81,6 +82,8 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
   // --- 2. DATA POUR VUE DÉTAILLÉE (AVEC DÉCOMPOSITION) ---
   const detailedData = useMemo(() => {
     let baseData = dateFilteredTransactions;
+    
+    // Filtrage par département
     if (detailFilter !== 'all') {
         baseData = baseData.filter(t => getTransactionSource(t) === detailFilter);
     }
@@ -150,7 +153,7 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
         .slice(0, 6);
 
     return { income, expense, profit, bySite: Array.from(bySiteMap.values()), byCategory, transactions: baseData, chartData };
-  }, [dateFilteredTransactions, period]); // detailFilter est constant 'all', retiré des dépendances
+  }, [dateFilteredTransactions, period, detailFilter]);
 
 
   // --- 3. DATA POUR VUE SOMMAIRE (CUMUL UNIQUE) ---
@@ -184,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
   if (viewMode === 'detailed') {
       return (
           <div className="space-y-6 animate-fade-in pb-10">
-              <div className="flex items-center gap-4 mb-6">
+              <div className="flex items-center gap-4 mb-2">
                   <button 
                     onClick={() => setViewMode('summary')}
                     className="p-3 bg-white border border-gray-200 rounded-full hover:bg-gray-100 transition-colors shadow-sm group"
@@ -197,14 +200,42 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
                   </div>
               </div>
 
+              {/* Filtres par département */}
+              <div className="flex flex-wrap gap-2 mb-4 bg-white p-2 rounded-2xl border border-gray-100 w-fit shadow-sm">
+                  <button 
+                    onClick={() => setDetailFilter('all')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${detailFilter === 'all' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}
+                  >
+                    Tout
+                  </button>
+                  <button 
+                    onClick={() => setDetailFilter('hardware')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${detailFilter === 'hardware' ? 'bg-orange-500 text-white shadow-md' : 'text-gray-500 hover:bg-orange-50'}`}
+                  >
+                    Quincaillerie
+                  </button>
+                  <button 
+                    onClick={() => setDetailFilter('secretariat')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${detailFilter === 'secretariat' ? 'bg-green-600 text-white shadow-md' : 'text-gray-500 hover:bg-green-50'}`}
+                  >
+                    Secrétariat
+                  </button>
+                  <button 
+                    onClick={() => setDetailFilter('accounting')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${detailFilter === 'accounting' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-blue-50'}`}
+                  >
+                    Comptabilité
+                  </button>
+              </div>
+
               {/* KPIs */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
-                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Recettes</p>
+                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Recettes ({detailFilter === 'all' ? 'Global' : detailFilter})</p>
                       <h3 className="text-3xl font-black text-blue-600">{detailedData.income.toLocaleString()} F</h3>
                   </div>
                   <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
-                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Dépenses</p>
+                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Dépenses ({detailFilter === 'all' ? 'Global' : detailFilter})</p>
                       <h3 className="text-3xl font-black text-red-500">{detailedData.expense.toLocaleString()} F</h3>
                   </div>
                   <div className="bg-gray-900 p-6 rounded-[2rem] shadow-lg text-white">
@@ -217,9 +248,16 @@ const Dashboard: React.FC<DashboardProps> = ({ site, period, customStartDate, cu
 
               {/* Graphe de décomposition temporelle (Spécificité demandée) */}
               <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
-                  <h3 className="font-bold text-gray-800 mb-6 flex items-center gap-2 text-sm uppercase tracking-wide">
-                      <TrendingUp size={18} className="text-orange-500"/> Décomposition par {period === 'Année' ? 'Mois' : period === 'Mois' ? 'Semaines' : 'Jours'}
-                  </h3>
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm uppercase tracking-wide">
+                          <TrendingUp size={18} className="text-orange-500"/> Décomposition : {period === 'Année' ? 'Mois' : period === 'Mois' ? 'Semaines' : 'Jours'}
+                      </h3>
+                      {detailFilter !== 'all' && (
+                        <span className="text-[10px] font-black uppercase bg-gray-100 text-gray-500 px-2 py-1 rounded-md">
+                            Filtre: {detailFilter}
+                        </span>
+                      )}
+                  </div>
                   <div className="h-[350px]">
                       <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={detailedData.chartData}>

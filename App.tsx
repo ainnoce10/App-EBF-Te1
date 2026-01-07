@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -19,8 +20,8 @@ const App: React.FC = () => {
   // Filtres globaux
   const [site, setSite] = useState<Site>('Global');
   const [period, setPeriod] = useState<Period>('Semaine');
-  const [customStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [customEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [customStartDate, setCustomStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   // États de données
   const [tickerMessages, setTickerMessages] = useState<TickerMessage[]>(TICKER_MESSAGES);
@@ -226,6 +227,10 @@ const App: React.FC = () => {
         onSiteChange={(s) => setSite(s as Site)}
         period={period}
         onPeriodChange={(p) => setPeriod(p as Period)}
+        customStartDate={customStartDate}
+        onCustomStartDateChange={setCustomStartDate}
+        customEndDate={customEndDate}
+        onCustomEndDateChange={setCustomEndDate}
         tickerMessages={tickerMessages}
         isLive={isLive}
         customLogo={customLogo}
