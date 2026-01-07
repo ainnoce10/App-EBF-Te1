@@ -18,8 +18,7 @@ import {
   TrendingUp, 
   Calendar,
   ArrowRight,
-  ArrowLeft,
-  Filter
+  ArrowLeft
 } from 'lucide-react';
 
 interface DashboardProps {
