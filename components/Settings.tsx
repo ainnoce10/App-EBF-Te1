@@ -134,8 +134,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   };
 
   const getFullSchemaScript = () => `
--- 1. CONFIGURATION STORAGE (LIGNES À AJOUTER)
--- Ajoute les nouveaux dossiers sans toucher aux anciens si déjà existants
+-- 1. CONFIGURATION STORAGE (Dossier pour les rapports vocaux)
 insert into storage.buckets (id, name, public) 
 values ('assets', 'assets', true), ('voice_reports', 'voice_reports', true)
 on conflict (id) do nothing;
@@ -147,7 +146,7 @@ create policy "Public Access Assets" on storage.objects for all using ( bucket_i
 drop policy if exists "Public Access Reports" on storage.objects;
 create policy "Public Access Reports" on storage.objects for all using ( bucket_id = 'voice_reports' ) with check ( bucket_id = 'voice_reports' );
 
--- 3. TABLES DE DONNÉES (IF NOT EXISTS garantit qu'on n'écrase pas les données)
+-- 3. TABLES DE DONNÉES
 create table if not exists public.tv_settings ( 
     key text primary key, 
     value text, 

@@ -96,8 +96,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         setAudioBlob(blob);
         setAudioUrl(URL.createObjectURL(blob));
-        setRecordingState('review');
-        if (timerRef.current) clearInterval(timerRef.current);
       };
 
       mediaRecorder.start();
@@ -117,6 +115,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      setRecordingState('review');
+      if (timerRef.current) clearInterval(timerRef.current);
     }
   };
 
