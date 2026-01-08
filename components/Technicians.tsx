@@ -95,7 +95,9 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         setAudioBlob(blob);
-        setAudioUrl(URL.createObjectURL(blob));
+        const url = URL.createObjectURL(blob);
+        setAudioUrl(url);
+        setRecordingState('review'); // On passe en mode écoute seulement quand le blob est prêt
       };
 
       mediaRecorder.start();
@@ -115,7 +117,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-      setRecordingState('review');
       if (timerRef.current) clearInterval(timerRef.current);
     }
   };
@@ -125,7 +126,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     if (isPlaying) {
       audioPreviewRef.current.pause();
     } else {
-      audioPreviewRef.current.play();
+      audioPreviewRef.current.play().catch(console.error);
     }
   };
 
@@ -177,19 +178,23 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         alert("Veuillez sélectionner un client.");
         return;
     }
+
+    if (!audioBlob) {
+        alert("Veuillez enregistrer un message vocal.");
+        return;
+    }
     
     setIsSaving(true);
     try {
       let audioPath = null;
-      if (audioBlob) {
-          const fileName = `report_${target.id}_${Date.now()}.webm`;
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('voice_reports')
-            .upload(fileName, audioBlob);
-          
-          if (uploadError) throw uploadError;
-          audioPath = uploadData.path;
-      }
+      const fileName = `report_${target.id}_${Date.now()}.webm`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('voice_reports')
+        .upload(fileName, audioBlob);
+      
+      if (uploadError) throw uploadError;
+      audioPath = uploadData.path;
 
       const { error } = await supabase
         .from('interventions')
@@ -197,8 +202,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
             status: 'Terminé', 
             has_report: true, 
             description: formReport.workDone 
-                ? `${formReport.workDone}\n(Rapport vocal enregistré : ${audioPath || 'N/A'})` 
-                : `Rapport vocal du ${new Date().toLocaleDateString()}`
+                ? `${formReport.workDone}\n(Audio: ${audioPath})` 
+                : `Rapport vocal enregistré le ${new Date().toLocaleDateString()}`
         })
         .eq('id', target.id);
       
@@ -209,6 +214,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       setActiveInterventionForReport(null);
       setAudioBlob(null);
       setAudioUrl(null);
+      setRecordingState('idle');
     } catch (err: any) {
       alert("Erreur lors de la soumission : " + err.message);
     } finally {
@@ -444,7 +450,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                         {activeInterventionForReport ? `Pour : ${activeInterventionForReport.client}` : 'Compte-rendu général'}
                     </p>
                   </div>
-                  <button onClick={() => { setShowReportModal(false); setActiveInterventionForReport(null); setAudioBlob(null); setAudioUrl(null); }} className="p-3 bg-gray-100 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all shadow-sm"><X size={24}/></button>
+                  <button onClick={() => { setShowReportModal(false); setActiveInterventionForReport(null); setAudioBlob(null); setAudioUrl(null); setRecordingState('idle'); }} className="p-3 bg-gray-100 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all shadow-sm"><X size={24}/></button>
               </div>
 
               <div className="flex flex-col items-center gap-8 py-6">
