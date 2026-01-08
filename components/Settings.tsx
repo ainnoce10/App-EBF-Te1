@@ -5,18 +5,10 @@ import {
   Trash2, 
   Loader2, 
   Database, 
-  Code,
   X,
   ShieldAlert,
-  Plus,
   Music,
-  Save,
-  Upload,
-  Play,
-  Pause,
-  Image as ImageIcon,
-  ListMusic,
-  CheckCircle2
+  Image as ImageIcon
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { TickerMessage } from '../types';
@@ -28,7 +20,6 @@ interface SettingsProps {
 
 const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const [newMessage, setNewMessage] = useState('');
-  const [selectedColor, setSelectedColor] = useState<'green' | 'yellow' | 'red' | 'neutral'>('neutral');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSavingMusic, setIsSavingMusic] = useState(false);
   const [isSavingLogo, setIsSavingLogo] = useState(false);
@@ -129,7 +120,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     if (!newMessage.trim()) return;
     setIsUpdating(true);
     try {
-      const { error } = await supabase.from('ticker_messages').insert([{ content: newMessage.trim(), color: selectedColor }]);
+      const { error } = await supabase.from('ticker_messages').insert([{ content: newMessage.trim(), color: 'neutral' }]);
       if (error) throw error;
       setNewMessage('');
     } catch (error: any) { alert(`Erreur : ${error.message}`); } finally { setIsUpdating(false); }
@@ -143,24 +134,20 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   };
 
   const getFullSchemaScript = () => `
--- 0. NETTOYAGE & PUBLICATION REALTIME
-drop publication if exists supabase_realtime;
-create publication supabase_realtime for all tables;
-
 -- 1. CONFIGURATION STORAGE (BUCKETS)
+-- Ajoute les nouveaux dossiers sans toucher aux anciens si déjà existants
 insert into storage.buckets (id, name, public) 
 values ('assets', 'assets', true), ('voice_reports', 'voice_reports', true)
 on conflict (id) do nothing;
 
--- 2. POLITIQUES DE STORAGE (ASSETS)
+-- 2. POLITIQUES DE STORAGE (DROP ET CREATE POUR GARANTIR LA MISE À JOUR)
 drop policy if exists "Public Access Assets" on storage.objects;
 create policy "Public Access Assets" on storage.objects for all using ( bucket_id = 'assets' ) with check ( bucket_id = 'assets' );
 
--- 3. POLITIQUES DE STORAGE (VOICE REPORTS)
 drop policy if exists "Public Access Reports" on storage.objects;
 create policy "Public Access Reports" on storage.objects for all using ( bucket_id = 'voice_reports' ) with check ( bucket_id = 'voice_reports' );
 
--- 4. TABLES DE DONNÉES
+-- 3. TABLES DE DONNÉES (IF NOT EXISTS garantit qu'on n'écrase pas les données existantes)
 create table if not exists public.tv_settings ( 
     key text primary key, 
     value text, 
@@ -249,29 +236,41 @@ create table if not exists public.accounting_transactions (
     created_at timestamp with time zone default now() 
 );
 
+-- 4. ACTIVATION REALTIME (PUBLICATION)
+drop publication if exists supabase_realtime;
+create publication supabase_realtime for all tables;
+
 -- 5. SÉCURITÉ (RLS)
 alter table public.tv_settings enable row level security;
+drop policy if exists "Public" on public.tv_settings;
 create policy "Public" on public.tv_settings for all using (true) with check (true);
 
 alter table public.ticker_messages enable row level security;
+drop policy if exists "Public" on public.ticker_messages;
 create policy "Public" on public.ticker_messages for all using (true) with check (true);
 
 alter table public.stock enable row level security;
+drop policy if exists "Public" on public.stock;
 create policy "Public" on public.stock for all using (true) with check (true);
 
 alter table public.interventions enable row level security;
+drop policy if exists "Public" on public.interventions;
 create policy "Public" on public.interventions for all using (true) with check (true);
 
 alter table public.employees enable row level security;
+drop policy if exists "Public" on public.employees;
 create policy "Public" on public.employees for all using (true) with check (true);
 
 alter table public.hardware_transactions enable row level security;
+drop policy if exists "Public" on public.hardware_transactions;
 create policy "Public" on public.hardware_transactions for all using (true) with check (true);
 
 alter table public.secretariat_transactions enable row level security;
+drop policy if exists "Public" on public.secretariat_transactions;
 create policy "Public" on public.secretariat_transactions for all using (true) with check (true);
 
 alter table public.accounting_transactions enable row level security;
+drop policy if exists "Public" on public.accounting_transactions;
 create policy "Public" on public.accounting_transactions for all using (true) with check (true);
 `;
 
@@ -289,9 +288,9 @@ create policy "Public" on public.accounting_transactions for all using (true) wi
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-blue-600 rounded-3xl p-6 text-white relative min-h-[180px] overflow-hidden">
               <Database size={80} className="absolute -right-4 -top-4 opacity-10" />
-              <h4 className="font-black text-xl mb-2 flex items-center gap-2"><ShieldAlert size={20}/> Base SQL</h4>
-              <p className="text-xs opacity-80 mb-6">Mettez à jour les tables et créez le bucket 'voice_reports'.</p>
-              <button onClick={() => setShowSql(true)} className="w-full py-3 bg-white text-blue-700 rounded-xl font-black text-xs uppercase">Configurer SQL</button>
+              <h4 className="font-black text-xl mb-2 flex items-center gap-2"><ShieldAlert size={20}/> Mise à jour SQL</h4>
+              <p className="text-xs opacity-80 mb-6">Ajoute les nouvelles fonctionnalités (Vocal) sans effacer vos données.</p>
+              <button onClick={() => setShowSql(true)} className="w-full py-3 bg-white text-blue-700 rounded-xl font-black text-xs uppercase">Voir le script</button>
           </div>
 
           <div className="bg-purple-700 rounded-3xl p-6 text-white min-h-[180px]">
@@ -302,7 +301,7 @@ create policy "Public" on public.accounting_transactions for all using (true) wi
               </select>
               <div className="flex gap-2">
                   <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-3 bg-purple-600 rounded-xl text-xs font-bold uppercase">Upload</button>
-                  <button onClick={handleSaveMusic} className="flex-1 py-3 bg-white text-purple-700 rounded-xl text-xs font-black uppercase">Sauver</button>
+                  <button onClick={handleSaveMusic} disabled={isSavingMusic} className="flex-1 py-3 bg-white text-purple-700 rounded-xl text-xs font-black uppercase">Sauver</button>
               </div>
               <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'music')} />
           </div>
@@ -310,10 +309,10 @@ create policy "Public" on public.accounting_transactions for all using (true) wi
           <div className="bg-orange-600 rounded-3xl p-6 text-white min-h-[180px]">
               <h4 className="font-black text-xl mb-4 flex items-center gap-2"><ImageIcon size={20}/> Logo</h4>
               <div className="flex gap-4">
-                  <div className="w-16 h-16 bg-white rounded-xl overflow-hidden">{logoUrl && <img src={logoUrl} className="w-full h-full object-contain" />}</div>
+                  <div className="w-16 h-16 bg-white rounded-xl overflow-hidden">{logoUrl && <img src={logoUrl} className="w-full h-full object-contain" alt="Logo" />}</div>
                   <div className="flex-1 flex flex-col gap-2">
                       <button onClick={() => logoInputRef.current?.click()} className="py-2 bg-orange-500 rounded-lg text-xs font-bold">Choisir</button>
-                      <button onClick={handleSaveLogo} className="py-2 bg-white text-orange-700 rounded-lg text-[10px] font-black uppercase">Sauver</button>
+                      <button onClick={handleSaveLogo} disabled={isSavingLogo} className="py-2 bg-white text-orange-700 rounded-lg text-[10px] font-black uppercase">Sauver</button>
                   </div>
               </div>
               <input type="file" ref={logoInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'logo')} />
@@ -340,13 +339,13 @@ create policy "Public" on public.accounting_transactions for all using (true) wi
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
            <div className="bg-white w-full max-w-2xl rounded-[3rem] overflow-hidden flex flex-col">
               <div className="p-8 border-b bg-blue-50 flex justify-between items-center">
-                  <h3 className="font-black text-xl text-blue-900">Script SQL Supabase Complet</h3>
+                  <h3 className="font-black text-xl text-blue-900">Script SQL Consolidé</h3>
                   <button onClick={() => setShowSql(false)}><X/></button>
               </div>
-              <div className="p-8">
-                  <p className="text-xs text-blue-600 font-bold mb-4">Ce script contient l'intégralité de la base de données EBF, y compris les nouveaux buckets audio.</p>
+              <div className="p-8 overflow-y-auto">
+                  <p className="text-xs text-blue-600 font-bold mb-4 uppercase tracking-widest">Utilisez ce script pour ajouter les buckets audio et les politiques de sécurité sans effacer vos tables actuelles.</p>
                   <pre className="bg-gray-900 text-green-400 p-6 rounded-2xl text-xs overflow-auto max-h-60 mb-8">{getFullSchemaScript()}</pre>
-                  <button onClick={() => { navigator.clipboard.writeText(getFullSchemaScript()); alert("Copié !"); }} className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black uppercase">Copier & Exécuter dans SQL Editor</button>
+                  <button onClick={() => { navigator.clipboard.writeText(getFullSchemaScript()); alert("Script SQL copié !"); }} className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black uppercase shadow-xl active:scale-95 transition-all">Copier pour Supabase SQL Editor</button>
               </div>
            </div>
         </div>

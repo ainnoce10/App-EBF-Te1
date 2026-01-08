@@ -23,7 +23,6 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  Navigation,
   FileText,
   Info,
   ExternalLink,
@@ -185,7 +184,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     try {
       let audioPath = null;
 
-      // 1. Upload de l'audio si présent
+      // 1. Upload de l'audio si présent vers le bucket voice_reports
       if (audioBlob) {
           const fileName = `report_${target.id}_${Date.now()}.webm`;
           const { data: uploadData, error: uploadError } = await supabase.storage
@@ -196,7 +195,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
           audioPath = uploadData.path;
       }
 
-      // 2. Mise à jour de l'intervention : Status Terminé + has_report True
+      // 2. Mise à jour automatique : status='Terminé' ET has_report=true
       const { error } = await supabase
         .from('interventions')
         .update({ 
@@ -216,7 +215,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       setAudioBlob(null);
       setAudioUrl(null);
     } catch (err: any) {
-      alert("Erreur de sauvegarde: " + err.message);
+      alert("Erreur lors de la soumission : " + err.message);
     } finally {
       setIsSaving(false);
     }
@@ -309,14 +308,14 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl md:text-4xl font-black text-gray-900 tracking-tighter uppercase italic">Techniciens 🛠️</h2>
-          <p className="text-gray-500 font-bold uppercase text-xs tracking-widest mt-1">Suivi terrain & Rapports vocaux</p>
+          <p className="text-gray-500 font-bold uppercase text-xs tracking-widest mt-1">Maintenance & Rapports vocaux</p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
             <button onClick={() => setShowNewInterventionModal(true)} className="flex-1 md:flex-none bg-green-600 hover:bg-green-700 text-white px-6 py-4 rounded-2xl font-black uppercase text-[10px] md:text-xs flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95">
               <CalendarPlus size={18} /> Planifier
             </button>
             <button onClick={() => { setActiveInterventionForReport(null); setShowReportModal(true); }} className="flex-1 md:flex-none bg-orange-500 hover:bg-orange-600 text-white px-6 py-4 rounded-2xl font-black uppercase text-[10px] md:text-xs flex items-center justify-center gap-2 shadow-lg pulse-soft transition-all active:scale-95">
-              <Mic size={18} /> Vocal Rapide
+              <Mic size={18} /> Rapport Rapide
             </button>
         </div>
       </div>
@@ -333,7 +332,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300" size={24} />
           </div>
 
-          {/* FILTRE PAR STATUT - LISTE DÉROULANTE */}
           <div className="relative">
               <select 
                 value={statusFilter}
@@ -341,8 +339,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                 className="w-full pl-14 pr-12 py-4 md:py-5 bg-white rounded-[2rem] shadow-sm font-black text-lg md:text-xl border-4 border-transparent focus:border-blue-600 outline-none appearance-none transition-all cursor-pointer uppercase tracking-tight"
               >
                 <option value="Tous">📊 Tous les dossiers</option>
-                <option value="En attente">⏳ Interventions en attente</option>
-                <option value="En cours">🛠️ Travaux en cours</option>
+                <option value="En attente">⏳ En Attente</option>
+                <option value="En cours">🛠️ En Cours</option>
                 <option value="Terminé avec rapport">✅ Terminé avec Rapport</option>
                 <option value="Terminé sans rapport">❌ Terminé sans Rapport</option>
               </select>
@@ -439,20 +437,95 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
             )}
           </div>
         ))}
-        {filteredInterventions.length === 0 && (
-            <div className="col-span-full py-24 text-center bg-white/50 rounded-[3rem] border-4 border-dashed border-gray-200 flex flex-col items-center justify-center animate-pulse">
-                <Search size={64} className="text-gray-200 mb-6" />
-                <h4 className="text-2xl font-black text-gray-300 uppercase tracking-tighter">Aucune intervention</h4>
-                <p className="text-gray-300 font-bold uppercase text-xs mt-2 tracking-widest">Essayez de changer les filtres ou la recherche</p>
-            </div>
-        )}
       </div>
+
+      {/* --- MODAL REPORT VOCAL --- */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+           <div className="bg-white w-full max-w-lg rounded-[3.5rem] p-10 animate-scale-in shadow-2xl relative overflow-hidden border-b-[12px] border-orange-500">
+              <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <h3 className="text-3xl font-black text-gray-900 tracking-tighter uppercase leading-none italic">Rapport Vocal</h3>
+                    <p className="text-orange-500 font-bold text-[10px] uppercase tracking-widest mt-2">
+                        {activeInterventionForReport ? `Pour : ${activeInterventionForReport.client}` : 'Compte-rendu général'}
+                    </p>
+                  </div>
+                  <button onClick={() => { setShowReportModal(false); setActiveInterventionForReport(null); setAudioBlob(null); setAudioUrl(null); }} className="p-3 bg-gray-100 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all shadow-sm"><X size={24}/></button>
+              </div>
+
+              <div className="flex flex-col items-center gap-8 py-6">
+                  <div className={`w-40 h-40 rounded-full flex items-center justify-center shadow-2xl transition-all relative z-10 
+                    ${recordingState === 'recording' ? 'bg-red-500 scale-110' : 'bg-orange-500 hover:scale-105 active:scale-95'}`}>
+                      {recordingState === 'recording' && (
+                          <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-20"></div>
+                      )}
+                      {recordingState === 'idle' ? (
+                        <button onClick={handleStartRecording} className="text-white flex flex-col items-center"><Mic size={64} /><span className="text-[10px] font-black uppercase mt-1">Enregistrer</span></button>
+                      ) : recordingState === 'recording' ? (
+                        <button onClick={handleStopRecording} className="text-white flex flex-col items-center"><Square size={48} /><span className="text-[10px] font-black uppercase mt-1">Arrêter</span></button>
+                      ) : (
+                        <button onClick={handleTogglePlayback} className="text-white flex flex-col items-center">
+                            {isPlaying ? <Pause size={64} /> : <Play size={64} />}
+                            <span className="text-[10px] font-black uppercase mt-1">{isPlaying ? 'Pause' : 'Réécouter'}</span>
+                        </button>
+                      )}
+                  </div>
+                  
+                  {audioUrl && (
+                      <audio 
+                        ref={audioPreviewRef} 
+                        src={audioUrl} 
+                        onPlay={() => setIsPlaying(true)} 
+                        onPause={() => setIsPlaying(false)} 
+                        onEnded={() => setIsPlaying(false)}
+                        onTimeUpdate={(e) => setPlaybackTime(e.currentTarget.currentTime)}
+                        className="hidden" 
+                      />
+                  )}
+
+                  <div className="text-center">
+                      <p className="text-6xl font-black font-mono tracking-tighter text-gray-950">
+                        {formatTime(recordingState === 'review' ? playbackTime : recordingDuration)}
+                      </p>
+                      <p className="text-gray-400 font-bold uppercase text-[10px] mt-4 tracking-widest">
+                          {recordingState === 'recording' ? 'CAPTURE AUDIO EN COURS...' : recordingState === 'review' ? 'AUDIO PRÊT POUR SOUMISSION' : 'PRÊT POUR LE VOCAL'}
+                      </p>
+                  </div>
+              </div>
+
+              {recordingState === 'review' && (
+                <div className="space-y-5 animate-fade-in pt-4 border-t border-gray-100">
+                   {!activeInterventionForReport && (
+                        <div className="space-y-2">
+                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Lier au client</label>
+                             <select 
+                                className="w-full p-5 bg-gray-50 rounded-2xl font-black text-sm outline-none border-2 border-transparent focus:border-orange-500 transition-all appearance-none"
+                                value={formReport.client}
+                                onChange={(e) => setFormReport({...formReport, client: e.target.value})}
+                            >
+                                <option value="">Choisir un chantier...</option>
+                                {interventions.filter(i => i.status !== 'Terminé').map(i => <option key={i.id} value={i.client}>{i.client}</option>)}
+                            </select>
+                        </div>
+                   )}
+                   <button 
+                     onClick={handleSubmitReport} 
+                     disabled={isSaving || (!activeInterventionForReport && !formReport.client)}
+                     className="w-full py-6 bg-gray-950 text-white rounded-3xl font-black uppercase text-xs tracking-widest shadow-2xl flex justify-center items-center gap-3 hover:bg-black transition-all disabled:opacity-50 active:scale-95"
+                   >
+                     {isSaving ? <Loader2 className="animate-spin" size={24}/> : <CheckCircle2 size={24}/>}
+                     {isSaving ? 'ENVOI...' : 'TRANSMETTRE ET TERMINER LE CHANTIER'}
+                   </button>
+                </div>
+              )}
+           </div>
+        </div>
+      )}
 
       {/* MODAL DETAIL INTERVENTION */}
       {viewIntervention && (
           <div className="fixed inset-0 z-[70] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-md animate-fade-in p-0 md:p-6">
               <div className="bg-white w-full max-w-2xl rounded-t-[3rem] md:rounded-[4rem] flex flex-col overflow-hidden shadow-2xl animate-slide-up max-h-[95vh]">
-                  {/* Header */}
                   <div className="p-8 md:p-12 pb-6 flex justify-between items-start sticky top-0 bg-white/80 backdrop-blur z-10 border-b border-gray-50">
                       <div className="flex-1">
                           <div className="flex items-center gap-3 mb-4">
@@ -473,8 +546,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       </button>
                   </div>
 
-                  {/* Scrollable Body */}
-                  <div className="flex-1 overflow-y-auto p-8 md:p-12 pt-4 custom-scrollbar space-y-10">
+                  <div className="flex-1 overflow-y-auto p-8 md:p-12 pt-4 space-y-10">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 flex flex-col gap-2">
                               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><MapPin size={12} className="text-orange-500"/> Localisation</p>
@@ -508,25 +580,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                                <p className="text-gray-700 text-lg md:text-xl font-medium leading-relaxed whitespace-pre-wrap">
                                    {viewIntervention.description}
                                </p>
-                          </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="p-4 bg-white border border-gray-100 rounded-2xl shadow-sm text-center">
-                              <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Technicien</p>
-                              <p className="text-xs font-black text-gray-800 truncate">{viewIntervention.technician}</p>
-                          </div>
-                          <div className="p-4 bg-white border border-gray-100 rounded-2xl shadow-sm text-center">
-                              <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Date</p>
-                              <p className="text-xs font-black text-gray-800">{new Date(viewIntervention.date).toLocaleDateString()}</p>
-                          </div>
-                          <div className="p-4 bg-white border border-gray-100 rounded-2xl shadow-sm text-center">
-                              <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Site</p>
-                              <p className="text-xs font-black text-gray-800">{viewIntervention.site}</p>
-                          </div>
-                          <div className="p-4 bg-white border border-gray-100 rounded-2xl shadow-sm text-center">
-                              <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Domaine</p>
-                              <p className="text-xs font-black text-orange-600 uppercase">{viewIntervention.domain || "N/A"}</p>
                           </div>
                       </div>
                   </div>
@@ -626,149 +679,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                        {isSaving ? 'Mise à jour...' : 'Sauvegarder'}
                    </button>
                </div>
-           </div>
-        </div>
-      )}
-
-      {/* MODAL REPORT VOCAL - ENREGISTREMENT RÉEL & SOUMISSION */}
-      {showReportModal && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-           <div className="bg-white w-full max-w-lg rounded-[3.5rem] p-10 animate-scale-in shadow-2xl relative overflow-hidden border-b-[12px] border-orange-500">
-              <div className="flex justify-between items-start mb-8">
-                  <div>
-                    <h3 className="text-3xl font-black text-gray-900 tracking-tighter uppercase leading-none italic">Rapport vocal</h3>
-                    <p className="text-orange-500 font-bold text-[10px] uppercase tracking-widest mt-2">
-                      {activeInterventionForReport ? `Client : ${activeInterventionForReport.client}` : 'Veuillez lier à un client après enregistrement'}
-                    </p>
-                  </div>
-                  <button onClick={() => { setShowReportModal(false); setActiveInterventionForReport(null); setAudioBlob(null); setAudioUrl(null); }} className="p-3 bg-gray-100 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all shadow-sm"><X size={24}/></button>
-              </div>
-
-              <div className="flex flex-col items-center gap-8 py-6">
-                  <div className={`w-40 h-40 rounded-full flex items-center justify-center shadow-2xl transition-all relative z-10 
-                    ${recordingState === 'recording' ? 'bg-red-500 scale-110' : 'bg-orange-500 hover:scale-105 active:scale-95'}`}>
-                      {recordingState === 'recording' && (
-                          <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-20"></div>
-                      )}
-                      {recordingState === 'idle' ? (
-                        <button onClick={handleStartRecording} className="text-white flex flex-col items-center"><Mic size={64} /><span className="text-[10px] font-black uppercase mt-1">Démarrer</span></button>
-                      ) : recordingState === 'recording' ? (
-                        <button onClick={handleStopRecording} className="text-white flex flex-col items-center"><Square size={48} /><span className="text-[10px] font-black uppercase mt-1">Arrêter</span></button>
-                      ) : (
-                        <button onClick={handleTogglePlayback} className="text-white flex flex-col items-center">
-                            {isPlaying ? <Pause size={64} /> : <Play size={64} />}
-                            <span className="text-[10px] font-black uppercase mt-1">{isPlaying ? 'Pause' : 'Réécouter'}</span>
-                        </button>
-                      )}
-                  </div>
-                  
-                  {audioUrl && (
-                      <audio 
-                        ref={audioPreviewRef} 
-                        src={audioUrl} 
-                        onPlay={() => setIsPlaying(true)} 
-                        onPause={() => setIsPlaying(false)} 
-                        onEnded={() => setIsPlaying(false)}
-                        onTimeUpdate={(e) => setPlaybackTime(e.currentTarget.currentTime)}
-                        className="hidden" 
-                      />
-                  )}
-
-                  <div className="text-center">
-                      <p className="text-6xl font-black font-mono tracking-tighter text-gray-950">
-                        {formatTime(recordingState === 'review' ? playbackTime : recordingDuration)}
-                      </p>
-                      <p className="text-gray-400 font-bold uppercase text-[10px] mt-4 tracking-widest flex items-center justify-center gap-2">
-                          {recordingState === 'recording' ? (
-                              <> <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"/> CAPTURE AUDIO...</>
-                          ) : recordingState === 'review' ? (
-                              <> <Volume2 size={14}/> RAPPORT PRÊT</>
-                          ) : 'EN ATTENTE D\'ENREGISTREMENT'}
-                      </p>
-                  </div>
-              </div>
-
-              {recordingState === 'review' && (
-                <div className="space-y-5 animate-fade-in pt-4 border-t border-gray-100">
-                   {!activeInterventionForReport && (
-                        <div className="space-y-2">
-                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Client concerné</label>
-                             <select 
-                                className="w-full p-5 bg-gray-50 rounded-2xl font-black text-sm outline-none border-2 border-transparent focus:border-orange-500 transition-all appearance-none"
-                                value={formReport.client}
-                                onChange={(e) => setFormReport({...formReport, client: e.target.value})}
-                            >
-                                <option value="">Choisir un chantier...</option>
-                                {interventions.filter(i => i.status !== 'Terminé').map(i => <option key={i.id} value={i.client}>{i.client}</option>)}
-                            </select>
-                        </div>
-                   )}
-                   <div className="space-y-2">
-                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Notes textuelles complémentaires (Optionnel)</label>
-                       <textarea 
-                         placeholder="Résumé rapide des travaux effectués..."
-                         className="w-full p-5 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-orange-500 h-24 resize-none transition-all"
-                         value={formReport.workDone}
-                         onChange={(e) => setFormReport({...formReport, workDone: e.target.value})}
-                       />
-                   </div>
-                   <button 
-                     onClick={handleSubmitReport} 
-                     disabled={isSaving || (!activeInterventionForReport && !formReport.client)}
-                     className="w-full py-6 bg-gray-950 text-white rounded-3xl font-black uppercase text-xs tracking-widest shadow-2xl flex justify-center items-center gap-3 hover:bg-black transition-all disabled:opacity-50 active:scale-95"
-                   >
-                     {isSaving ? <Loader2 className="animate-spin" size={24}/> : <CheckCircle2 size={24}/>}
-                     {isSaving ? 'ENVOI DU RAPPORT...' : 'TRANSMETTRE ET TERMINER LE CHANTIER'}
-                   </button>
-                </div>
-              )}
-           </div>
-        </div>
-      )}
-
-      {/* MODAL NOUVELLE INTERVENTION */}
-      {showNewInterventionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-           <div className="bg-white w-full max-w-2xl rounded-[3.5rem] p-8 md:p-12 animate-scale-in max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl border-t-[12px] border-green-600">
-              <div className="flex justify-between items-center mb-10">
-                  <h3 className="text-3xl font-black text-gray-900 tracking-tighter uppercase italic leading-none">Planifier Chantier</h3>
-                  <button onClick={() => setShowNewInterventionModal(false)} className="p-3 bg-gray-100 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all"><X size={24}/></button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Client / Entreprise</label>
-                    <input type="text" placeholder="Ex: Société Ivoire" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Téléphone</label>
-                    <input type="tel" placeholder="+225..." className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={newIntervention.clientPhone} onChange={e => setNewIntervention({...newIntervention, clientPhone: e.target.value})}/>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Domaine</label>
-                    <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.domain} onChange={e => setNewIntervention({...newIntervention, domain: e.target.value as any})}>
-                        <option value="Électricité">Électricité</option>
-                        <option value="Bâtiment">Bâtiment</option>
-                        <option value="Froid">Froid & Clim</option>
-                        <option value="Plomberie">Plomberie</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Site</label>
-                    <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.site} onChange={e => setNewIntervention({...newIntervention, site: e.target.value as any})}>
-                        <option value="Abidjan">Abidjan</option>
-                        <option value="Bouaké">Bouaké</option>
-                        <option value="Korhogo">Korhogo</option>
-                    </select>
-                  </div>
-                  <div className="col-span-full">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Description Technique</label>
-                    <textarea placeholder="..." className="w-full p-5 bg-gray-50 rounded-3xl font-bold h-28 resize-none" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})} />
-                  </div>
-                  <button onClick={handleCreateIntervention} disabled={isSaving} className="col-span-full py-6 bg-gray-900 text-white rounded-[2rem] font-black uppercase text-xs tracking-widest">
-                      {isSaving ? 'PLANIFICATION...' : 'VALIDER LA PLANIFICATION'}
-                  </button>
-              </div>
            </div>
         </div>
       )}
