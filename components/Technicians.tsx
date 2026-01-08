@@ -394,16 +394,14 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                        <span className="text-[10px] font-black uppercase text-gray-600 tracking-tighter">{inter.technician}</span>
                        
                        {/* BOUTON RAPPORT VOCAL SPÉCIFIQUE */}
-                       {inter.technician === 'À assigner' && (
-                           <button 
-                                onClick={() => handleOpenReportForIntervention(inter)}
-                                className="ml-2 bg-orange-500 hover:bg-orange-600 text-white p-1.5 rounded-lg transition-all active:scale-95 shadow-md flex items-center gap-1.5"
-                                title="Faire le rapport vocal"
-                           >
-                               <Mic size={14} />
-                               <span className="text-[9px] font-black uppercase">Rapport</span>
-                           </button>
-                       )}
+                       <button 
+                            onClick={() => handleOpenReportForIntervention(inter)}
+                            className="ml-2 bg-orange-500 hover:bg-orange-600 text-white p-1.5 rounded-lg transition-all active:scale-95 shadow-md flex items-center gap-1.5"
+                            title="Faire le rapport vocal"
+                       >
+                           <Mic size={14} />
+                           <span className="text-[9px] font-black uppercase">Rapport</span>
+                       </button>
                    </div>
                </div>
             </div>
