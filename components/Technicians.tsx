@@ -215,7 +215,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
   const handleCreateIntervention = async () => {
     if (!newIntervention.client || !newIntervention.description || !newIntervention.technician) {
-      alert("Veuillez remplir le client, la description et choisir un technicien.");
+      alert("Veuillez remplir au moins le client, la description et choisir un technicien.");
       return;
     }
     setIsSaving(true);
@@ -230,7 +230,17 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       if (error) throw error;
       triggerCelebration('PLANIFIÉ !', 'Nouvelle intervention créée.');
       setShowNewInterventionModal(false);
-      setNewIntervention({...newIntervention, client: '', description: '', technician: '', clientPhone: ''});
+      setNewIntervention({
+        client: '',
+        clientPhone: '',
+        domain: 'Électricité',
+        interventionType: 'Dépannage',
+        description: '',
+        location: '',
+        site: 'Abidjan',
+        technician: '',
+        date: new Date().toISOString().split('T')[0]
+      });
     } catch (err: any) {
       alert("Erreur création : " + err.message);
     } finally {
@@ -340,11 +350,9 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
               <div className="flex flex-col items-center justify-center gap-10 py-10 w-full">
                   <div className="relative flex items-center justify-center">
-                      {/* Anneau pulsant pendant l'enregistrement */}
                       {recordingState === 'recording' && (
                           <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping -z-10 scale-150"></div>
                       )}
-                      
                       <button 
                         onClick={recordingState === 'idle' ? handleStartRecording : recordingState === 'recording' ? handleStopRecording : handleTogglePlayback}
                         className={`w-40 h-40 md:w-48 md:h-48 rounded-full flex flex-col items-center justify-center shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-all active:scale-90
@@ -410,28 +418,83 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
       {showNewInterventionModal && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-           <div className="bg-white w-full max-w-xl rounded-[3rem] p-10 shadow-2xl max-h-[90vh] overflow-y-auto">
+           <div className="bg-white w-full max-w-2xl rounded-[3rem] p-10 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
               <div className="flex justify-between items-center mb-8">
                   <h3 className="text-2xl font-black uppercase italic">Nouveau Chantier</h3>
                   <button onClick={() => setShowNewInterventionModal(false)} className="p-2 bg-gray-100 rounded-full"><X/></button>
               </div>
-              <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Client</label>
-                    <input type="text" placeholder="Nom du client" className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Informations Client */}
+                  <div className="space-y-4">
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Client</label>
+                        <input type="text" placeholder="Nom du client" className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Téléphone</label>
+                        <input type="text" placeholder="+225 ..." className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.clientPhone} onChange={e => setNewIntervention({...newIntervention, clientPhone: e.target.value})}/>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Lieu / Adresse</label>
+                        <input type="text" placeholder="Ex: Cocody, Angré" className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.location} onChange={e => setNewIntervention({...newIntervention, location: e.target.value})}/>
+                      </div>
                   </div>
+
+                  {/* Détails Techniques */}
+                  <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Domaine</label>
+                            <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-xs" value={newIntervention.domain} onChange={e => setNewIntervention({...newIntervention, domain: e.target.value as any})}>
+                                <option value="Électricité">Électricité</option>
+                                <option value="Bâtiment">Bâtiment</option>
+                                <option value="Froid">Froid</option>
+                                <option value="Plomberie">Plomberie</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Type</label>
+                            <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-xs" value={newIntervention.interventionType} onChange={e => setNewIntervention({...newIntervention, interventionType: e.target.value as any})}>
+                                <option value="Dépannage">Dépannage</option>
+                                <option value="Installation">Installation</option>
+                                <option value="Entretien">Entretien</option>
+                                <option value="Maintenance">Maintenance</option>
+                                <option value="Devis">Devis / Expertise</option>
+                            </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Site Principal</label>
+                        <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.site} onChange={e => setNewIntervention({...newIntervention, site: e.target.value as any})}>
+                            <option value="Abidjan">Abidjan</option>
+                            <option value="Bouaké">Bouaké</option>
+                            <option value="Korhogo">Korhogo</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Date prévue</label>
+                        <input type="date" className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.date} onChange={e => setNewIntervention({...newIntervention, date: e.target.value})}/>
+                      </div>
+                  </div>
+              </div>
+
+              {/* Assigantion & Description */}
+              <div className="mt-6 space-y-4 pt-6 border-t border-gray-100">
                   <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Assigner à</label>
-                    <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.technician} onChange={e => setNewIntervention({...newIntervention, technician: e.target.value})}>
-                        <option value="">Choisir un technicien...</option>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block underline">Assigner au technicien (Requis)</label>
+                    <select className="w-full p-4 bg-orange-50 text-orange-700 border-2 border-orange-100 rounded-2xl font-black" value={newIntervention.technician} onChange={e => setNewIntervention({...newIntervention, technician: e.target.value})}>
+                        <option value="">-- Sélectionner un agent actif --</option>
                         {techniciansList.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Description des travaux</label>
-                    <textarea placeholder="Détails de l'intervention" className="w-full p-4 bg-gray-50 rounded-2xl font-bold h-32" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Description détaillée</label>
+                    <textarea placeholder="Décrivez les travaux à effectuer..." className="w-full p-4 bg-gray-50 rounded-2xl font-bold h-32" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
                   </div>
-                  <button onClick={handleCreateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black uppercase mt-4">Valider la planification</button>
+                  <button onClick={handleCreateIntervention} disabled={isSaving} className="w-full py-5 bg-gray-900 text-white rounded-[2rem] font-black uppercase text-sm tracking-widest shadow-xl flex justify-center items-center gap-2 active:scale-95 transition-all">
+                    {isSaving ? <Loader2 className="animate-spin" /> : <CalendarPlus />}
+                    {isSaving ? 'PLANIFICATION...' : 'VALIDER LA PLANIFICATION'}
+                  </button>
               </div>
            </div>
         </div>
