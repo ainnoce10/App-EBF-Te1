@@ -18,7 +18,8 @@ import {
   CheckCircle2,
   FileText,
   ChevronDown,
-  User
+  User,
+  RefreshCw
 } from 'lucide-react';
 
 interface TechniciansProps {
@@ -215,7 +216,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
   const handleCreateIntervention = async () => {
     if (!newIntervention.client || !newIntervention.description || !newIntervention.technician) {
-      alert("Veuillez remplir au moins le client, la description et choisir un technicien.");
+      alert("Veuillez remplir le client, la description et choisir un technicien.");
       return;
     }
     setIsSaving(true);
@@ -301,7 +302,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300" size={24} />
           </div>
           <div className="relative">
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilterType)} className="w-full pl-14 pr-12 py-5 bg-white rounded-[2rem] shadow-sm font-black text-xl outline-none appearance-none cursor-pointer uppercase">
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilterType)} className="w-full pl-14 pr-12 py-5 bg-white rounded-[2rem] shadow-sm font-black text-xl outline-none appearance-none cursor-pointer uppercase text-xs tracking-widest">
                 <option value="Tous">📊 Tous les dossiers</option>
                 <option value="En attente">⏳ En Attente</option>
                 <option value="En cours">🛠️ En Cours</option>
@@ -334,79 +335,88 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         ))}
       </div>
 
+      {/* MODAL RAPPORT VOCAL CENTRÉ OPTIMISÉ MOBILE */}
       {showReportModal && (
-        <div className="fixed inset-0 z-[80] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-md transition-opacity">
-           <div className="bg-white w-full max-w-lg md:rounded-[3.5rem] rounded-t-[3.5rem] p-8 md:p-10 shadow-2xl relative border-b-[12px] border-orange-500 flex flex-col items-center animate-slide-up">
-              <button onClick={() => { setShowReportModal(false); setRecordingState('idle'); setAudioBlob(null); setAudioUrl(null); }} className="absolute top-6 right-6 p-3 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
-                  <X size={24}/>
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-0 md:p-6 bg-black/80 backdrop-blur-xl animate-fade-in">
+           <div className="bg-white w-full h-full md:h-auto md:max-w-xl md:rounded-[4rem] flex flex-col items-center justify-center p-10 relative overflow-hidden">
+              {/* Bouton de fermeture */}
+              <button 
+                onClick={() => { setShowReportModal(false); setRecordingState('idle'); setAudioBlob(null); setAudioUrl(null); }} 
+                className="absolute top-10 right-10 p-4 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200 transition-colors active:scale-90"
+              >
+                  <X size={32}/>
               </button>
 
-              <div className="w-full text-center mb-10 mt-4 md:mt-0">
-                  <h3 className="text-3xl font-black uppercase italic leading-tight">Rapport Vocal</h3>
-                  <p className="text-orange-500 font-bold text-xs uppercase mt-2 tracking-widest">
-                      {activeInterventionForReport ? `Client : ${activeInterventionForReport.client}` : 'Rapport Rapide'}
+              <div className="text-center mb-16">
+                  <h3 className="text-4xl font-black uppercase italic tracking-tighter">Rapport Vocal</h3>
+                  <p className="text-orange-500 font-bold text-sm uppercase mt-4 tracking-widest flex items-center justify-center gap-2">
+                    {activeInterventionForReport ? <><CheckCircle2 size={16}/> {activeInterventionForReport.client}</> : 'Rapport Libre'}
                   </p>
               </div>
 
-              <div className="flex flex-col items-center justify-center gap-10 py-10 w-full">
+              {/* ZONE CENTRALE D'ENREGISTREMENT */}
+              <div className="relative flex flex-col items-center justify-center gap-12 w-full">
                   <div className="relative flex items-center justify-center">
+                      {/* Animation d'onde pulsante */}
                       {recordingState === 'recording' && (
-                          <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping -z-10 scale-150"></div>
+                          <div className="absolute inset-0 bg-red-500/30 rounded-full animate-ping scale-150"></div>
                       )}
+                      
                       <button 
                         onClick={recordingState === 'idle' ? handleStartRecording : recordingState === 'recording' ? handleStopRecording : handleTogglePlayback}
-                        className={`w-40 h-40 md:w-48 md:h-48 rounded-full flex flex-col items-center justify-center shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-all active:scale-90
+                        className={`w-56 h-56 md:w-64 md:h-64 rounded-full flex flex-col items-center justify-center shadow-[0_20px_60px_rgba(0,0,0,0.2)] transition-all duration-300 active:scale-95
                           ${recordingState === 'recording' ? 'bg-red-500 scale-110' : recordingState === 'review' ? 'bg-orange-500' : 'bg-gray-900 hover:bg-orange-500'}`}
                       >
                           {recordingState === 'idle' && (
                               <div className="flex flex-col items-center text-white">
-                                  <Mic size={64} />
-                                  <span className="text-[10px] font-black uppercase mt-3 tracking-widest">Cliquer pour parler</span>
+                                  <Mic size={80} />
+                                  <span className="text-xs font-black uppercase mt-4 tracking-[0.2em]">Cliquer pour parler</span>
                               </div>
                           )}
                           {recordingState === 'recording' && (
                               <div className="flex flex-col items-center text-white">
-                                  <Square size={56} />
-                                  <span className="text-[10px] font-black uppercase mt-3 tracking-widest">Arrêter</span>
+                                  <Square size={70} />
+                                  <span className="text-xs font-black uppercase mt-4 tracking-[0.2em]">Arrêter</span>
                               </div>
                           )}
                           {recordingState === 'review' && (
                               <div className="flex flex-col items-center text-white">
-                                  {isPlaying ? <Pause size={64} /> : <Play size={64} />}
-                                  <span className="text-[10px] font-black uppercase mt-3 tracking-widest">{isPlaying ? 'Pause' : 'Réécouter'}</span>
+                                  {isPlaying ? <Pause size={80} /> : <Play size={80} />}
+                                  <span className="text-xs font-black uppercase mt-4 tracking-[0.2em]">{isPlaying ? 'En lecture' : 'Réécouter'}</span>
                               </div>
                           )}
                       </button>
                   </div>
 
                   <div className="text-center">
-                      <p className="text-6xl md:text-7xl font-black font-mono text-gray-950 tabular-nums">
+                      <p className="text-7xl md:text-8xl font-black font-mono text-gray-950 tabular-nums">
                           {formatTime(recordingState === 'review' ? playbackTime : recordingDuration)}
                       </p>
-                      <div className="flex items-center justify-center gap-2 mt-2">
-                        {recordingState === 'recording' && <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>}
-                        <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em]">
-                            {recordingState === 'recording' ? 'Enregistrement en cours...' : recordingState === 'review' ? 'Enregistrement terminé' : 'Prêt à enregistrer'}
+                      <div className="flex items-center justify-center gap-3 mt-4">
+                        {recordingState === 'recording' && <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>}
+                        <p className="text-gray-400 font-bold uppercase text-sm tracking-[0.25em]">
+                            {recordingState === 'recording' ? 'Enregistrement...' : recordingState === 'review' ? 'Prêt pour validation' : 'Attente Micro'}
                         </p>
                       </div>
                   </div>
               </div>
 
+              {/* ACTIONS FINALES */}
               {recordingState === 'review' && (
-                <div className="w-full space-y-4 pt-6 border-t border-gray-100 animate-fade-in mb-4">
+                <div className="w-full max-w-sm space-y-6 mt-16 animate-slide-up">
                    {!activeInterventionForReport && (
-                        <select className="w-full p-5 bg-gray-50 rounded-2xl font-black text-sm border-2 border-transparent focus:border-orange-500 outline-none" value={formReport.client} onChange={(e) => setFormReport({...formReport, client: e.target.value})}>
-                            <option value="">Sélectionner le client...</option>
+                        <select className="w-full p-5 bg-gray-50 rounded-3xl font-black text-sm border-2 border-transparent focus:border-orange-500 outline-none shadow-inner" value={formReport.client} onChange={(e) => setFormReport({...formReport, client: e.target.value})}>
+                            <option value="">Sélectionner le client concerné...</option>
                             {interventions.filter(i => i.status !== 'Terminé').map(i => <option key={i.id} value={i.client}>{i.client}</option>)}
                         </select>
                    )}
-                   <div className="grid grid-cols-2 gap-3">
-                       <button onClick={() => { setRecordingState('idle'); setAudioBlob(null); handleStartRecording(); }} className="py-5 bg-gray-100 text-gray-500 rounded-3xl font-black uppercase text-[10px] tracking-widest hover:bg-gray-200 transition-colors">
-                           Refaire
+                   <div className="flex gap-4">
+                       <button onClick={() => { setRecordingState('idle'); setAudioBlob(null); handleStartRecording(); }} className="flex-1 py-6 bg-gray-100 text-gray-400 rounded-3xl font-black uppercase text-xs tracking-widest hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
+                           <RefreshCw size={18}/> Refaire
                        </button>
-                       <button onClick={handleSubmitReport} disabled={isSaving} className="py-5 bg-gray-950 text-white rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-xl flex justify-center items-center gap-2 disabled:opacity-50 active:scale-95 transition-all">
-                        {isSaving ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16}/>}
-                        {isSaving ? 'Envoi...' : 'Transmettre'}
+                       <button onClick={handleSubmitReport} disabled={isSaving} className="flex-[2] py-6 bg-gray-950 text-white rounded-3xl font-black uppercase text-xs tracking-widest shadow-2xl flex justify-center items-center gap-3 disabled:opacity-50 active:scale-95 transition-all">
+                        {isSaving ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={24}/>}
+                        {isSaving ? 'ENVOI...' : 'TRANSMETTRE'}
                        </button>
                    </div>
                 </div>
@@ -416,36 +426,38 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         </div>
       )}
 
+      {/* FORMULAIRE DE PLANIFICATION COMPLET RÉTABLI */}
       {showNewInterventionModal && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-           <div className="bg-white w-full max-w-2xl rounded-[3rem] p-10 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
-              <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-2xl font-black uppercase italic">Nouveau Chantier</h3>
-                  <button onClick={() => setShowNewInterventionModal(false)} className="p-2 bg-gray-100 rounded-full"><X/></button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+           <div className="bg-white w-full max-w-2xl rounded-[3rem] p-8 md:p-12 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+              <div className="flex justify-between items-center mb-10">
+                  <h3 className="text-3xl font-black uppercase italic tracking-tight">Nouveau Dossier Chantier</h3>
+                  <button onClick={() => setShowNewInterventionModal(false)} className="p-3 bg-gray-100 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"><X size={24}/></button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Informations Client */}
-                  <div className="space-y-4">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Colonne 1 : Client */}
+                  <div className="space-y-6">
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Client</label>
-                        <input type="text" placeholder="Nom du client" className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Client / Entreprise</label>
+                        <input type="text" placeholder="Nom complet" className="w-full p-4 bg-gray-50 rounded-2xl font-bold border-2 border-transparent focus:border-orange-500 outline-none" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
                       </div>
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Téléphone</label>
-                        <input type="text" placeholder="+225 ..." className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.clientPhone} onChange={e => setNewIntervention({...newIntervention, clientPhone: e.target.value})}/>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Contact Téléphonique</label>
+                        <input type="text" placeholder="+225 ..." className="w-full p-4 bg-gray-50 rounded-2xl font-bold border-2 border-transparent focus:border-orange-500 outline-none" value={newIntervention.clientPhone} onChange={e => setNewIntervention({...newIntervention, clientPhone: e.target.value})}/>
                       </div>
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Lieu / Adresse</label>
-                        <input type="text" placeholder="Ex: Cocody, Angré" className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.location} onChange={e => setNewIntervention({...newIntervention, location: e.target.value})}/>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Lieu / Commune</label>
+                        <input type="text" placeholder="Adresse précise" className="w-full p-4 bg-gray-50 rounded-2xl font-bold border-2 border-transparent focus:border-orange-500 outline-none" value={newIntervention.location} onChange={e => setNewIntervention({...newIntervention, location: e.target.value})}/>
                       </div>
                   </div>
 
-                  {/* Détails Techniques */}
-                  <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-2">
+                  {/* Colonne 2 : Technique */}
+                  <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Domaine</label>
-                            <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-xs" value={newIntervention.domain} onChange={e => setNewIntervention({...newIntervention, domain: e.target.value as any})}>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Domaine</label>
+                            <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-xs appearance-none cursor-pointer" value={newIntervention.domain} onChange={e => setNewIntervention({...newIntervention, domain: e.target.value as any})}>
                                 <option value="Électricité">Électricité</option>
                                 <option value="Bâtiment">Bâtiment</option>
                                 <option value="Froid">Froid</option>
@@ -453,8 +465,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                             </select>
                         </div>
                         <div>
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Type</label>
-                            <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-xs" value={newIntervention.interventionType} onChange={e => setNewIntervention({...newIntervention, interventionType: e.target.value as any})}>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Type</label>
+                            <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-xs appearance-none cursor-pointer" value={newIntervention.interventionType} onChange={e => setNewIntervention({...newIntervention, interventionType: e.target.value as any})}>
                                 <option value="Dépannage">Dépannage</option>
                                 <option value="Installation">Installation</option>
                                 <option value="Entretien">Entretien</option>
@@ -464,79 +476,94 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                         </div>
                       </div>
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Site Principal</label>
-                        <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.site} onChange={e => setNewIntervention({...newIntervention, site: e.target.value as any})}>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Site Principal</label>
+                        <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold appearance-none cursor-pointer" value={newIntervention.site} onChange={e => setNewIntervention({...newIntervention, site: e.target.value as any})}>
                             <option value="Abidjan">Abidjan</option>
                             <option value="Bouaké">Bouaké</option>
                             <option value="Korhogo">Korhogo</option>
                         </select>
                       </div>
                       <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Date prévue</label>
-                        <input type="date" className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.date} onChange={e => setNewIntervention({...newIntervention, date: e.target.value})}/>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Date de début</label>
+                        <input type="date" className="w-full p-4 bg-gray-50 rounded-2xl font-bold border-2 border-transparent focus:border-orange-500 outline-none" value={newIntervention.date} onChange={e => setNewIntervention({...newIntervention, date: e.target.value})}/>
                       </div>
                   </div>
               </div>
 
-              {/* Assigantion & Description */}
-              <div className="mt-6 space-y-4 pt-6 border-t border-gray-100">
-                  <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block underline">Assigner au technicien (Requis)</label>
-                    <select className="w-full p-4 bg-orange-50 text-orange-700 border-2 border-orange-100 rounded-2xl font-black" value={newIntervention.technician} onChange={e => setNewIntervention({...newIntervention, technician: e.target.value})}>
-                        <option value="">-- Sélectionner un agent actif --</option>
+              {/* Attribution & Description */}
+              <div className="mt-10 pt-10 border-t border-gray-100 space-y-8">
+                  <div className="bg-orange-50 p-6 rounded-[2.5rem] border-2 border-orange-100">
+                    <label className="text-sm font-black text-orange-600 uppercase tracking-wider ml-1 mb-3 block italic">Technicien en charge (Obligatoire)</label>
+                    <select className="w-full p-5 bg-white text-gray-900 rounded-2xl font-black shadow-sm border-2 border-transparent focus:border-orange-500 outline-none appearance-none cursor-pointer" value={newIntervention.technician} onChange={e => setNewIntervention({...newIntervention, technician: e.target.value})}>
+                        <option value="">-- Sélectionner l'agent concerné --</option>
                         {techniciansList.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
                     </select>
                   </div>
+                  
                   <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Description détaillée</label>
-                    <textarea placeholder="Décrivez les travaux à effectuer..." className="w-full p-4 bg-gray-50 rounded-2xl font-bold h-32" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Détails des travaux à réaliser</label>
+                    <textarea placeholder="Instructions spécifiques pour le technicien..." className="w-full p-5 bg-gray-50 rounded-3xl font-bold h-36 border-2 border-transparent focus:border-orange-500 outline-none resize-none" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
                   </div>
-                  <button onClick={handleCreateIntervention} disabled={isSaving} className="w-full py-5 bg-gray-900 text-white rounded-[2rem] font-black uppercase text-sm tracking-widest shadow-xl flex justify-center items-center gap-2 active:scale-95 transition-all">
-                    {isSaving ? <Loader2 className="animate-spin" /> : <CalendarPlus />}
-                    {isSaving ? 'PLANIFICATION...' : 'VALIDER LA PLANIFICATION'}
+                  
+                  <button onClick={handleCreateIntervention} disabled={isSaving} className="w-full py-6 bg-gray-950 text-white rounded-[2.5rem] font-black uppercase text-sm tracking-[0.2em] shadow-2xl flex justify-center items-center gap-3 active:scale-95 transition-all disabled:opacity-50">
+                    {isSaving ? <Loader2 className="animate-spin" /> : <CalendarPlus size={24}/>}
+                    {isSaving ? 'PLANIFICATION EN COURS...' : 'VALIDER LA PLANIFICATION'}
                   </button>
               </div>
            </div>
         </div>
       )}
 
+      {/* Visualisation rapide d'un dossier */}
       {viewIntervention && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-md p-6">
-              <div className="bg-white w-full max-w-xl rounded-[3rem] p-10 shadow-2xl overflow-hidden animate-slide-up">
-                  <div className="flex justify-between items-start mb-6">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-md p-6 animate-fade-in">
+              <div className="bg-white w-full max-w-xl rounded-[3rem] p-10 shadow-2xl overflow-hidden animate-slide-up relative">
+                  <div className="flex justify-between items-start mb-8">
                       <div>
-                        <h2 className="text-4xl font-black uppercase italic leading-none">{viewIntervention.client}</h2>
-                        <p className="text-orange-500 font-black uppercase text-xs mt-2 tracking-widest italic">{viewIntervention.technician}</p>
+                        <h2 className="text-4xl font-black uppercase italic leading-none tracking-tighter">{viewIntervention.client}</h2>
+                        <p className="text-orange-500 font-black uppercase text-xs mt-3 tracking-widest italic flex items-center gap-2"><User size={14}/> {viewIntervention.technician}</p>
                       </div>
-                      <button onClick={() => setViewIntervention(null)} className="p-3 bg-gray-100 rounded-full"><X /></button>
+                      <button onClick={() => setViewIntervention(null)} className="p-3 bg-gray-100 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors"><X /></button>
                   </div>
                   <div className="space-y-6">
-                      <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 font-bold text-blue-700 flex items-center gap-2"><Phone size={18}/> {viewIntervention.clientPhone || "Non renseigné"}</div>
-                      <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 text-gray-700 leading-relaxed font-medium">{viewIntervention.description}</div>
+                      <div className="flex gap-2">
+                         <span className="px-4 py-1 bg-blue-50 text-blue-600 rounded-xl font-black text-[10px] uppercase border border-blue-100">{viewIntervention.interventionType}</span>
+                         <span className="px-4 py-1 bg-gray-50 text-gray-500 rounded-xl font-black text-[10px] uppercase border border-gray-100">{viewIntervention.domain}</span>
+                      </div>
+                      <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 font-bold text-blue-700 flex items-center gap-3"><Phone size={20}/> {viewIntervention.clientPhone || "Non renseigné"}</div>
+                      <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100 text-gray-700 leading-relaxed font-medium text-lg min-h-[150px]">{viewIntervention.description}</div>
                       <div className="flex gap-4">
-                          <button onClick={() => { setEditIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase text-xs">Modifier</button>
-                          <button onClick={() => { handleOpenReportForIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-orange-500 text-white rounded-2xl font-black uppercase text-xs">Rapport Vocal</button>
+                          <button onClick={() => { setEditIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-5 bg-gray-900 text-white rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-lg">Modifier</button>
+                          <button onClick={() => { handleOpenReportForIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-5 bg-orange-500 text-white rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-lg flex items-center justify-center gap-2"><Mic size={18}/> Rapport</button>
                       </div>
                   </div>
               </div>
           </div>
       )}
 
+      {/* Édition du statut et technicien */}
       {editIntervention && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4">
-           <div className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl">
-               <div className="flex justify-between mb-6"><h3 className="text-xl font-black uppercase italic">Modifier Statut</h3><button onClick={() => setEditIntervention(null)}><X/></button></div>
-               <div className="space-y-4">
-                   {['En attente', 'En cours', 'Terminé'].map((s) => (
-                       <button key={s} onClick={() => setEditIntervention({...editIntervention, status: s as any})} className={`w-full p-4 rounded-xl font-bold border-2 transition-all ${editIntervention.status === s ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-100 text-gray-500'}`}>{s}</button>
-                   ))}
-                   <div className="pt-2">
-                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Réassigner technicien</label>
-                       <select className="w-full p-4 bg-gray-50 rounded-xl font-bold" value={editIntervention.technician} onChange={e => setEditIntervention({...editIntervention, technician: e.target.value})}>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4 animate-fade-in">
+           <div className="bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl">
+               <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-xl font-black uppercase italic tracking-tighter">Modifier Dossier</h3>
+                  <button onClick={() => setEditIntervention(null)} className="p-2 bg-gray-50 rounded-full"><X size={20}/></button>
+               </div>
+               <div className="space-y-6">
+                   <div className="grid grid-cols-1 gap-2">
+                       {['En attente', 'En cours', 'Terminé'].map((s) => (
+                           <button key={s} onClick={() => setEditIntervention({...editIntervention, status: s as any})} className={`w-full p-5 rounded-2xl font-black uppercase text-xs tracking-widest border-2 transition-all ${editIntervention.status === s ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-100 text-gray-400'}`}>{s}</button>
+                       ))}
+                   </div>
+                   <div className="pt-4 border-t border-gray-100">
+                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block italic">Réassigner l'agent</label>
+                       <select className="w-full p-5 bg-gray-50 rounded-2xl font-black text-sm outline-none border-2 border-transparent focus:border-orange-500 appearance-none cursor-pointer" value={editIntervention.technician} onChange={e => setEditIntervention({...editIntervention, technician: e.target.value})}>
                             {techniciansList.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
                        </select>
                    </div>
-                   <button onClick={handleUpdateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-900 text-white rounded-xl font-black uppercase mt-4">Sauvegarder</button>
+                   <button onClick={handleUpdateIntervention} disabled={isSaving} className="w-full py-5 bg-gray-950 text-white rounded-[2rem] font-black uppercase text-xs tracking-widest mt-4 shadow-xl active:scale-95 transition-all">
+                     {isSaving ? <Loader2 className="animate-spin mx-auto" /> : 'Sauvegarder les modifications'}
+                   </button>
                </div>
            </div>
         </div>
