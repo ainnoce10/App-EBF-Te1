@@ -277,145 +277,146 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     <div className="space-y-6 pb-20">
       {showSuccessCelebration && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-             <div className="bg-white p-10 rounded-[3rem] text-center shadow-2xl animate-bounce border-8 border-orange-500">
-                <PartyPopper size={64} className="text-orange-500 mx-auto mb-4" />
-                <h2 className="text-3xl font-black uppercase">{celebrationMessage.title}</h2>
-                <p className="text-xl text-gray-500 font-bold uppercase mt-2">{celebrationMessage.sub}</p>
+             <div className="bg-white p-8 rounded-[2.5rem] text-center shadow-2xl animate-bounce border-4 border-orange-500 max-w-[80%]">
+                <PartyPopper size={48} className="text-orange-500 mx-auto mb-4" />
+                <h2 className="text-xl font-black uppercase tracking-tight">{celebrationMessage.title}</h2>
+                <p className="text-sm text-gray-500 font-bold uppercase mt-1">{celebrationMessage.sub}</p>
              </div>
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row justify-between gap-4">
+      {/* Header compact mobile */}
+      <div className="flex flex-col md:flex-row justify-between gap-4 px-1">
         <div>
-          <h2 className="text-4xl font-black uppercase italic tracking-tighter">Techniciens 🛠️</h2>
-          <p className="text-gray-500 font-bold text-xs uppercase tracking-widest">Maintenance & Rapports vocaux</p>
+          <h2 className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter">Techniciens 🛠️</h2>
+          <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest">Maintenance & Rapports</p>
         </div>
-        <div className="flex gap-2">
-            <button onClick={() => setShowNewInterventionModal(true)} className="bg-green-600 text-white px-6 py-4 rounded-2xl font-black uppercase text-xs flex items-center gap-2 shadow-lg"><CalendarPlus size={18} /> Planifier</button>
-            <button onClick={() => { setActiveInterventionForReport(null); setShowReportModal(true); }} className="bg-orange-500 text-white px-6 py-4 rounded-2xl font-black uppercase text-xs flex items-center gap-2 shadow-lg"><Mic size={18} /> Rapport Rapide</button>
+        <div className="flex gap-2 w-full md:w-auto">
+            <button onClick={() => setShowNewInterventionModal(true)} className="flex-1 md:flex-none bg-green-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg"><CalendarPlus size={14} /> Planifier</button>
+            <button onClick={() => { setActiveInterventionForReport(null); setShowReportModal(true); }} className="flex-1 md:flex-none bg-orange-500 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg"><Mic size={14} /> Rapport</button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Recherche & Filtre ajustés */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 px-1">
           <div className="relative">
-            <input type="text" placeholder="Rechercher un client..." className="w-full pl-14 pr-4 py-5 bg-white rounded-[2rem] shadow-sm font-black text-xl outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300" size={24} />
+            <input type="text" placeholder="Recherche client..." className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl shadow-sm font-bold text-sm outline-none border border-transparent focus:border-orange-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={20} />
           </div>
           <div className="relative">
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilterType)} className="w-full pl-14 pr-12 py-5 bg-white rounded-[2rem] shadow-sm font-black text-xl outline-none appearance-none cursor-pointer uppercase text-xs tracking-widest">
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilterType)} className="w-full pl-12 pr-10 py-4 bg-white rounded-2xl shadow-sm font-black text-[10px] outline-none appearance-none cursor-pointer uppercase tracking-widest text-gray-600">
                 <option value="Tous">📊 Tous les dossiers</option>
                 <option value="En attente">⏳ En Attente</option>
                 <option value="En cours">🛠️ En Cours</option>
-                <option value="Terminé avec rapport">✅ Terminé avec Rapport</option>
-                <option value="Terminé sans rapport">❌ Terminé sans Rapport</option>
+                <option value="Terminé avec rapport">✅ Terminé + Rapport</option>
+                <option value="Terminé sans rapport">❌ Terminé seul</option>
               </select>
-              <FileText className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={24} />
-              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={24} />
+              <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={20} />
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={18} />
           </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Grid de cartes optimisée */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-1">
         {filteredInterventions.map((inter) => (
-          <div key={inter.id} onClick={() => setViewIntervention(inter)} className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 hover-lift relative overflow-hidden flex flex-col cursor-pointer">
-            <div className="flex justify-between items-start mb-4">
-              <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${getStatusColorClass(inter)}`}>
+          <div key={inter.id} onClick={() => setViewIntervention(inter)} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover-lift relative overflow-hidden flex flex-col cursor-pointer">
+            <div className="flex justify-between items-start mb-3">
+              <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${getStatusColorClass(inter)}`}>
                 {inter.status}
               </span>
-              <button onClick={(e) => { e.stopPropagation(); setEditIntervention(inter); }} className="p-2.5 bg-gray-50 text-gray-400 hover:text-blue-600 rounded-xl"><Edit size={16}/></button>
+              <button onClick={(e) => { e.stopPropagation(); setEditIntervention(inter); }} className="p-2 bg-gray-50 text-gray-400 hover:text-blue-600 rounded-lg"><Edit size={14}/></button>
             </div>
-            <h3 className="font-black text-2xl mb-1 uppercase italic">{inter.client}</h3>
-            <p className="text-gray-400 text-xs font-black mb-1 flex items-center gap-1"><MapPin size={12}/> {inter.location}</p>
-            <p className="text-orange-500 text-[10px] font-black uppercase mb-4 flex items-center gap-1"><User size={12}/> {inter.technician}</p>
-            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-6 flex-1 text-sm font-bold text-gray-600 line-clamp-3">{inter.description}</div>
-            <div className="flex items-center justify-between pt-5 border-t border-gray-100">
-               <div className="text-[10px] font-black uppercase text-gray-400">📅 {new Date(inter.date).toLocaleDateString()}</div>
-               <button onClick={(e) => { e.stopPropagation(); handleOpenReportForIntervention(inter); }} className="p-2.5 bg-orange-500 text-white rounded-xl shadow-md flex items-center gap-2"><Mic size={16} /><span className="text-[10px] font-black uppercase">Rapport</span></button>
+            <h3 className="font-black text-xl mb-1 uppercase italic line-clamp-1">{inter.client}</h3>
+            <div className="flex flex-col gap-1 mb-4">
+                <p className="text-gray-400 text-[10px] font-bold flex items-center gap-1"><MapPin size={10}/> {inter.location}</p>
+                <p className="text-orange-500 text-[9px] font-black uppercase flex items-center gap-1"><User size={10}/> {inter.technician}</p>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-4 flex-1 text-xs font-bold text-gray-600 line-clamp-2">{inter.description}</div>
+            <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+               <div className="text-[9px] font-black uppercase text-gray-400 tracking-tighter">📅 {new Date(inter.date).toLocaleDateString()}</div>
+               <button onClick={(e) => { e.stopPropagation(); handleOpenReportForIntervention(inter); }} className="p-2.5 bg-orange-500 text-white rounded-xl shadow-md flex items-center gap-2 active:scale-90 transition-transform"><Mic size={14} /><span className="text-[9px] font-black uppercase">Rapport</span></button>
             </div>
           </div>
         ))}
       </div>
 
-      {/* MODAL RAPPORT VOCAL CENTRÉ OPTIMISÉ MOBILE */}
+      {/* MODAL RAPPORT VOCAL AJUSTÉ ET CENTRÉ (Compact Mobile) */}
       {showReportModal && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-0 md:p-6 bg-black/80 backdrop-blur-xl animate-fade-in">
-           <div className="bg-white w-full h-full md:h-auto md:max-w-xl md:rounded-[4rem] flex flex-col items-center justify-center p-10 relative overflow-hidden">
-              {/* Bouton de fermeture */}
+        <div className="fixed inset-0 z-[120] flex items-end md:items-center justify-center bg-black/70 backdrop-blur-md animate-fade-in">
+           <div className="bg-white w-full max-w-lg md:rounded-[3rem] rounded-t-[3rem] p-6 md:p-10 shadow-2xl relative border-b-[8px] border-orange-500 flex flex-col items-center animate-slide-up">
               <button 
                 onClick={() => { setShowReportModal(false); setRecordingState('idle'); setAudioBlob(null); setAudioUrl(null); }} 
-                className="absolute top-10 right-10 p-4 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200 transition-colors active:scale-90"
+                className="absolute top-4 right-4 p-2.5 bg-gray-100 rounded-full text-gray-500 active:scale-90"
               >
-                  <X size={32}/>
+                  <X size={20}/>
               </button>
 
-              <div className="text-center mb-16">
-                  <h3 className="text-4xl font-black uppercase italic tracking-tighter">Rapport Vocal</h3>
-                  <p className="text-orange-500 font-bold text-sm uppercase mt-4 tracking-widest flex items-center justify-center gap-2">
-                    {activeInterventionForReport ? <><CheckCircle2 size={16}/> {activeInterventionForReport.client}</> : 'Rapport Libre'}
+              <div className="text-center mb-6 mt-2">
+                  <h3 className="text-xl font-black uppercase italic tracking-tighter">Rapport Vocal</h3>
+                  <p className="text-orange-500 font-bold text-[10px] uppercase mt-1 tracking-widest flex items-center justify-center gap-1">
+                    {activeInterventionForReport ? <><CheckCircle2 size={12}/> {activeInterventionForReport.client}</> : 'Rapport Libre'}
                   </p>
               </div>
 
-              {/* ZONE CENTRALE D'ENREGISTREMENT */}
-              <div className="relative flex flex-col items-center justify-center gap-12 w-full">
+              <div className="relative flex flex-col items-center justify-center gap-6 py-6 w-full">
                   <div className="relative flex items-center justify-center">
-                      {/* Animation d'onde pulsante */}
                       {recordingState === 'recording' && (
-                          <div className="absolute inset-0 bg-red-500/30 rounded-full animate-ping scale-150"></div>
+                          <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping scale-125"></div>
                       )}
                       
                       <button 
                         onClick={recordingState === 'idle' ? handleStartRecording : recordingState === 'recording' ? handleStopRecording : handleTogglePlayback}
-                        className={`w-56 h-56 md:w-64 md:h-64 rounded-full flex flex-col items-center justify-center shadow-[0_20px_60px_rgba(0,0,0,0.2)] transition-all duration-300 active:scale-95
-                          ${recordingState === 'recording' ? 'bg-red-500 scale-110' : recordingState === 'review' ? 'bg-orange-500' : 'bg-gray-900 hover:bg-orange-500'}`}
+                        className={`w-32 h-32 md:w-48 md:h-48 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all active:scale-95
+                          ${recordingState === 'recording' ? 'bg-red-500 scale-105' : recordingState === 'review' ? 'bg-orange-500' : 'bg-gray-900 hover:bg-orange-500'}`}
                       >
                           {recordingState === 'idle' && (
                               <div className="flex flex-col items-center text-white">
-                                  <Mic size={80} />
-                                  <span className="text-xs font-black uppercase mt-4 tracking-[0.2em]">Cliquer pour parler</span>
+                                  <Mic size={40} />
+                                  <span className="text-[8px] font-black uppercase mt-2 tracking-widest">Cliquer</span>
                               </div>
                           )}
                           {recordingState === 'recording' && (
                               <div className="flex flex-col items-center text-white">
-                                  <Square size={70} />
-                                  <span className="text-xs font-black uppercase mt-4 tracking-[0.2em]">Arrêter</span>
+                                  <Square size={36} />
+                                  <span className="text-[8px] font-black uppercase mt-2 tracking-widest">Arrêter</span>
                               </div>
                           )}
                           {recordingState === 'review' && (
                               <div className="flex flex-col items-center text-white">
-                                  {isPlaying ? <Pause size={80} /> : <Play size={80} />}
-                                  <span className="text-xs font-black uppercase mt-4 tracking-[0.2em]">{isPlaying ? 'En lecture' : 'Réécouter'}</span>
+                                  {isPlaying ? <Pause size={40} /> : <Play size={40} />}
+                                  <span className="text-[8px] font-black uppercase mt-2 tracking-widest">{isPlaying ? 'Lecture' : 'Réécouter'}</span>
                               </div>
                           )}
                       </button>
                   </div>
 
                   <div className="text-center">
-                      <p className="text-7xl md:text-8xl font-black font-mono text-gray-950 tabular-nums">
+                      <p className="text-4xl md:text-7xl font-black font-mono text-gray-950 tabular-nums">
                           {formatTime(recordingState === 'review' ? playbackTime : recordingDuration)}
                       </p>
-                      <div className="flex items-center justify-center gap-3 mt-4">
-                        {recordingState === 'recording' && <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>}
-                        <p className="text-gray-400 font-bold uppercase text-sm tracking-[0.25em]">
-                            {recordingState === 'recording' ? 'Enregistrement...' : recordingState === 'review' ? 'Prêt pour validation' : 'Attente Micro'}
+                      <div className="flex items-center justify-center gap-2 mt-2">
+                        {recordingState === 'recording' && <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>}
+                        <p className="text-gray-400 font-bold uppercase text-[9px] tracking-widest">
+                            {recordingState === 'recording' ? 'Enregistrement...' : recordingState === 'review' ? 'Prêt' : 'Prêt'}
                         </p>
                       </div>
                   </div>
               </div>
 
-              {/* ACTIONS FINALES */}
               {recordingState === 'review' && (
-                <div className="w-full max-w-sm space-y-6 mt-16 animate-slide-up">
+                <div className="w-full space-y-3 mt-4 animate-slide-up">
                    {!activeInterventionForReport && (
-                        <select className="w-full p-5 bg-gray-50 rounded-3xl font-black text-sm border-2 border-transparent focus:border-orange-500 outline-none shadow-inner" value={formReport.client} onChange={(e) => setFormReport({...formReport, client: e.target.value})}>
-                            <option value="">Sélectionner le client concerné...</option>
+                        <select className="w-full p-4 bg-gray-50 rounded-2xl font-black text-xs border-2 border-transparent focus:border-orange-500 outline-none" value={formReport.client} onChange={(e) => setFormReport({...formReport, client: e.target.value})}>
+                            <option value="">Client concerné...</option>
                             {interventions.filter(i => i.status !== 'Terminé').map(i => <option key={i.id} value={i.client}>{i.client}</option>)}
                         </select>
                    )}
-                   <div className="flex gap-4">
-                       <button onClick={() => { setRecordingState('idle'); setAudioBlob(null); handleStartRecording(); }} className="flex-1 py-6 bg-gray-100 text-gray-400 rounded-3xl font-black uppercase text-xs tracking-widest hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
-                           <RefreshCw size={18}/> Refaire
+                   <div className="flex gap-2">
+                       <button onClick={() => { setRecordingState('idle'); setAudioBlob(null); handleStartRecording(); }} className="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl font-black uppercase text-[10px] tracking-widest active:bg-gray-200">
+                           Refaire
                        </button>
-                       <button onClick={handleSubmitReport} disabled={isSaving} className="flex-[2] py-6 bg-gray-950 text-white rounded-3xl font-black uppercase text-xs tracking-widest shadow-2xl flex justify-center items-center gap-3 disabled:opacity-50 active:scale-95 transition-all">
-                        {isSaving ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={24}/>}
+                       <button onClick={handleSubmitReport} disabled={isSaving} className="flex-[2] py-4 bg-gray-950 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl flex justify-center items-center gap-2 disabled:opacity-50 active:scale-95 transition-all">
+                        {isSaving ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle2 size={16}/>}
                         {isSaving ? 'ENVOI...' : 'TRANSMETTRE'}
                        </button>
                    </div>
@@ -426,143 +427,142 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         </div>
       )}
 
-      {/* FORMULAIRE DE PLANIFICATION COMPLET RÉTABLI */}
+      {/* FORMULAIRE DE PLANIFICATION AJUSTÉ (Compact Mobile) */}
       {showNewInterventionModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-           <div className="bg-white w-full max-w-2xl rounded-[3rem] p-8 md:p-12 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
-              <div className="flex justify-between items-center mb-10">
-                  <h3 className="text-3xl font-black uppercase italic tracking-tight">Nouveau Dossier Chantier</h3>
-                  <button onClick={() => setShowNewInterventionModal(false)} className="p-3 bg-gray-100 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"><X size={24}/></button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 bg-black/70 backdrop-blur-sm animate-fade-in">
+           <div className="bg-white w-full max-w-2xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl max-h-[95vh] overflow-y-auto custom-scrollbar">
+              <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-black uppercase italic tracking-tight">Nouveau Chantier</h3>
+                  <button onClick={() => setShowNewInterventionModal(false)} className="p-2.5 bg-gray-100 rounded-full text-gray-500 active:bg-red-50"><X size={18}/></button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Colonne 1 : Client */}
-                  <div className="space-y-6">
-                      <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Client / Entreprise</label>
-                        <input type="text" placeholder="Nom complet" className="w-full p-4 bg-gray-50 rounded-2xl font-bold border-2 border-transparent focus:border-orange-500 outline-none" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Client Info */}
+                  <div className="space-y-4">
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Client</label>
+                        <input type="text" placeholder="Nom du client" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
                       </div>
-                      <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Contact Téléphonique</label>
-                        <input type="text" placeholder="+225 ..." className="w-full p-4 bg-gray-50 rounded-2xl font-bold border-2 border-transparent focus:border-orange-500 outline-none" value={newIntervention.clientPhone} onChange={e => setNewIntervention({...newIntervention, clientPhone: e.target.value})}/>
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Contact</label>
+                        <input type="text" placeholder="+225 ..." className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.clientPhone} onChange={e => setNewIntervention({...newIntervention, clientPhone: e.target.value})}/>
                       </div>
-                      <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Lieu / Commune</label>
-                        <input type="text" placeholder="Adresse précise" className="w-full p-4 bg-gray-50 rounded-2xl font-bold border-2 border-transparent focus:border-orange-500 outline-none" value={newIntervention.location} onChange={e => setNewIntervention({...newIntervention, location: e.target.value})}/>
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Lieu</label>
+                        <input type="text" placeholder="Adresse" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.location} onChange={e => setNewIntervention({...newIntervention, location: e.target.value})}/>
                       </div>
                   </div>
 
-                  {/* Colonne 2 : Technique */}
-                  <div className="space-y-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Domaine</label>
-                            <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-xs appearance-none cursor-pointer" value={newIntervention.domain} onChange={e => setNewIntervention({...newIntervention, domain: e.target.value as any})}>
-                                <option value="Électricité">Électricité</option>
-                                <option value="Bâtiment">Bâtiment</option>
+                  {/* Tech Details */}
+                  <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Domaine</label>
+                            <select className="w-full bg-transparent font-bold text-[10px] outline-none" value={newIntervention.domain} onChange={e => setNewIntervention({...newIntervention, domain: e.target.value as any})}>
+                                <option value="Électricité">Élec.</option>
+                                <option value="Bâtiment">Bât.</option>
                                 <option value="Froid">Froid</option>
-                                <option value="Plomberie">Plomberie</option>
+                                <option value="Plomberie">Plomb.</option>
                             </select>
                         </div>
-                        <div>
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Type</label>
-                            <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-xs appearance-none cursor-pointer" value={newIntervention.interventionType} onChange={e => setNewIntervention({...newIntervention, interventionType: e.target.value as any})}>
-                                <option value="Dépannage">Dépannage</option>
-                                <option value="Installation">Installation</option>
-                                <option value="Entretien">Entretien</option>
-                                <option value="Maintenance">Maintenance</option>
-                                <option value="Devis">Devis / Expertise</option>
-                            </select>
+                        <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Date</label>
+                            <input type="date" className="w-full bg-transparent font-bold text-[10px] outline-none" value={newIntervention.date} onChange={e => setNewIntervention({...newIntervention, date: e.target.value})}/>
                         </div>
                       </div>
-                      <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Site Principal</label>
-                        <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold appearance-none cursor-pointer" value={newIntervention.site} onChange={e => setNewIntervention({...newIntervention, site: e.target.value as any})}>
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Site Principal</label>
+                        <select className="w-full bg-transparent font-bold text-xs outline-none" value={newIntervention.site} onChange={e => setNewIntervention({...newIntervention, site: e.target.value as any})}>
                             <option value="Abidjan">Abidjan</option>
                             <option value="Bouaké">Bouaké</option>
                             <option value="Korhogo">Korhogo</option>
                         </select>
                       </div>
-                      <div>
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Date de début</label>
-                        <input type="date" className="w-full p-4 bg-gray-50 rounded-2xl font-bold border-2 border-transparent focus:border-orange-500 outline-none" value={newIntervention.date} onChange={e => setNewIntervention({...newIntervention, date: e.target.value})}/>
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Type d'intervention</label>
+                        <select className="w-full bg-transparent font-bold text-xs outline-none" value={newIntervention.interventionType} onChange={e => setNewIntervention({...newIntervention, interventionType: e.target.value as any})}>
+                            <option value="Dépannage">Dépannage</option>
+                            <option value="Installation">Installation</option>
+                            <option value="Entretien">Entretien</option>
+                            <option value="Maintenance">Maintenance</option>
+                        </select>
                       </div>
                   </div>
               </div>
 
-              {/* Attribution & Description */}
-              <div className="mt-10 pt-10 border-t border-gray-100 space-y-8">
-                  <div className="bg-orange-50 p-6 rounded-[2.5rem] border-2 border-orange-100">
-                    <label className="text-sm font-black text-orange-600 uppercase tracking-wider ml-1 mb-3 block italic">Technicien en charge (Obligatoire)</label>
-                    <select className="w-full p-5 bg-white text-gray-900 rounded-2xl font-black shadow-sm border-2 border-transparent focus:border-orange-500 outline-none appearance-none cursor-pointer" value={newIntervention.technician} onChange={e => setNewIntervention({...newIntervention, technician: e.target.value})}>
-                        <option value="">-- Sélectionner l'agent concerné --</option>
+              {/* Assignment & Desc */}
+              <div className="mt-6 space-y-4 pt-4 border-t border-gray-50">
+                  <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
+                    <label className="text-[9px] font-black text-orange-600 uppercase tracking-widest mb-1.5 block">Technicien assigné</label>
+                    <select className="w-full bg-transparent font-black text-sm outline-none text-gray-800" value={newIntervention.technician} onChange={e => setNewIntervention({...newIntervention, technician: e.target.value})}>
+                        <option value="">Sélectionner...</option>
                         {techniciansList.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
                     </select>
                   </div>
                   
-                  <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Détails des travaux à réaliser</label>
-                    <textarea placeholder="Instructions spécifiques pour le technicien..." className="w-full p-5 bg-gray-50 rounded-3xl font-bold h-36 border-2 border-transparent focus:border-orange-500 outline-none resize-none" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
+                  <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Description des travaux</label>
+                    <textarea placeholder="Instructions..." className="w-full bg-transparent font-bold text-sm h-24 outline-none resize-none" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
                   </div>
                   
-                  <button onClick={handleCreateIntervention} disabled={isSaving} className="w-full py-6 bg-gray-950 text-white rounded-[2.5rem] font-black uppercase text-sm tracking-[0.2em] shadow-2xl flex justify-center items-center gap-3 active:scale-95 transition-all disabled:opacity-50">
-                    {isSaving ? <Loader2 className="animate-spin" /> : <CalendarPlus size={24}/>}
-                    {isSaving ? 'PLANIFICATION EN COURS...' : 'VALIDER LA PLANIFICATION'}
+                  <button onClick={handleCreateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-950 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl flex justify-center items-center gap-2 active:scale-95 transition-all disabled:opacity-50">
+                    {isSaving ? <Loader2 className="animate-spin" size={16} /> : <CalendarPlus size={18}/>}
+                    {isSaving ? 'EN COURS...' : 'VALIDER LA PLANIFICATION'}
                   </button>
               </div>
            </div>
         </div>
       )}
 
-      {/* Visualisation rapide d'un dossier */}
+      {/* Vue d'un dossier optimisée */}
       {viewIntervention && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-md p-6 animate-fade-in">
-              <div className="bg-white w-full max-w-xl rounded-[3rem] p-10 shadow-2xl overflow-hidden animate-slide-up relative">
-                  <div className="flex justify-between items-start mb-8">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
+              <div className="bg-white w-full max-w-xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative animate-slide-up">
+                  <div className="flex justify-between items-start mb-6">
                       <div>
-                        <h2 className="text-4xl font-black uppercase italic leading-none tracking-tighter">{viewIntervention.client}</h2>
-                        <p className="text-orange-500 font-black uppercase text-xs mt-3 tracking-widest italic flex items-center gap-2"><User size={14}/> {viewIntervention.technician}</p>
+                        <h2 className="text-2xl font-black uppercase italic tracking-tighter">{viewIntervention.client}</h2>
+                        <p className="text-orange-500 font-black uppercase text-[10px] mt-1 tracking-widest italic flex items-center gap-1"><User size={12}/> {viewIntervention.technician}</p>
                       </div>
-                      <button onClick={() => setViewIntervention(null)} className="p-3 bg-gray-100 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors"><X /></button>
+                      <button onClick={() => setViewIntervention(null)} className="p-2 bg-gray-100 rounded-full active:bg-gray-200"><X size={18} /></button>
                   </div>
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                       <div className="flex gap-2">
-                         <span className="px-4 py-1 bg-blue-50 text-blue-600 rounded-xl font-black text-[10px] uppercase border border-blue-100">{viewIntervention.interventionType}</span>
-                         <span className="px-4 py-1 bg-gray-50 text-gray-500 rounded-xl font-black text-[10px] uppercase border border-gray-100">{viewIntervention.domain}</span>
+                         <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg font-black text-[8px] uppercase">{viewIntervention.interventionType}</span>
+                         <span className="px-3 py-1 bg-gray-50 text-gray-500 rounded-lg font-black text-[8px] uppercase">{viewIntervention.domain}</span>
                       </div>
-                      <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 font-bold text-blue-700 flex items-center gap-3"><Phone size={20}/> {viewIntervention.clientPhone || "Non renseigné"}</div>
-                      <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100 text-gray-700 leading-relaxed font-medium text-lg min-h-[150px]">{viewIntervention.description}</div>
-                      <div className="flex gap-4">
-                          <button onClick={() => { setEditIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-5 bg-gray-900 text-white rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-lg">Modifier</button>
-                          <button onClick={() => { handleOpenReportForIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-5 bg-orange-500 text-white rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-lg flex items-center justify-center gap-2"><Mic size={18}/> Rapport</button>
+                      <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 font-bold text-blue-700 text-sm flex items-center gap-3"><Phone size={18}/> {viewIntervention.clientPhone || "Non renseigné"}</div>
+                      <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 text-gray-700 text-sm leading-relaxed font-medium min-h-[100px]">{viewIntervention.description}</div>
+                      <div className="flex gap-2 pt-2">
+                          <button onClick={() => { setEditIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest">Modifier</button>
+                          <button onClick={() => { handleOpenReportForIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-orange-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2"><Mic size={16}/> Rapport</button>
                       </div>
                   </div>
               </div>
           </div>
       )}
 
-      {/* Édition du statut et technicien */}
+      {/* Édition Statut/Tech ajustée */}
       {editIntervention && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4 animate-fade-in">
-           <div className="bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl">
-               <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-xl font-black uppercase italic tracking-tighter">Modifier Dossier</h3>
-                  <button onClick={() => setEditIntervention(null)} className="p-2 bg-gray-50 rounded-full"><X size={20}/></button>
+           <div className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl animate-scale-in">
+               <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-black uppercase italic tracking-tighter">Statut & Technicien</h3>
+                  <button onClick={() => setEditIntervention(null)} className="p-2 bg-gray-50 rounded-full"><X size={18}/></button>
                </div>
-               <div className="space-y-6">
+               <div className="space-y-5">
                    <div className="grid grid-cols-1 gap-2">
                        {['En attente', 'En cours', 'Terminé'].map((s) => (
-                           <button key={s} onClick={() => setEditIntervention({...editIntervention, status: s as any})} className={`w-full p-5 rounded-2xl font-black uppercase text-xs tracking-widest border-2 transition-all ${editIntervention.status === s ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-100 text-gray-400'}`}>{s}</button>
+                           <button key={s} onClick={() => setEditIntervention({...editIntervention, status: s as any})} className={`w-full p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest border-2 transition-all ${editIntervention.status === s ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-100 text-gray-400'}`}>{s}</button>
                        ))}
                    </div>
                    <div className="pt-4 border-t border-gray-100">
-                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block italic">Réassigner l'agent</label>
-                       <select className="w-full p-5 bg-gray-50 rounded-2xl font-black text-sm outline-none border-2 border-transparent focus:border-orange-500 appearance-none cursor-pointer" value={editIntervention.technician} onChange={e => setEditIntervention({...editIntervention, technician: e.target.value})}>
+                       <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Réassigner l'agent</label>
+                       <select className="w-full p-4 bg-gray-50 rounded-2xl font-black text-xs outline-none border-2 border-transparent focus:border-orange-500 appearance-none" value={editIntervention.technician} onChange={e => setEditIntervention({...editIntervention, technician: e.target.value})}>
                             {techniciansList.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
                        </select>
                    </div>
-                   <button onClick={handleUpdateIntervention} disabled={isSaving} className="w-full py-5 bg-gray-950 text-white rounded-[2rem] font-black uppercase text-xs tracking-widest mt-4 shadow-xl active:scale-95 transition-all">
-                     {isSaving ? <Loader2 className="animate-spin mx-auto" /> : 'Sauvegarder les modifications'}
+                   <button onClick={handleUpdateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-950 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest mt-2 active:scale-95 transition-all">
+                     {isSaving ? <Loader2 className="animate-spin mx-auto" size={18} /> : 'Valider'}
                    </button>
                </div>
            </div>
