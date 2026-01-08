@@ -275,11 +275,11 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   return (
     <div className="space-y-6 pb-20">
       {showSuccessCelebration && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-             <div className="bg-white p-8 rounded-[2.5rem] text-center shadow-2xl animate-bounce border-4 border-orange-500 max-w-[80%]">
-                <PartyPopper size={48} className="text-orange-500 mx-auto mb-4" />
-                <h2 className="text-xl font-black uppercase tracking-tight">{celebrationMessage.title}</h2>
-                <p className="text-sm text-gray-500 font-bold uppercase mt-1">{celebrationMessage.sub}</p>
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+             <div className="bg-white p-6 rounded-[2rem] text-center shadow-2xl animate-bounce border-4 border-orange-500 w-full max-w-xs">
+                <PartyPopper size={40} className="text-orange-500 mx-auto mb-2" />
+                <h2 className="text-lg font-black uppercase tracking-tight">{celebrationMessage.title}</h2>
+                <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">{celebrationMessage.sub}</p>
              </div>
         </div>
       )}
@@ -339,83 +339,87 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         ))}
       </div>
 
-      {/* MODAL RAPPORT VOCAL AJUSTÉ ET CENTRÉ (Compact Mobile) */}
+      {/* MODAL RAPPORT VOCAL - CORRECTION CENTRAGE ET TAILLE */}
       {showReportModal && (
-        <div className="fixed inset-0 z-[120] flex items-end md:items-center justify-center bg-black/70 backdrop-blur-md animate-fade-in">
-           <div className="bg-white w-full max-w-lg md:rounded-[3rem] rounded-t-[3rem] p-6 md:p-10 shadow-2xl relative border-b-[8px] border-orange-500 flex flex-col items-center animate-slide-up">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-lg animate-fade-in p-4">
+           <div className="bg-white w-full max-w-sm rounded-[3rem] p-6 md:p-8 shadow-2xl relative border-b-[6px] border-orange-500 flex flex-col items-center animate-scale-in overflow-hidden">
+              
+              {/* Bouton fermeture ajusté */}
               <button 
                 onClick={() => { setShowReportModal(false); setRecordingState('idle'); setAudioBlob(null); setAudioUrl(null); }} 
-                className="absolute top-4 right-4 p-2.5 bg-gray-100 rounded-full text-gray-500 active:scale-90"
+                className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full text-gray-400 active:scale-90"
               >
-                  <X size={20}/>
+                  <X size={18}/>
               </button>
 
-              <div className="text-center mb-6 mt-2">
-                  <h3 className="text-xl font-black uppercase italic tracking-tighter">Rapport Vocal</h3>
-                  <p className="text-orange-500 font-bold text-[10px] uppercase mt-1 tracking-widest flex items-center justify-center gap-1">
-                    {activeInterventionForReport ? <><CheckCircle2 size={12}/> {activeInterventionForReport.client}</> : 'Rapport Libre'}
+              <div className="text-center mb-4 mt-2">
+                  <h3 className="text-lg font-black uppercase italic tracking-tighter">Rapport Vocal</h3>
+                  <p className="text-orange-500 font-bold text-[9px] uppercase mt-0.5 tracking-widest flex items-center justify-center gap-1">
+                    {activeInterventionForReport ? <><CheckCircle2 size={10}/> {activeInterventionForReport.client}</> : 'Rapport Libre'}
                   </p>
               </div>
 
-              <div className="relative flex flex-col items-center justify-center gap-6 py-6 w-full">
+              {/* ZONE CENTRALE PLUS COMPACTE */}
+              <div className="relative flex flex-col items-center justify-center gap-4 py-4 w-full">
                   <div className="relative flex items-center justify-center">
                       {recordingState === 'recording' && (
-                          <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping scale-125"></div>
+                          <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping scale-110"></div>
                       )}
                       
                       <button 
                         onClick={recordingState === 'idle' ? handleStartRecording : recordingState === 'recording' ? handleStopRecording : handleTogglePlayback}
-                        className={`w-32 h-32 md:w-40 md:h-40 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all active:scale-95
-                          ${recordingState === 'recording' ? 'bg-red-500 scale-105' : recordingState === 'review' ? 'bg-orange-500' : 'bg-gray-900 hover:bg-orange-500'}`}
+                        className={`w-28 h-28 md:w-36 md:h-36 rounded-full flex flex-col items-center justify-center shadow-xl transition-all active:scale-95
+                          ${recordingState === 'recording' ? 'bg-red-500' : recordingState === 'review' ? 'bg-orange-500' : 'bg-gray-900'}`}
                       >
                           {recordingState === 'idle' && (
                               <div className="flex flex-col items-center text-white">
-                                  <Mic size={40} />
-                                  <span className="text-[8px] font-black uppercase mt-2 tracking-widest">Cliquer</span>
+                                  <Mic size={32} />
+                                  <span className="text-[7px] font-black uppercase mt-1 tracking-widest">Cliquer</span>
                               </div>
                           )}
                           {recordingState === 'recording' && (
                               <div className="flex flex-col items-center text-white">
-                                  <Square size={36} />
-                                  <span className="text-[8px] font-black uppercase mt-2 tracking-widest">Arrêter</span>
+                                  <Square size={28} />
+                                  <span className="text-[7px] font-black uppercase mt-1 tracking-widest">Arrêter</span>
                               </div>
                           )}
                           {recordingState === 'review' && (
                               <div className="flex flex-col items-center text-white">
-                                  {isPlaying ? <Pause size={40} /> : <Play size={40} />}
-                                  <span className="text-[8px] font-black uppercase mt-2 tracking-widest">{isPlaying ? 'Lecture' : 'Réécouter'}</span>
+                                  {isPlaying ? <Pause size={32} /> : <Play size={32} />}
+                                  <span className="text-[7px] font-black uppercase mt-1 tracking-widest">{isPlaying ? 'Lecture' : 'Réécouter'}</span>
                               </div>
                           )}
                       </button>
                   </div>
 
                   <div className="text-center">
-                      <p className="text-4xl md:text-6xl font-black font-mono text-gray-950 tabular-nums">
+                      <p className="text-4xl font-black font-mono text-gray-950 tabular-nums leading-none">
                           {formatTime(recordingState === 'review' ? playbackTime : recordingDuration)}
                       </p>
-                      <div className="flex items-center justify-center gap-2 mt-2">
-                        {recordingState === 'recording' && <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>}
-                        <p className="text-gray-400 font-bold uppercase text-[9px] tracking-widest">
+                      <div className="flex items-center justify-center gap-1.5 mt-1.5">
+                        {recordingState === 'recording' && <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>}
+                        <p className="text-gray-400 font-bold uppercase text-[8px] tracking-[0.2em]">
                             {recordingState === 'recording' ? 'Enregistrement...' : recordingState === 'review' ? 'Prêt' : 'Prêt'}
                         </p>
                       </div>
                   </div>
               </div>
 
+              {/* ACTIONS FINALES PLUS COMPACTES */}
               {recordingState === 'review' && (
-                <div className="w-full space-y-3 mt-4 animate-slide-up">
+                <div className="w-full space-y-2 mt-2 animate-slide-up">
                    {!activeInterventionForReport && (
-                        <select className="w-full p-4 bg-gray-50 rounded-2xl font-black text-xs border-2 border-transparent focus:border-orange-500 outline-none" value={formReport.client} onChange={(e) => setFormReport({...formReport, client: e.target.value})}>
+                        <select className="w-full p-3 bg-gray-50 rounded-xl font-black text-[10px] border-2 border-transparent focus:border-orange-500 outline-none" value={formReport.client} onChange={(e) => setFormReport({...formReport, client: e.target.value})}>
                             <option value="">Client concerné...</option>
                             {interventions.filter(i => i.status !== 'Terminé').map(i => <option key={i.id} value={i.client}>{i.client}</option>)}
                         </select>
                    )}
                    <div className="flex gap-2">
-                       <button onClick={() => { setRecordingState('idle'); setAudioBlob(null); handleStartRecording(); }} className="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl font-black uppercase text-[10px] tracking-widest active:bg-gray-200">
+                       <button onClick={() => { setRecordingState('idle'); setAudioBlob(null); handleStartRecording(); }} className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-black uppercase text-[9px] tracking-widest active:bg-gray-200">
                            Refaire
                        </button>
-                       <button onClick={handleSubmitReport} disabled={isSaving} className="flex-[2] py-4 bg-gray-950 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl flex justify-center items-center gap-2 disabled:opacity-50 active:scale-95 transition-all">
-                        {isSaving ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle2 size={16}/>}
+                       <button onClick={handleSubmitReport} disabled={isSaving} className="flex-[2] py-3 bg-gray-950 text-white rounded-xl font-black uppercase text-[9px] tracking-widest shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 active:scale-95 transition-all">
+                        {isSaving ? <Loader2 className="animate-spin" size={12} /> : <CheckCircle2 size={14}/>}
                         {isSaving ? 'ENVOI...' : 'TRANSMETTRE'}
                        </button>
                    </div>
@@ -428,7 +432,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
       {/* FORMULAIRE DE PLANIFICATION AJUSTÉ (Compact Mobile) */}
       {showNewInterventionModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 bg-black/70 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-2 bg-black/70 backdrop-blur-sm animate-fade-in">
            <div className="bg-white w-full max-w-2xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl max-h-[95vh] overflow-y-auto custom-scrollbar">
               <div className="flex justify-between items-center mb-6">
                   <h3 className="text-xl font-black uppercase italic tracking-tight">Nouveau Chantier</h3>
@@ -436,7 +440,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Client Info */}
                   <div className="space-y-4">
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Client</label>
@@ -452,7 +455,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       </div>
                   </div>
 
-                  {/* Tech Details */}
                   <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-2">
                         <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
@@ -489,7 +491,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                   </div>
               </div>
 
-              {/* Assignment & Desc */}
               <div className="mt-6 space-y-4 pt-4 border-t border-gray-50">
                   <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
                     <label className="text-[9px] font-black text-orange-600 uppercase tracking-widest mb-1.5 block">Technicien assigné</label>
@@ -515,7 +516,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
       {/* Vue d'un dossier optimisée */}
       {viewIntervention && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
               <div className="bg-white w-full max-w-xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative animate-slide-up">
                   <div className="flex justify-between items-start mb-6">
                       <div>
@@ -542,7 +543,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
       {/* Édition Statut/Tech ajustée */}
       {editIntervention && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4 animate-fade-in">
            <div className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl animate-scale-in">
                <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-black uppercase italic tracking-tighter">Statut & Technicien</h3>
