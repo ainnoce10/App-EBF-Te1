@@ -25,6 +25,7 @@ export interface Intervention {
   description: string;
   technician: string;
   status: 'En cours' | 'Terminé' | 'En attente';
+  has_report?: boolean;
   date: string;
   site: Site | string;
 }

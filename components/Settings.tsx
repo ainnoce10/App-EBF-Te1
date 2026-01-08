@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Megaphone, 
@@ -320,6 +321,7 @@ create table if not exists public.interventions (
   location text, 
   technician text,
   status text,
+  has_report boolean default false,
   date date,
   site text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
