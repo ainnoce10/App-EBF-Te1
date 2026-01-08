@@ -18,8 +18,7 @@ import {
   CheckCircle2,
   FileText,
   ChevronDown,
-  User,
-  RefreshCw
+  User
 } from 'lucide-react';
 
 interface TechniciansProps {
@@ -366,7 +365,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       
                       <button 
                         onClick={recordingState === 'idle' ? handleStartRecording : recordingState === 'recording' ? handleStopRecording : handleTogglePlayback}
-                        className={`w-32 h-32 md:w-48 md:h-48 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all active:scale-95
+                        className={`w-32 h-32 md:w-40 md:h-40 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all active:scale-95
                           ${recordingState === 'recording' ? 'bg-red-500 scale-105' : recordingState === 'review' ? 'bg-orange-500' : 'bg-gray-900 hover:bg-orange-500'}`}
                       >
                           {recordingState === 'idle' && (
@@ -391,7 +390,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                   </div>
 
                   <div className="text-center">
-                      <p className="text-4xl md:text-7xl font-black font-mono text-gray-950 tabular-nums">
+                      <p className="text-4xl md:text-6xl font-black font-mono text-gray-950 tabular-nums">
                           {formatTime(recordingState === 'review' ? playbackTime : recordingDuration)}
                       </p>
                       <div className="flex items-center justify-center gap-2 mt-2">
