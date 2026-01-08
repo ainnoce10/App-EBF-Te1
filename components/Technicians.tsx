@@ -339,10 +339,10 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         ))}
       </div>
 
-      {/* MODAL RAPPORT VOCAL - CORRECTION CENTRAGE ET TAILLE */}
+      {/* MODAL RAPPORT VOCAL - CORRECTION INDÉPENDANCE DU SCROLL */}
       {showReportModal && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-lg animate-fade-in p-4">
-           <div className="bg-white w-full max-w-sm rounded-[3rem] p-6 md:p-8 shadow-2xl relative border-b-[6px] border-orange-500 flex flex-col items-center animate-scale-in overflow-hidden">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-lg animate-fade-in p-4 overflow-hidden">
+           <div className="bg-white w-full max-w-sm rounded-[3rem] p-6 md:p-8 shadow-2xl relative border-b-[6px] border-orange-500 flex flex-col items-center animate-scale-in">
               
               {/* Bouton fermeture ajusté */}
               <button 
@@ -359,7 +359,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                   </p>
               </div>
 
-              {/* ZONE CENTRALE PLUS COMPACTE */}
+              {/* ZONE CENTRALE */}
               <div className="relative flex flex-col items-center justify-center gap-4 py-4 w-full">
                   <div className="relative flex items-center justify-center">
                       {recordingState === 'recording' && (
@@ -405,7 +405,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                   </div>
               </div>
 
-              {/* ACTIONS FINALES PLUS COMPACTES */}
+              {/* ACTIONS FINALES */}
               {recordingState === 'review' && (
                 <div className="w-full space-y-2 mt-2 animate-slide-up">
                    {!activeInterventionForReport && (
@@ -430,7 +430,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         </div>
       )}
 
-      {/* FORMULAIRE DE PLANIFICATION AJUSTÉ (Compact Mobile) */}
+      {/* FORMULAIRE DE PLANIFICATION */}
       {showNewInterventionModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-2 bg-black/70 backdrop-blur-sm animate-fade-in">
            <div className="bg-white w-full max-w-2xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl max-h-[95vh] overflow-y-auto custom-scrollbar">
@@ -514,7 +514,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         </div>
       )}
 
-      {/* Vue d'un dossier optimisée */}
+      {/* Vue d'un dossier */}
       {viewIntervention && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
               <div className="bg-white w-full max-w-xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative animate-slide-up">
@@ -541,7 +541,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
           </div>
       )}
 
-      {/* Édition Statut/Tech ajustée */}
+      {/* Édition Statut/Tech */}
       {editIntervention && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4 animate-fade-in">
            <div className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl animate-scale-in">
