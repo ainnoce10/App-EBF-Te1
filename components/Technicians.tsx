@@ -325,40 +325,82 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       </div>
 
       {showReportModal && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-           <div className="bg-white w-full max-w-lg rounded-[3.5rem] p-10 shadow-2xl relative border-b-[12px] border-orange-500">
-              <div className="flex justify-between items-start mb-8">
-                  <div>
-                    <h3 className="text-3xl font-black uppercase italic">Rapport Vocal</h3>
-                    <p className="text-orange-500 font-bold text-[10px] uppercase mt-2">{activeInterventionForReport ? `Client : ${activeInterventionForReport.client}` : 'Rapport Rapide'}</p>
-                  </div>
-                  <button onClick={() => { setShowReportModal(false); setRecordingState('idle'); setAudioBlob(null); setAudioUrl(null); }} className="p-3 bg-gray-100 rounded-full"><X size={24}/></button>
+        <div className="fixed inset-0 z-[80] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-md transition-opacity">
+           <div className="bg-white w-full max-w-lg md:rounded-[3.5rem] rounded-t-[3.5rem] p-8 md:p-10 shadow-2xl relative border-b-[12px] border-orange-500 flex flex-col items-center animate-slide-up">
+              <button onClick={() => { setShowReportModal(false); setRecordingState('idle'); setAudioBlob(null); setAudioUrl(null); }} className="absolute top-6 right-6 p-3 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+                  <X size={24}/>
+              </button>
+
+              <div className="w-full text-center mb-10 mt-4 md:mt-0">
+                  <h3 className="text-3xl font-black uppercase italic leading-tight">Rapport Vocal</h3>
+                  <p className="text-orange-500 font-bold text-xs uppercase mt-2 tracking-widest">
+                      {activeInterventionForReport ? `Client : ${activeInterventionForReport.client}` : 'Rapport Rapide'}
+                  </p>
               </div>
 
-              <div className="flex flex-col items-center gap-8 py-6">
-                  <div className={`w-32 h-32 rounded-full flex items-center justify-center shadow-2xl transition-all ${recordingState === 'recording' ? 'bg-red-500 scale-110 animate-pulse' : 'bg-orange-500 hover:scale-105'}`}>
-                      {recordingState === 'idle' && <button onClick={handleStartRecording} className="text-white flex flex-col items-center"><Mic size={48} /><span className="text-[10px] font-black uppercase mt-1">Enregistrer</span></button>}
-                      {recordingState === 'recording' && <button onClick={handleStopRecording} className="text-white flex flex-col items-center"><Square size={40} /><span className="text-[10px] font-black uppercase mt-1">Arrêter</span></button>}
-                      {recordingState === 'review' && <button onClick={handleTogglePlayback} className="text-white flex flex-col items-center">{isPlaying ? <Pause size={48} /> : <Play size={48} />}<span className="text-[10px] font-black uppercase mt-1">Écouter</span></button>}
+              <div className="flex flex-col items-center justify-center gap-10 py-10 w-full">
+                  <div className="relative flex items-center justify-center">
+                      {/* Anneau pulsant pendant l'enregistrement */}
+                      {recordingState === 'recording' && (
+                          <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping -z-10 scale-150"></div>
+                      )}
+                      
+                      <button 
+                        onClick={recordingState === 'idle' ? handleStartRecording : recordingState === 'recording' ? handleStopRecording : handleTogglePlayback}
+                        className={`w-40 h-40 md:w-48 md:h-48 rounded-full flex flex-col items-center justify-center shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-all active:scale-90
+                          ${recordingState === 'recording' ? 'bg-red-500 scale-110' : recordingState === 'review' ? 'bg-orange-500' : 'bg-gray-900 hover:bg-orange-500'}`}
+                      >
+                          {recordingState === 'idle' && (
+                              <div className="flex flex-col items-center text-white">
+                                  <Mic size={64} />
+                                  <span className="text-[10px] font-black uppercase mt-3 tracking-widest">Cliquer pour parler</span>
+                              </div>
+                          )}
+                          {recordingState === 'recording' && (
+                              <div className="flex flex-col items-center text-white">
+                                  <Square size={56} />
+                                  <span className="text-[10px] font-black uppercase mt-3 tracking-widest">Arrêter</span>
+                              </div>
+                          )}
+                          {recordingState === 'review' && (
+                              <div className="flex flex-col items-center text-white">
+                                  {isPlaying ? <Pause size={64} /> : <Play size={64} />}
+                                  <span className="text-[10px] font-black uppercase mt-3 tracking-widest">{isPlaying ? 'Pause' : 'Réécouter'}</span>
+                              </div>
+                          )}
+                      </button>
                   </div>
+
                   <div className="text-center">
-                      <p className="text-5xl font-black font-mono text-gray-950">{formatTime(recordingState === 'review' ? playbackTime : recordingDuration)}</p>
-                      <p className="text-gray-400 font-bold uppercase text-[10px] mt-2 tracking-widest">{recordingState === 'recording' ? 'Enregistrement...' : recordingState === 'review' ? 'Prêt pour envoi' : 'Cliquer pour parler'}</p>
+                      <p className="text-6xl md:text-7xl font-black font-mono text-gray-950 tabular-nums">
+                          {formatTime(recordingState === 'review' ? playbackTime : recordingDuration)}
+                      </p>
+                      <div className="flex items-center justify-center gap-2 mt-2">
+                        {recordingState === 'recording' && <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>}
+                        <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em]">
+                            {recordingState === 'recording' ? 'Enregistrement en cours...' : recordingState === 'review' ? 'Enregistrement terminé' : 'Prêt à enregistrer'}
+                        </p>
+                      </div>
                   </div>
               </div>
 
               {recordingState === 'review' && (
-                <div className="space-y-4 pt-4 border-t border-gray-100 animate-fade-in">
+                <div className="w-full space-y-4 pt-6 border-t border-gray-100 animate-fade-in mb-4">
                    {!activeInterventionForReport && (
-                        <select className="w-full p-4 bg-gray-50 rounded-2xl font-black text-sm" value={formReport.client} onChange={(e) => setFormReport({...formReport, client: e.target.value})}>
+                        <select className="w-full p-5 bg-gray-50 rounded-2xl font-black text-sm border-2 border-transparent focus:border-orange-500 outline-none" value={formReport.client} onChange={(e) => setFormReport({...formReport, client: e.target.value})}>
                             <option value="">Sélectionner le client...</option>
                             {interventions.filter(i => i.status !== 'Terminé').map(i => <option key={i.id} value={i.client}>{i.client}</option>)}
                         </select>
                    )}
-                   <button onClick={handleSubmitReport} disabled={isSaving} className="w-full py-5 bg-gray-950 text-white rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl flex justify-center items-center gap-3 disabled:opacity-50 active:scale-95">
-                     {isSaving ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={24}/>}
-                     {isSaving ? 'ENVOI...' : 'TRANSMETTRE'}
-                   </button>
+                   <div className="grid grid-cols-2 gap-3">
+                       <button onClick={() => { setRecordingState('idle'); setAudioBlob(null); handleStartRecording(); }} className="py-5 bg-gray-100 text-gray-500 rounded-3xl font-black uppercase text-[10px] tracking-widest hover:bg-gray-200 transition-colors">
+                           Refaire
+                       </button>
+                       <button onClick={handleSubmitReport} disabled={isSaving} className="py-5 bg-gray-950 text-white rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-xl flex justify-center items-center gap-2 disabled:opacity-50 active:scale-95 transition-all">
+                        {isSaving ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16}/>}
+                        {isSaving ? 'Envoi...' : 'Transmettre'}
+                       </button>
+                   </div>
                 </div>
               )}
               {audioUrl && <audio ref={audioPreviewRef} src={audioUrl} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={() => setIsPlaying(false)} onTimeUpdate={(e) => setPlaybackTime(e.currentTarget.currentTime)} className="hidden" />}
