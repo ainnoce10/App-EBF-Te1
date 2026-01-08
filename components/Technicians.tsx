@@ -24,8 +24,7 @@ import {
   Clock,
   AlertCircle,
   Navigation,
-  FileText,
-  Filter
+  FileText
 } from 'lucide-react';
 
 interface TechniciansProps {
