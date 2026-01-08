@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Intervention, Site } from '../types';
+import { Intervention, Site, Employee } from '../types';
 import { supabase } from '../lib/supabase';
 import { 
   Search, 
@@ -17,7 +17,8 @@ import {
   Edit,
   CheckCircle2,
   FileText,
-  ChevronDown
+  ChevronDown,
+  User
 } from 'lucide-react';
 
 interface TechniciansProps {
@@ -30,11 +31,18 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('Tous');
   const [interventions, setInterventions] = useState<Intervention[]>(initialData);
+  const [techniciansList, setTechniciansList] = useState<Employee[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setInterventions(initialData);
+    fetchTechnicians();
   }, [initialData]);
+
+  const fetchTechnicians = async () => {
+    const { data } = await supabase.from('employees').select('*').eq('status', 'Actif');
+    if (data) setTechniciansList(data as Employee[]);
+  };
 
   const [showReportModal, setShowReportModal] = useState(false);
   const [showNewInterventionModal, setShowNewInterventionModal] = useState(false);
@@ -54,6 +62,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     description: '',
     location: '',
     site: 'Abidjan' as Site,
+    technician: '',
     date: new Date().toISOString().split('T')[0]
   });
 
@@ -85,6 +94,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
+        setRecordingState('review');
       };
 
       mediaRecorder.start();
@@ -102,13 +112,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
   const handleStopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      // Forcer la récupération des dernières données
-      mediaRecorderRef.current.requestData();
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-      
-      // Passage immédiat en mode review pour UI réactive
-      setRecordingState('review');
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -170,7 +175,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const handleSubmitReport = async () => {
     const target = activeInterventionForReport || interventions.find(i => i.client === formReport.client);
     if (!target || !audioBlob) {
-        alert("Erreur : L'audio n'est pas prêt. Veuillez réessayer l'enregistrement.");
+        alert("Erreur : L'audio n'est pas prêt.");
         return;
     }
     
@@ -209,20 +214,23 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   };
 
   const handleCreateIntervention = async () => {
-    if (!newIntervention.client || !newIntervention.description) return;
+    if (!newIntervention.client || !newIntervention.description || !newIntervention.technician) {
+      alert("Veuillez remplir le client, la description et choisir un technicien.");
+      return;
+    }
     setIsSaving(true);
     const id = `INT-${Math.floor(Math.random() * 9000) + 1000}`;
     try {
       const { error } = await supabase.from('interventions').insert([{
         id,
         ...newIntervention,
-        technician: 'À assigner',
         status: 'En attente',
         has_report: false
       }]);
       if (error) throw error;
       triggerCelebration('PLANIFIÉ !', 'Nouvelle intervention créée.');
       setShowNewInterventionModal(false);
+      setNewIntervention({...newIntervention, client: '', description: '', technician: '', clientPhone: ''});
     } catch (err: any) {
       alert("Erreur création : " + err.message);
     } finally {
@@ -305,7 +313,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
               <button onClick={(e) => { e.stopPropagation(); setEditIntervention(inter); }} className="p-2.5 bg-gray-50 text-gray-400 hover:text-blue-600 rounded-xl"><Edit size={16}/></button>
             </div>
             <h3 className="font-black text-2xl mb-1 uppercase italic">{inter.client}</h3>
-            <p className="text-gray-400 text-xs font-black mb-4 flex items-center gap-1"><MapPin size={12}/> {inter.location}</p>
+            <p className="text-gray-400 text-xs font-black mb-1 flex items-center gap-1"><MapPin size={12}/> {inter.location}</p>
+            <p className="text-orange-500 text-[10px] font-black uppercase mb-4 flex items-center gap-1"><User size={12}/> {inter.technician}</p>
             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-6 flex-1 text-sm font-bold text-gray-600 line-clamp-3">{inter.description}</div>
             <div className="flex items-center justify-between pt-5 border-t border-gray-100">
                <div className="text-[10px] font-black uppercase text-gray-400">📅 {new Date(inter.date).toLocaleDateString()}</div>
@@ -359,15 +368,28 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
       {showNewInterventionModal && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-           <div className="bg-white w-full max-w-xl rounded-[3rem] p-10 shadow-2xl">
+           <div className="bg-white w-full max-w-xl rounded-[3rem] p-10 shadow-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-8">
                   <h3 className="text-2xl font-black uppercase italic">Nouveau Chantier</h3>
                   <button onClick={() => setShowNewInterventionModal(false)} className="p-2 bg-gray-100 rounded-full"><X/></button>
               </div>
               <div className="space-y-4">
-                  <input type="text" placeholder="Client" className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
-                  <textarea placeholder="Description" className="w-full p-4 bg-gray-50 rounded-2xl font-bold h-32" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
-                  <button onClick={handleCreateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black uppercase">Valider</button>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Client</label>
+                    <input type="text" placeholder="Nom du client" className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Assigner à</label>
+                    <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.technician} onChange={e => setNewIntervention({...newIntervention, technician: e.target.value})}>
+                        <option value="">Choisir un technicien...</option>
+                        {techniciansList.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Description des travaux</label>
+                    <textarea placeholder="Détails de l'intervention" className="w-full p-4 bg-gray-50 rounded-2xl font-bold h-32" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
+                  </div>
+                  <button onClick={handleCreateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black uppercase mt-4">Valider la planification</button>
               </div>
            </div>
         </div>
@@ -377,7 +399,10 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
           <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-md p-6">
               <div className="bg-white w-full max-w-xl rounded-[3rem] p-10 shadow-2xl overflow-hidden animate-slide-up">
                   <div className="flex justify-between items-start mb-6">
-                      <h2 className="text-4xl font-black uppercase italic">{viewIntervention.client}</h2>
+                      <div>
+                        <h2 className="text-4xl font-black uppercase italic leading-none">{viewIntervention.client}</h2>
+                        <p className="text-orange-500 font-black uppercase text-xs mt-2 tracking-widest italic">{viewIntervention.technician}</p>
+                      </div>
                       <button onClick={() => setViewIntervention(null)} className="p-3 bg-gray-100 rounded-full"><X /></button>
                   </div>
                   <div className="space-y-6">
@@ -400,6 +425,12 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                    {['En attente', 'En cours', 'Terminé'].map((s) => (
                        <button key={s} onClick={() => setEditIntervention({...editIntervention, status: s as any})} className={`w-full p-4 rounded-xl font-bold border-2 transition-all ${editIntervention.status === s ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-100 text-gray-500'}`}>{s}</button>
                    ))}
+                   <div className="pt-2">
+                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Réassigner technicien</label>
+                       <select className="w-full p-4 bg-gray-50 rounded-xl font-bold" value={editIntervention.technician} onChange={e => setEditIntervention({...editIntervention, technician: e.target.value})}>
+                            {techniciansList.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                       </select>
+                   </div>
                    <button onClick={handleUpdateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-900 text-white rounded-xl font-black uppercase mt-4">Sauvegarder</button>
                </div>
            </div>
