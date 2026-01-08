@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabase';
 import { 
   Search, 
   MapPin, 
-  Calendar, 
   Mic, 
   X, 
   Square, 
@@ -15,16 +14,9 @@ import {
   CalendarPlus,
   Loader2,
   Phone,
-  Briefcase,
-  Layers,
-  User,
   Edit,
   CheckCircle2,
-  Clock,
-  AlertCircle,
   FileText,
-  Info,
-  ExternalLink,
   ChevronDown
 } from 'lucide-react';
 
@@ -82,7 +74,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = []; // Nettoyer les anciens enregistrements
+      chunksRef.current = [];
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
@@ -93,8 +85,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
-        // On s'assure que l'état passe en review ICI
-        setRecordingState('review');
       };
 
       mediaRecorder.start();
@@ -112,9 +102,17 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
   const handleStopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      // Forcer la récupération des dernières données
+      mediaRecorderRef.current.requestData();
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-      if (timerRef.current) clearInterval(timerRef.current);
+      
+      // Passage immédiat en mode review pour UI réactive
+      setRecordingState('review');
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     }
   };
 
@@ -172,7 +170,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const handleSubmitReport = async () => {
     const target = activeInterventionForReport || interventions.find(i => i.client === formReport.client);
     if (!target || !audioBlob) {
-        alert("Veuillez sélectionner un client et enregistrer un audio.");
+        alert("Erreur : L'audio n'est pas prêt. Veuillez réessayer l'enregistrement.");
         return;
     }
     
@@ -202,6 +200,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       setShowReportModal(false);
       setRecordingState('idle');
       setAudioBlob(null);
+      setAudioUrl(null);
     } catch (err: any) {
       alert("Erreur de soumission : " + err.message);
     } finally {
@@ -324,7 +323,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                     <h3 className="text-3xl font-black uppercase italic">Rapport Vocal</h3>
                     <p className="text-orange-500 font-bold text-[10px] uppercase mt-2">{activeInterventionForReport ? `Client : ${activeInterventionForReport.client}` : 'Rapport Rapide'}</p>
                   </div>
-                  <button onClick={() => { setShowReportModal(false); setRecordingState('idle'); setAudioBlob(null); }} className="p-3 bg-gray-100 rounded-full"><X size={24}/></button>
+                  <button onClick={() => { setShowReportModal(false); setRecordingState('idle'); setAudioBlob(null); setAudioUrl(null); }} className="p-3 bg-gray-100 rounded-full"><X size={24}/></button>
               </div>
 
               <div className="flex flex-col items-center gap-8 py-6">
@@ -347,7 +346,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                             {interventions.filter(i => i.status !== 'Terminé').map(i => <option key={i.id} value={i.client}>{i.client}</option>)}
                         </select>
                    )}
-                   <button onClick={handleSubmitReport} disabled={isSaving} className="w-full py-5 bg-gray-950 text-white rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl flex justify-center items-center gap-3 disabled:opacity-50">
+                   <button onClick={handleSubmitReport} disabled={isSaving} className="w-full py-5 bg-gray-950 text-white rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl flex justify-center items-center gap-3 disabled:opacity-50 active:scale-95">
                      {isSaving ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={24}/>}
                      {isSaving ? 'ENVOI...' : 'TRANSMETTRE'}
                    </button>
