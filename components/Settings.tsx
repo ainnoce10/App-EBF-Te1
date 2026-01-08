@@ -134,20 +134,20 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   };
 
   const getFullSchemaScript = () => `
--- 1. CONFIGURATION STORAGE (BUCKETS)
+-- 1. CONFIGURATION STORAGE (LIGNES À AJOUTER)
 -- Ajoute les nouveaux dossiers sans toucher aux anciens si déjà existants
 insert into storage.buckets (id, name, public) 
 values ('assets', 'assets', true), ('voice_reports', 'voice_reports', true)
 on conflict (id) do nothing;
 
--- 2. POLITIQUES DE STORAGE (DROP ET CREATE POUR GARANTIR LA MISE À JOUR)
+-- 2. POLITIQUES DE STORAGE
 drop policy if exists "Public Access Assets" on storage.objects;
 create policy "Public Access Assets" on storage.objects for all using ( bucket_id = 'assets' ) with check ( bucket_id = 'assets' );
 
 drop policy if exists "Public Access Reports" on storage.objects;
 create policy "Public Access Reports" on storage.objects for all using ( bucket_id = 'voice_reports' ) with check ( bucket_id = 'voice_reports' );
 
--- 3. TABLES DE DONNÉES (IF NOT EXISTS garantit qu'on n'écrase pas les données existantes)
+-- 3. TABLES DE DONNÉES (IF NOT EXISTS garantit qu'on n'écrase pas les données)
 create table if not exists public.tv_settings ( 
     key text primary key, 
     value text, 
@@ -236,7 +236,7 @@ create table if not exists public.accounting_transactions (
     created_at timestamp with time zone default now() 
 );
 
--- 4. ACTIVATION REALTIME (PUBLICATION)
+-- 4. ACTIVATION REALTIME
 drop publication if exists supabase_realtime;
 create publication supabase_realtime for all tables;
 

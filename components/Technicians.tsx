@@ -19,15 +19,13 @@ import {
   Layers,
   User,
   Edit,
-  Save,
   CheckCircle2,
   Clock,
   AlertCircle,
   FileText,
   Info,
   ExternalLink,
-  ChevronDown,
-  Volume2
+  ChevronDown
 } from 'lucide-react';
 
 interface TechniciansProps {
@@ -70,7 +68,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     date: new Date().toISOString().split('T')[0]
   });
 
-  // Audio recording state (Real MediaRecorder)
+  // Audio recording state
   const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'review'>('idle');
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -183,8 +181,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     setIsSaving(true);
     try {
       let audioPath = null;
-
-      // 1. Upload de l'audio si présent vers le bucket voice_reports
       if (audioBlob) {
           const fileName = `report_${target.id}_${Date.now()}.webm`;
           const { data: uploadData, error: uploadError } = await supabase.storage
@@ -195,7 +191,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
           audioPath = uploadData.path;
       }
 
-      // 2. Mise à jour automatique : status='Terminé' ET has_report=true
       const { error } = await supabase
         .from('interventions')
         .update({ 
@@ -240,7 +235,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       if (error) throw error;
       triggerCelebration('PLANIFIÉ !', 'Nouvelle intervention créée.');
       setShowNewInterventionModal(false);
-      // Reset form
       setNewIntervention({
         client: '',
         clientPhone: '',
@@ -675,10 +669,57 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                      disabled={isSaving}
                      className="w-full py-5 bg-gray-900 text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl active:scale-95"
                    >
-                       {isSaving ? <Loader2 className="animate-spin"/> : <Save size={20} />}
+                       {isSaving ? <Loader2 className="animate-spin"/> : <CheckCircle2 size={20} />}
                        {isSaving ? 'Mise à jour...' : 'Sauvegarder'}
                    </button>
                </div>
+           </div>
+        </div>
+      )}
+
+      {/* MODAL NOUVELLE INTERVENTION */}
+      {showNewInterventionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+           <div className="bg-white w-full max-w-2xl rounded-[3.5rem] p-8 md:p-12 animate-scale-in max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl border-t-[12px] border-green-600">
+              <div className="flex justify-between items-center mb-10">
+                  <h3 className="text-3xl font-black text-gray-900 tracking-tighter uppercase italic leading-none">Planifier Chantier</h3>
+                  <button onClick={() => setShowNewInterventionModal(false)} className="p-3 bg-gray-100 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all"><X size={24}/></button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Client / Entreprise</label>
+                    <input type="text" placeholder="Ex: Société Ivoire" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Téléphone</label>
+                    <input type="tel" placeholder="+225..." className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={newIntervention.clientPhone} onChange={e => setNewIntervention({...newIntervention, clientPhone: e.target.value})}/>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Domaine</label>
+                    <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.domain} onChange={e => setNewIntervention({...newIntervention, domain: e.target.value as any})}>
+                        <option value="Électricité">Électricité</option>
+                        <option value="Bâtiment">Bâtiment</option>
+                        <option value="Froid">Froid & Clim</option>
+                        <option value="Plomberie">Plomberie</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Site</label>
+                    <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold" value={newIntervention.site} onChange={e => setNewIntervention({...newIntervention, site: e.target.value as any})}>
+                        <option value="Abidjan">Abidjan</option>
+                        <option value="Bouaké">Bouaké</option>
+                        <option value="Korhogo">Korhogo</option>
+                    </select>
+                  </div>
+                  <div className="col-span-full">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Description Technique</label>
+                    <textarea placeholder="..." className="w-full p-5 bg-gray-50 rounded-3xl font-bold h-28 resize-none" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})} />
+                  </div>
+                  <button onClick={handleCreateIntervention} disabled={isSaving} className="col-span-full py-6 bg-gray-900 text-white rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">
+                      {isSaving ? 'PLANIFICATION...' : 'VALIDER LA PLANIFICATION'}
+                  </button>
+              </div>
            </div>
         </div>
       )}
