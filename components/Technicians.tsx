@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Intervention, Site, Employee } from '../types';
+import { Intervention, Employee } from '../types';
 import { supabase } from '../lib/supabase';
 import { 
   Search, 
@@ -53,17 +53,16 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const [activeInterventionForReport, setActiveInterventionForReport] = useState<Intervention | null>(null);
 
   const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
-  const [celebrationMessage, setCelebrationMessage] = useState({ title: 'ENVOYÉ !', sub: 'Ton travail est bien enregistré.' });
   
   const [formReport, setFormReport] = useState({ client: '', workDone: '' });
   const [newIntervention, setNewIntervention] = useState({
     client: '',
     clientPhone: '',
-    domain: 'Électricité' as 'Électricité' | 'Bâtiment' | 'Froid' | 'Plomberie',
+    domain: 'Électricité' as any,
     interventionType: 'Dépannage' as any,
     description: '',
     location: '',
-    site: 'Abidjan' as Site,
+    site: 'Abidjan' as any,
     technician: '',
     date: new Date().toISOString().split('T')[0]
   });
@@ -132,8 +131,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     }
   };
 
-  const triggerCelebration = (title: string, sub: string) => {
-    setCelebrationMessage({ title, sub });
+  const triggerCelebration = () => {
     setShowSuccessCelebration(true);
     setTimeout(() => setShowSuccessCelebration(false), 3000);
   };
@@ -165,7 +163,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
             .eq('id', editIntervention.id);
 
         if (error) throw error;
-        triggerCelebration('MIS À JOUR !', 'Le dossier a été modifié.');
+        triggerCelebration();
         setEditIntervention(null);
     } catch (err: any) {
         alert("Erreur : " + err.message);
@@ -203,7 +201,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       
       if (error) throw error;
 
-      triggerCelebration('RAPPORT TRANSMIS !', 'L\'intervention est maintenant terminée.');
+      triggerCelebration();
       setShowReportModal(false);
       setRecordingState('idle');
       setAudioBlob(null);
@@ -230,19 +228,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         has_report: false
       }]);
       if (error) throw error;
-      triggerCelebration('PLANIFIÉ !', 'Nouvelle intervention créée.');
+      triggerCelebration();
       setShowNewInterventionModal(false);
-      setNewIntervention({
-        client: '',
-        clientPhone: '',
-        domain: 'Électricité',
-        interventionType: 'Dépannage',
-        description: '',
-        location: '',
-        site: 'Abidjan',
-        technician: '',
-        date: new Date().toISOString().split('T')[0]
-      });
     } catch (err: any) {
       alert("Erreur création : " + err.message);
     } finally {
@@ -277,16 +264,16 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   return (
     <div className="space-y-6 pb-20 relative">
       {showSuccessCelebration && (
-        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[700] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
              <div className="bg-white p-6 rounded-[2rem] text-center shadow-2xl animate-bounce border-4 border-orange-500 w-full max-w-xs">
                 <PartyPopper size={40} className="text-orange-500 mx-auto mb-2" />
-                <h2 className="text-lg font-black uppercase tracking-tight">ENVOYÉ !</h2>
-                <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">Ton travail est bien enregistré.</p>
+                <h2 className="text-lg font-black uppercase tracking-tight">RÉUSSI !</h2>
+                <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">L'action a été enregistrée.</p>
              </div>
         </div>
       )}
 
-      {/* Header compact mobile */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between gap-4 px-1">
         <div>
           <h2 className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter text-gray-900">Techniciens 🛠️</h2>
@@ -294,11 +281,11 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         </div>
         <div className="flex gap-2 w-full md:w-auto">
             <button onClick={() => setShowNewInterventionModal(true)} className="flex-1 md:flex-none bg-green-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"><CalendarPlus size={14} /> Planifier</button>
-            <button onClick={() => { setActiveInterventionForReport(null); setShowReportModal(true); }} className="flex-1 md:flex-none bg-orange-500 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"><Mic size={14} /> Rapport Libre</button>
+            <button onClick={() => { setActiveInterventionForReport(null); setShowReportModal(true); }} className="flex-1 md:flex-none bg-orange-500 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"><Mic size={14} /> Nouveau Rapport</button>
         </div>
       </div>
 
-      {/* Recherche & Filtre */}
+      {/* Filtres */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 px-1">
           <div className="relative">
             <input type="text" placeholder="Recherche client..." className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl shadow-sm font-bold text-sm outline-none border border-transparent focus:border-orange-500 transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -317,7 +304,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
           </div>
       </div>
 
-      {/* Grid de cartes */}
+      {/* Liste */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-1">
         {filteredInterventions.map((inter) => (
           <div key={inter.id} onClick={() => setViewIntervention(inter)} className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 hover-lift relative overflow-hidden flex flex-col cursor-pointer transition-all">
@@ -341,13 +328,11 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         ))}
       </div>
 
-      {/* INTERFACE D'ENREGISTREMENT FLOTTANTE ET CENTRÉE - SANS FOND NOIR */}
+      {/* INTERFACE ENREGISTREMENT - CENTRÉE ET FLOTTANTE SANS FOND NOIR */}
       {showReportModal && (
-        <div className="fixed inset-0 z-[500] pointer-events-none flex items-center justify-center p-6">
-           {/* La carte d'enregistrement elle-même récupère les clics */}
+        <div className="fixed inset-0 z-[600] pointer-events-none flex items-center justify-center p-6">
            <div className="bg-white/95 backdrop-blur-3xl w-full max-w-sm rounded-[3.5rem] p-8 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.3)] relative border-b-[10px] border-orange-500 flex flex-col items-center animate-scale-in pointer-events-auto ring-1 ring-black/5">
               
-              {/* Bouton de fermeture discret */}
               <button 
                 onClick={() => { setShowReportModal(false); setRecordingState('idle'); setAudioBlob(null); setAudioUrl(null); }} 
                 className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full text-gray-400 active:bg-red-50 active:text-red-500 transition-all"
@@ -358,17 +343,15 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
               <div className="text-center mb-8 mt-2">
                   <h3 className="text-xl font-black uppercase italic tracking-tighter text-gray-900 leading-none">Rapport Vocal</h3>
                   <p className="text-orange-500 font-bold text-[10px] uppercase mt-2 tracking-widest flex items-center justify-center gap-2 px-4 truncate">
-                    {activeInterventionForReport ? <><CheckCircle2 size={12}/> {activeInterventionForReport.client}</> : 'Nouveau Rapport Libre'}
+                    {activeInterventionForReport ? <><CheckCircle2 size={12}/> {activeInterventionForReport.client}</> : 'Nouveau Rapport'}
                   </p>
               </div>
 
-              {/* ZONE CENTRALE D'ACTION */}
               <div className="relative flex flex-col items-center gap-8 py-4 w-full">
                   <div className="relative">
                       {recordingState === 'recording' && (
                           <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping scale-150"></div>
                       )}
-                      
                       <button 
                         onClick={recordingState === 'idle' ? handleStartRecording : recordingState === 'recording' ? handleStopRecording : handleTogglePlayback}
                         className={`w-36 h-36 md:w-44 md:h-44 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all active:scale-95 border-8 border-white
@@ -389,7 +372,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                           {recordingState === 'review' && (
                               <div className="flex flex-col items-center">
                                   {isPlaying ? <Pause size={48} fill="white" /> : <Play size={48} fill="white" className="ml-2" />}
-                                  <span className="text-[10px] font-black uppercase mt-3 tracking-widest">{isPlaying ? 'Lecture' : 'Réécouter'}</span>
+                                  <span className="text-[10px] font-black uppercase mt-3 tracking-widest">{isPlaying ? 'Lecture' : 'Réécoute'}</span>
                               </div>
                           )}
                       </button>
@@ -402,19 +385,18 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       <div className="flex items-center justify-center gap-2 mt-4 bg-gray-50 px-4 py-2 rounded-full border border-gray-100">
                         {recordingState === 'recording' && <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>}
                         <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em]">
-                            {recordingState === 'recording' ? 'Micro en ligne...' : recordingState === 'review' ? 'Audio validé' : 'Prêt à enregistrer'}
+                            {recordingState === 'recording' ? 'En direct...' : recordingState === 'review' ? 'Audio prêt' : 'Appuyer pour parler'}
                         </p>
                       </div>
                   </div>
               </div>
 
-              {/* ACTIONS FINALES */}
               {recordingState === 'review' && (
                 <div className="w-full space-y-4 mt-8 animate-slide-up border-t border-gray-100 pt-8">
                    {!activeInterventionForReport && (
                         <div className="relative">
                             <select className="w-full p-4 bg-gray-50 rounded-2xl font-black text-xs border-2 border-transparent focus:border-orange-500 outline-none appearance-none uppercase tracking-wider" value={formReport.client} onChange={(e) => setFormReport({...formReport, client: e.target.value})}>
-                                <option value="">Choisir le client concerné...</option>
+                                <option value="">Client...</option>
                                 {interventions.filter(i => i.status !== 'Terminé').map(i => <option key={i.id} value={i.client}>{i.client}</option>)}
                             </select>
                             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16}/>
@@ -436,84 +418,47 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         </div>
       )}
 
-      {/* MODAL PLANIFICATION - CLASSIQUE AVEC FOND */}
+      {/* Modal Planification */}
       {showNewInterventionModal && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-           <div className="bg-white w-full max-w-2xl rounded-[3rem] p-6 md:p-10 shadow-2xl max-h-[92vh] overflow-y-auto custom-scrollbar">
+           <div className="bg-white w-full max-w-2xl rounded-[3rem] p-6 md:p-10 shadow-2xl max-h-[92vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                   <h3 className="text-xl font-black uppercase italic tracking-tight text-gray-950">Nouvelle Mission</h3>
-                  <button onClick={() => setShowNewInterventionModal(false)} className="p-3 bg-gray-100 rounded-full text-gray-500 active:bg-red-50 active:text-red-500 transition-all"><X size={20}/></button>
+                  <button onClick={() => setShowNewInterventionModal(false)} className="p-3 bg-gray-100 rounded-full text-gray-500"><X size={20}/></button>
               </div>
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-4">
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Client</label>
-                        <input type="text" placeholder="Nom du client" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
+                        <input type="text" placeholder="Nom" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
                       </div>
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Téléphone</label>
-                        <input type="text" placeholder="+225 ..." className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.clientPhone} onChange={e => setNewIntervention({...newIntervention, clientPhone: e.target.value})}/>
-                      </div>
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Localisation</label>
-                        <input type="text" placeholder="Quartier / Rue" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.location} onChange={e => setNewIntervention({...newIntervention, location: e.target.value})}/>
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Tél</label>
+                        <input type="text" placeholder="+225" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.clientPhone} onChange={e => setNewIntervention({...newIntervention, clientPhone: e.target.value})}/>
                       </div>
                   </div>
-
                   <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Domaine</label>
-                            <select className="w-full bg-transparent font-bold text-[10px] outline-none" value={newIntervention.domain} onChange={e => setNewIntervention({...newIntervention, domain: e.target.value as any})}>
-                                <option value="Électricité">Élec.</option>
-                                <option value="Bâtiment">Bât.</option>
-                                <option value="Froid">Froid</option>
-                                <option value="Plomberie">Plomb.</option>
-                            </select>
-                        </div>
-                        <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Date</label>
-                            <input type="date" className="w-full bg-transparent font-bold text-[10px] outline-none" value={newIntervention.date} onChange={e => setNewIntervention({...newIntervention, date: e.target.value})}/>
-                        </div>
-                      </div>
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Site EBF</label>
-                        <select className="w-full bg-transparent font-bold text-xs outline-none" value={newIntervention.site} onChange={e => setNewIntervention({...newIntervention, site: e.target.value as any})}>
-                            <option value="Abidjan">Abidjan</option>
-                            <option value="Bouaké">Bouaké</option>
-                            <option value="Korhogo">Korhogo</option>
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Technicien</label>
+                        <select className="w-full bg-transparent font-black text-sm outline-none" value={newIntervention.technician} onChange={e => setNewIntervention({...newIntervention, technician: e.target.value})}>
+                            <option value="">Choisir...</option>
+                            {techniciansList.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
                         </select>
                       </div>
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Type</label>
-                        <select className="w-full bg-transparent font-bold text-xs outline-none" value={newIntervention.interventionType} onChange={e => setNewIntervention({...newIntervention, interventionType: e.target.value as any})}>
-                            <option value="Dépannage">Dépannage</option>
-                            <option value="Installation">Installation</option>
-                            <option value="Entretien">Entretien</option>
-                            <option value="Maintenance">Maintenance</option>
-                        </select>
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Date</label>
+                        <input type="date" className="w-full bg-transparent font-bold text-[10px] outline-none" value={newIntervention.date} onChange={e => setNewIntervention({...newIntervention, date: e.target.value})}/>
                       </div>
                   </div>
               </div>
-
-              <div className="mt-6 space-y-4 pt-4 border-t border-gray-100">
-                  <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
-                    <label className="text-[9px] font-black text-orange-600 uppercase tracking-widest mb-1 block">Technicien</label>
-                    <select className="w-full bg-transparent font-black text-sm outline-none text-gray-800" value={newIntervention.technician} onChange={e => setNewIntervention({...newIntervention, technician: e.target.value})}>
-                        <option value="">Choisir un agent...</option>
-                        {techniciansList.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
-                    </select>
-                  </div>
-                  
+              <div className="mt-6 space-y-4">
                   <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Instructions</label>
-                    <textarea placeholder="Description des travaux..." className="w-full bg-transparent font-bold text-sm h-24 outline-none resize-none" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
+                    <textarea placeholder="Description..." className="w-full bg-transparent font-bold text-sm h-24 outline-none resize-none" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
                   </div>
-                  
                   <button onClick={handleCreateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-950 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-widest shadow-xl flex justify-center items-center gap-2 active:scale-95 transition-all disabled:opacity-50">
                     {isSaving ? <Loader2 className="animate-spin" size={16} /> : <CalendarPlus size={18}/>}
-                    {isSaving ? 'EN COURS...' : 'CONFIRMER LA PLANIFICATION'}
+                    {isSaving ? 'EN COURS...' : 'CONFIRMER'}
                   </button>
               </div>
            </div>
@@ -532,15 +477,11 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       <button onClick={() => setViewIntervention(null)} className="p-3 bg-gray-100 rounded-full active:bg-gray-200 transition-colors"><X size={20} /></button>
                   </div>
                   <div className="space-y-4">
-                      <div className="flex gap-2">
-                         <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg font-black text-[8px] uppercase tracking-widest border border-blue-100">{viewIntervention.interventionType}</span>
-                         <span className="px-3 py-1 bg-gray-50 text-gray-500 rounded-lg font-black text-[8px] uppercase tracking-widest border border-gray-200">{viewIntervention.domain}</span>
-                      </div>
                       <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 font-bold text-blue-700 text-sm flex items-center gap-3"><Phone size={18}/> {viewIntervention.clientPhone || "Inconnu"}</div>
-                      <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 text-gray-700 text-sm leading-relaxed font-medium min-h-[120px] scrollbar-hide overflow-y-auto">{viewIntervention.description}</div>
+                      <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 text-gray-700 text-sm leading-relaxed font-medium min-h-[120px] overflow-y-auto">{viewIntervention.description}</div>
                       <div className="flex gap-3 pt-4">
-                          <button onClick={() => { setEditIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">Modifier</button>
-                          <button onClick={() => { handleOpenReportForIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-orange-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"><Mic size={18}/> Rapport</button>
+                          <button onClick={() => { setEditIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest">Modifier</button>
+                          <button onClick={() => { handleOpenReportForIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-orange-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-lg"><Mic size={18}/> Rapport</button>
                       </div>
                   </div>
               </div>
@@ -552,22 +493,16 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 p-4 animate-fade-in">
            <div className="bg-white w-full max-w-md rounded-[3rem] p-8 shadow-2xl animate-scale-in">
                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-lg font-black uppercase italic tracking-tighter text-gray-950">Modifier le Statut</h3>
-                  <button onClick={() => setEditIntervention(null)} className="p-2 bg-gray-50 rounded-full active:bg-red-50 transition-colors"><X size={18}/></button>
+                  <h3 className="text-lg font-black uppercase italic tracking-tighter text-gray-950">Statut</h3>
+                  <button onClick={() => setEditIntervention(null)} className="p-2 bg-gray-50 rounded-full"><X size={18}/></button>
                </div>
                <div className="space-y-4">
                    <div className="grid grid-cols-1 gap-2">
                        {['En attente', 'En cours', 'Terminé'].map((s) => (
-                           <button key={s} onClick={() => setEditIntervention({...editIntervention, status: s as any})} className={`w-full p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest border-2 transition-all active:scale-95 ${editIntervention.status === s ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-100 text-gray-400'}`}>{s}</button>
+                           <button key={s} onClick={() => setEditIntervention({...editIntervention, status: s as any})} className={`w-full p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest border-2 transition-all ${editIntervention.status === s ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-100 text-gray-400'}`}>{s}</button>
                        ))}
                    </div>
-                   <div className="pt-4 border-t border-gray-100">
-                       <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Réassigner l'agent</label>
-                       <select className="w-full p-4 bg-gray-50 rounded-2xl font-black text-xs outline-none border-2 border-transparent focus:border-orange-500 appearance-none" value={editIntervention.technician} onChange={e => setEditIntervention({...editIntervention, technician: e.target.value})}>
-                            {techniciansList.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
-                       </select>
-                   </div>
-                   <button onClick={handleUpdateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-950 text-white rounded-[1.5rem] font-black uppercase text-[10px] tracking-widest mt-4 shadow-xl active:scale-95 transition-all">
+                   <button onClick={handleUpdateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-950 text-white rounded-[1.5rem] font-black uppercase text-[10px] tracking-widest mt-4 shadow-xl">
                      {isSaving ? <Loader2 className="animate-spin mx-auto" size={18} /> : 'Appliquer'}
                    </button>
                </div>
