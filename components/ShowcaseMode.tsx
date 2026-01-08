@@ -443,7 +443,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                     {inter.site && (
                                         <div className="flex items-center gap-2 md:gap-3 bg-white/10 px-4 py-1.5 md:px-5 md:py-2 rounded-xl border border-white/10 backdrop-blur-md animate-pulse-soft">
                                             <MapPin className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />
-                                            <span className="text-xs md:text-base font-black text-white uppercase tracking-tighter">
+                                            <span className="text-xs md:text-base font-black text-orange-500 uppercase tracking-tighter">
                                                 {inter.site}
                                             </span>
                                         </div>
