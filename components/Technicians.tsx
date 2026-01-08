@@ -277,11 +277,11 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   return (
     <div className="space-y-6 pb-20 relative">
       {showSuccessCelebration && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
              <div className="bg-white p-6 rounded-[2rem] text-center shadow-2xl animate-bounce border-4 border-orange-500 w-full max-w-xs">
                 <PartyPopper size={40} className="text-orange-500 mx-auto mb-2" />
-                <h2 className="text-lg font-black uppercase tracking-tight">{celebrationMessage.title}</h2>
-                <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">{celebrationMessage.sub}</p>
+                <h2 className="text-lg font-black uppercase tracking-tight">ENVOYÉ !</h2>
+                <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">Ton travail est bien enregistré.</p>
              </div>
         </div>
       )}
@@ -341,68 +341,91 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         ))}
       </div>
 
-      {/* MODAL RAPPORT VOCAL - FIXÉ ET SANS FOND NOIR */}
+      {/* INTERFACE D'ENREGISTREMENT FLOTTANTE ET CENTRÉE - SANS FOND NOIR */}
       {showReportModal && (
-        <div className="fixed bottom-6 left-6 right-6 md:left-auto md:right-8 md:bottom-8 z-[400] pointer-events-none">
-           <div className="bg-white/95 backdrop-blur-2xl w-full md:w-80 rounded-[2.5rem] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.15)] relative border-b-[6px] border-orange-500 flex flex-col items-center animate-slide-up pointer-events-auto ring-1 ring-black/5">
+        <div className="fixed inset-0 z-[500] pointer-events-none flex items-center justify-center p-6">
+           {/* La carte d'enregistrement elle-même récupère les clics */}
+           <div className="bg-white/95 backdrop-blur-3xl w-full max-w-sm rounded-[3.5rem] p-8 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.3)] relative border-b-[10px] border-orange-500 flex flex-col items-center animate-scale-in pointer-events-auto ring-1 ring-black/5">
               
+              {/* Bouton de fermeture discret */}
               <button 
                 onClick={() => { setShowReportModal(false); setRecordingState('idle'); setAudioBlob(null); setAudioUrl(null); }} 
-                className="absolute top-4 right-4 p-1.5 bg-gray-100 rounded-full text-gray-400 active:bg-red-50 active:text-red-500 transition-colors"
+                className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full text-gray-400 active:bg-red-50 active:text-red-500 transition-all"
               >
-                  <X size={16}/>
+                  <X size={20}/>
               </button>
 
-              <div className="text-center mb-4 mt-2">
-                  <h3 className="text-sm font-black uppercase italic tracking-tighter text-gray-900">Enregistrement Rapport</h3>
-                  <p className="text-orange-500 font-bold text-[8px] uppercase mt-0.5 tracking-widest flex items-center justify-center gap-1 px-4 truncate">
-                    {activeInterventionForReport ? <><CheckCircle2 size={10}/> {activeInterventionForReport.client}</> : 'Mode Rapport Libre'}
+              <div className="text-center mb-8 mt-2">
+                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-gray-900 leading-none">Rapport Vocal</h3>
+                  <p className="text-orange-500 font-bold text-[10px] uppercase mt-2 tracking-widest flex items-center justify-center gap-2 px-4 truncate">
+                    {activeInterventionForReport ? <><CheckCircle2 size={12}/> {activeInterventionForReport.client}</> : 'Nouveau Rapport Libre'}
                   </p>
               </div>
 
-              <div className="flex items-center gap-6 w-full px-2">
+              {/* ZONE CENTRALE D'ACTION */}
+              <div className="relative flex flex-col items-center gap-8 py-4 w-full">
                   <div className="relative">
                       {recordingState === 'recording' && (
-                          <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping scale-125"></div>
+                          <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping scale-150"></div>
                       )}
+                      
                       <button 
                         onClick={recordingState === 'idle' ? handleStartRecording : recordingState === 'recording' ? handleStopRecording : handleTogglePlayback}
-                        className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-90
-                          ${recordingState === 'recording' ? 'bg-red-500 text-white' : recordingState === 'review' ? 'bg-orange-500 text-white' : 'bg-gray-900 text-white'}`}
+                        className={`w-36 h-36 md:w-44 md:h-44 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all active:scale-95 border-8 border-white
+                          ${recordingState === 'recording' ? 'bg-red-500 text-white' : recordingState === 'review' ? 'bg-orange-500 text-white' : 'bg-gray-950 text-white'}`}
                       >
-                          {recordingState === 'idle' && <Mic size={24} />}
-                          {recordingState === 'recording' && <Square size={20} fill="white" />}
-                          {recordingState === 'review' && (isPlaying ? <Pause size={24} fill="white" /> : <Play size={24} fill="white" className="ml-1" />)}
+                          {recordingState === 'idle' && (
+                              <div className="flex flex-col items-center">
+                                  <Mic size={48} strokeWidth={2.5}/>
+                                  <span className="text-[10px] font-black uppercase mt-3 tracking-widest">Lancer</span>
+                              </div>
+                          )}
+                          {recordingState === 'recording' && (
+                              <div className="flex flex-col items-center">
+                                  <Square size={40} fill="white" />
+                                  <span className="text-[10px] font-black uppercase mt-3 tracking-widest">Arrêter</span>
+                              </div>
+                          )}
+                          {recordingState === 'review' && (
+                              <div className="flex flex-col items-center">
+                                  {isPlaying ? <Pause size={48} fill="white" /> : <Play size={48} fill="white" className="ml-2" />}
+                                  <span className="text-[10px] font-black uppercase mt-3 tracking-widest">{isPlaying ? 'Lecture' : 'Réécouter'}</span>
+                              </div>
+                          )}
                       </button>
                   </div>
 
-                  <div className="flex-1">
-                      <p className="text-3xl font-black font-mono text-gray-950 tabular-nums leading-none tracking-tighter">
+                  <div className="text-center">
+                      <p className="text-6xl font-black font-mono text-gray-950 tabular-nums tracking-tighter leading-none">
                           {formatTime(recordingState === 'review' ? playbackTime : recordingDuration)}
                       </p>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        {recordingState === 'recording' && <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>}
-                        <p className="text-gray-400 font-bold uppercase text-[8px] tracking-[0.1em]">
-                            {recordingState === 'recording' ? 'Micro actif...' : recordingState === 'review' ? 'Réécoute' : 'Prêt à parler'}
+                      <div className="flex items-center justify-center gap-2 mt-4 bg-gray-50 px-4 py-2 rounded-full border border-gray-100">
+                        {recordingState === 'recording' && <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>}
+                        <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em]">
+                            {recordingState === 'recording' ? 'Micro en ligne...' : recordingState === 'review' ? 'Audio validé' : 'Prêt à enregistrer'}
                         </p>
                       </div>
                   </div>
               </div>
 
+              {/* ACTIONS FINALES */}
               {recordingState === 'review' && (
-                <div className="w-full space-y-3 mt-6 animate-fade-in border-t border-gray-100 pt-4">
+                <div className="w-full space-y-4 mt-8 animate-slide-up border-t border-gray-100 pt-8">
                    {!activeInterventionForReport && (
-                        <select className="w-full p-3 bg-gray-50 rounded-xl font-black text-[9px] border-2 border-transparent focus:border-orange-500 outline-none appearance-none uppercase" value={formReport.client} onChange={(e) => setFormReport({...formReport, client: e.target.value})}>
-                            <option value="">Lier à un client...</option>
-                            {interventions.filter(i => i.status !== 'Terminé').map(i => <option key={i.id} value={i.client}>{i.client}</option>)}
-                        </select>
+                        <div className="relative">
+                            <select className="w-full p-4 bg-gray-50 rounded-2xl font-black text-xs border-2 border-transparent focus:border-orange-500 outline-none appearance-none uppercase tracking-wider" value={formReport.client} onChange={(e) => setFormReport({...formReport, client: e.target.value})}>
+                                <option value="">Choisir le client concerné...</option>
+                                {interventions.filter(i => i.status !== 'Terminé').map(i => <option key={i.id} value={i.client}>{i.client}</option>)}
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16}/>
+                        </div>
                    )}
-                   <div className="flex gap-2">
-                       <button onClick={() => { setRecordingState('idle'); setAudioBlob(null); handleStartRecording(); }} className="flex-1 py-3 bg-gray-50 text-gray-500 rounded-xl font-black uppercase text-[8px] tracking-widest active:bg-gray-200 flex items-center justify-center gap-1">
-                           <RotateCcw size={12}/> Refaire
+                   <div className="flex gap-3">
+                       <button onClick={() => { setRecordingState('idle'); setAudioBlob(null); handleStartRecording(); }} className="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl font-black uppercase text-[10px] tracking-widest active:bg-gray-200 flex items-center justify-center gap-2">
+                           <RotateCcw size={14}/> Refaire
                        </button>
-                       <button onClick={handleSubmitReport} disabled={isSaving} className="flex-[2] py-3 bg-gray-950 text-white rounded-xl font-black uppercase text-[8px] tracking-widest shadow-xl flex justify-center items-center gap-2 disabled:opacity-50 active:scale-95 transition-all">
-                        {isSaving ? <Loader2 className="animate-spin" size={12} /> : <SendHorizontal size={14}/>}
+                       <button onClick={handleSubmitReport} disabled={isSaving} className="flex-[2] py-4 bg-gray-950 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl flex justify-center items-center gap-2 disabled:opacity-50 active:scale-95 transition-all">
+                        {isSaving ? <Loader2 className="animate-spin" size={14} /> : <SendHorizontal size={16}/>}
                         {isSaving ? 'ENVOI...' : 'TRANSMETTRE'}
                        </button>
                    </div>
@@ -413,9 +436,9 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         </div>
       )}
 
-      {/* MODAL PLANIFICATION - RESTE CLASSIQUE */}
+      {/* MODAL PLANIFICATION - CLASSIQUE AVEC FOND */}
       {showNewInterventionModal && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
            <div className="bg-white w-full max-w-2xl rounded-[3rem] p-6 md:p-10 shadow-2xl max-h-[92vh] overflow-y-auto custom-scrollbar">
               <div className="flex justify-between items-center mb-6">
                   <h3 className="text-xl font-black uppercase italic tracking-tight text-gray-950">Nouvelle Mission</h3>
@@ -499,7 +522,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
       {/* Vue dossier */}
       {viewIntervention && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
+          <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
               <div className="bg-white w-full max-w-xl rounded-[3rem] p-8 md:p-10 shadow-2xl relative animate-slide-up">
                   <div className="flex justify-between items-start mb-6 text-gray-950">
                       <div>
@@ -514,7 +537,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                          <span className="px-3 py-1 bg-gray-50 text-gray-500 rounded-lg font-black text-[8px] uppercase tracking-widest border border-gray-200">{viewIntervention.domain}</span>
                       </div>
                       <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 font-bold text-blue-700 text-sm flex items-center gap-3"><Phone size={18}/> {viewIntervention.clientPhone || "Inconnu"}</div>
-                      <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 text-gray-700 text-sm leading-relaxed font-medium min-h-[120px]">{viewIntervention.description}</div>
+                      <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 text-gray-700 text-sm leading-relaxed font-medium min-h-[120px] scrollbar-hide overflow-y-auto">{viewIntervention.description}</div>
                       <div className="flex gap-3 pt-4">
                           <button onClick={() => { setEditIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">Modifier</button>
                           <button onClick={() => { handleOpenReportForIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-orange-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"><Mic size={18}/> Rapport</button>
@@ -526,7 +549,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
       {/* Édition Statut */}
       {editIntervention && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 p-4 animate-fade-in">
            <div className="bg-white w-full max-w-md rounded-[3rem] p-8 shadow-2xl animate-scale-in">
                <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-black uppercase italic tracking-tighter text-gray-950">Modifier le Statut</h3>
