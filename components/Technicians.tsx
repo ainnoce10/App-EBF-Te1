@@ -82,7 +82,16 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const handleStartRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      
+      // Détection du meilleur type MIME supporté
+      let options: MediaRecorderOptions = {};
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        options = { mimeType: 'audio/webm;codecs=opus' };
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        options = { mimeType: 'audio/mp4' };
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
@@ -91,11 +100,16 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        const blob = new Blob(chunksRef.current, { type: mimeType });
         setAudioBlob(blob);
+        
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
         setRecordingState('review');
+        
+        // Libération propre du micro
+        stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
@@ -107,14 +121,14 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         setRecordingDuration(prev => prev + 1);
       }, 1000);
     } catch (err) {
-      alert("Erreur micro : vérifiez les permissions.");
+      console.error(err);
+      alert("Impossible d'accéder au microphone. Vérifiez vos permissions.");
     }
   };
 
   const handleStopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -174,28 +188,45 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
   const handleSubmitReport = async () => {
     const target = activeInterventionForReport || interventions.find(i => i.client === formReport.client);
-    if (!target || !audioBlob) {
+    if (!target) {
+        alert("Veuillez sélectionner une intervention.");
+        return;
+    }
+    if (!audioBlob) {
         alert("Erreur : L'audio n'est pas prêt.");
         return;
     }
     
     setIsSaving(true);
     try {
-      const fileName = `report_${target.id}_${Date.now()}.webm`;
+      // 1. Upload vers le bucket 'voice_reports'
+      const timestamp = Date.now();
+      const fileExt = audioBlob.type.includes('mp4') ? 'mp4' : 'webm';
+      const fileName = `report_${target.id}_${timestamp}.${fileExt}`;
+      
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('voice_reports')
         .upload(fileName, audioBlob);
       
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+          console.error("Upload error:", uploadError);
+          // Fallback possible vers 'assets' si 'voice_reports' n'existe pas, mais on suppose que le script SQL a été joué.
+          throw new Error("Échec upload audio. Avez-vous exécuté le script SQL dans Paramètres ?");
+      }
+
+      // 2. Mise à jour de l'intervention
+      const audioPath = uploadData.path;
+      // On ajoute l'info audio à la description existante ou nouvelle
+      const currentDesc = target.description || "";
+      const additionalInfo = formReport.workDone ? `\nNote: ${formReport.workDone}` : "";
+      const newDescription = `${currentDesc}${additionalInfo}\n\n[Rapport Vocal: ${fileName}]`.trim();
 
       const { error } = await supabase
         .from('interventions')
         .update({ 
             status: 'Terminé', 
             has_report: true, 
-            description: formReport.workDone 
-                ? `${formReport.workDone}\n(Audio: ${uploadData.path})` 
-                : `Rapport vocal enregistré le ${new Date().toLocaleDateString()}`
+            description: newDescription
         })
         .eq('id', target.id);
       
@@ -206,6 +237,16 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       setRecordingState('idle');
       setAudioBlob(null);
       setAudioUrl(null);
+      setFormReport({ client: '', workDone: '' });
+
+      // Mise à jour optimiste de l'UI
+      setInterventions(prev => prev.map(i => i.id === target.id ? { 
+          ...i, 
+          status: 'Terminé', 
+          has_report: true, 
+          description: newDescription
+      } : i));
+
     } catch (err: any) {
       alert("Erreur de soumission : " + err.message);
     } finally {
@@ -478,7 +519,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                   </div>
                   <div className="space-y-4">
                       <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 font-bold text-blue-700 text-sm flex items-center gap-3"><Phone size={18}/> {viewIntervention.clientPhone || "Inconnu"}</div>
-                      <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 text-gray-700 text-sm leading-relaxed font-medium min-h-[120px] overflow-y-auto">{viewIntervention.description}</div>
+                      <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 text-gray-700 text-sm leading-relaxed font-medium min-h-[120px] max-h-[200px] overflow-y-auto whitespace-pre-wrap">{viewIntervention.description}</div>
                       <div className="flex gap-3 pt-4">
                           <button onClick={() => { setEditIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest">Modifier</button>
                           <button onClick={() => { handleOpenReportForIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-orange-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-lg"><Mic size={18}/> Rapport</button>
