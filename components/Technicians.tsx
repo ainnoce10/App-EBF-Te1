@@ -67,6 +67,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     date: new Date().toISOString().split('T')[0]
   });
 
+  // --- LOGIQUE ENREGISTREMENT ET LECTURE ---
   const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'review'>('idle');
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -78,71 +79,138 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Nettoyage au démontage ou fermeture
+  useEffect(() => {
+    return () => {
+      cleanupRecording();
+    };
+  }, []);
+
+  const cleanupRecording = () => {
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+  };
 
   const handleStartRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Détection du meilleur type MIME supporté
-      let options: MediaRecorderOptions = {};
-      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        options = { mimeType: 'audio/webm;codecs=opus' };
-      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-        options = { mimeType: 'audio/mp4' };
-      }
-      
-      const mediaRecorder = new MediaRecorder(stream, options);
-      mediaRecorderRef.current = mediaRecorder;
+      // Reset états précédents
+      cleanupRecording();
+      setAudioBlob(null);
+      setAudioUrl(null);
+      setPlaybackTime(0);
+      setIsPlaying(false);
       chunksRef.current = [];
 
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      
+      // Détection MIME Type (MP4 pour iOS/Safari, WebM pour Chrome/FF)
+      let mimeType = '';
+      if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mimeType = 'audio/mp4';
+      } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mimeType = 'audio/webm;codecs=opus';
+      } else {
+        mimeType = 'audio/webm';
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mediaRecorder;
+
       mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
       };
 
       mediaRecorder.onstop = () => {
-        const mimeType = mediaRecorder.mimeType || 'audio/webm';
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        setAudioBlob(blob);
+        try {
+            const blob = new Blob(chunksRef.current, { type: mimeType });
+            setAudioBlob(blob);
+            const url = URL.createObjectURL(blob);
+            setAudioUrl(url);
+            setRecordingState('review');
+        } catch (e) {
+            console.error("Erreur création blob audio:", e);
+            alert("Erreur lors de la finalisation de l'audio.");
+            setRecordingState('idle');
+        }
         
-        const url = URL.createObjectURL(blob);
-        setAudioUrl(url);
-        setRecordingState('review');
-        
-        // Libération propre du micro
-        stream.getTracks().forEach(track => track.stop());
+        // Arrêt des pistes micro
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+      };
+      
+      mediaRecorder.onerror = (event) => {
+          console.error("Erreur MediaRecorder:", event);
+          alert("Une erreur est survenue pendant l'enregistrement.");
+          handleStopRecording();
       };
 
-      mediaRecorder.start();
+      // Démarrage avec timeslice pour garantir des chunks réguliers
+      mediaRecorder.start(200);
       setRecordingState('recording');
       setRecordingDuration(0);
       
-      if (timerRef.current) clearInterval(timerRef.current);
       timerRef.current = window.setInterval(() => {
         setRecordingDuration(prev => prev + 1);
       }, 1000);
-    } catch (err) {
+
+    } catch (err: any) {
       console.error(err);
-      alert("Impossible d'accéder au microphone. Vérifiez vos permissions.");
+      alert("Impossible d'accéder au microphone. Vérifiez les permissions du navigateur.");
+      setRecordingState('idle');
     }
   };
 
   const handleStopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+    } else {
+        // Fallback si l'état est incohérent
+        setRecordingState('idle');
+    }
+    
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
   };
 
-  const handleTogglePlayback = () => {
+  const handleTogglePlayback = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!audioPreviewRef.current) return;
+    
     if (isPlaying) {
       audioPreviewRef.current.pause();
     } else {
-      audioPreviewRef.current.play().catch(console.error);
+      // On remet au début si fini
+      if (audioPreviewRef.current.ended) {
+          audioPreviewRef.current.currentTime = 0;
+      }
+      audioPreviewRef.current.play().catch(e => {
+          console.error("Erreur lecture:", e);
+          alert("Impossible de lire l'audio : " + e.message);
+      });
     }
+  };
+
+  const handleMainButtonClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (recordingState === 'idle') handleStartRecording();
+      else if (recordingState === 'recording') handleStopRecording();
+      else handleTogglePlayback(e);
   };
 
   const triggerCelebration = () => {
@@ -189,11 +257,11 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const handleSubmitReport = async () => {
     const target = activeInterventionForReport || interventions.find(i => i.client === formReport.client);
     if (!target) {
-        alert("Veuillez sélectionner une intervention.");
+        alert("Veuillez sélectionner une intervention ou un client.");
         return;
     }
     if (!audioBlob) {
-        alert("Erreur : L'audio n'est pas prêt.");
+        alert("Erreur : L'audio n'est pas prêt ou est vide.");
         return;
     }
     
@@ -204,18 +272,16 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       const fileExt = audioBlob.type.includes('mp4') ? 'mp4' : 'webm';
       const fileName = `report_${target.id}_${timestamp}.${fileExt}`;
       
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('voice_reports')
         .upload(fileName, audioBlob);
       
       if (uploadError) {
           console.error("Upload error:", uploadError);
-          // Fallback possible vers 'assets' si 'voice_reports' n'existe pas, mais on suppose que le script SQL a été joué.
-          throw new Error("Échec upload audio. Avez-vous exécuté le script SQL dans Paramètres ?");
+          throw new Error("Échec upload audio. Vérifiez votre connexion ou les paramètres Supabase (Storage).");
       }
 
       // 2. Mise à jour de l'intervention
-      // On ajoute l'info audio à la description existante ou nouvelle
       const currentDesc = target.description || "";
       const additionalInfo = formReport.workDone ? `\nNote: ${formReport.workDone}` : "";
       const newDescription = `${currentDesc}${additionalInfo}\n\n[Rapport Vocal: ${fileName}]`.trim();
@@ -237,6 +303,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       setAudioBlob(null);
       setAudioUrl(null);
       setFormReport({ client: '', workDone: '' });
+      cleanupRecording();
 
       // Mise à jour optimiste de l'UI
       setInterventions(prev => prev.map(i => i.id === target.id ? { 
@@ -374,7 +441,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
            <div className="bg-white/95 backdrop-blur-3xl w-full max-w-sm rounded-[3.5rem] p-8 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.3)] relative border-b-[10px] border-orange-500 flex flex-col items-center animate-scale-in pointer-events-auto ring-1 ring-black/5">
               
               <button 
-                onClick={() => { setShowReportModal(false); setRecordingState('idle'); setAudioBlob(null); setAudioUrl(null); }} 
+                onClick={() => { setShowReportModal(false); cleanupRecording(); setRecordingState('idle'); }} 
                 className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full text-gray-400 active:bg-red-50 active:text-red-500 transition-all"
               >
                   <X size={20}/>
@@ -393,7 +460,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                           <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping scale-150"></div>
                       )}
                       <button 
-                        onClick={recordingState === 'idle' ? handleStartRecording : recordingState === 'recording' ? handleStopRecording : handleTogglePlayback}
+                        onClick={handleMainButtonClick}
                         className={`w-36 h-36 md:w-44 md:h-44 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all active:scale-95 border-8 border-white
                           ${recordingState === 'recording' ? 'bg-red-500 text-white' : recordingState === 'review' ? 'bg-orange-500 text-white' : 'bg-gray-950 text-white'}`}
                       >
@@ -443,7 +510,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                         </div>
                    )}
                    <div className="flex gap-3">
-                       <button onClick={() => { setRecordingState('idle'); setAudioBlob(null); handleStartRecording(); }} className="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl font-black uppercase text-[10px] tracking-widest active:bg-gray-200 flex items-center justify-center gap-2">
+                       <button onClick={() => { setRecordingState('idle'); cleanupRecording(); handleStartRecording(); }} className="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl font-black uppercase text-[10px] tracking-widest active:bg-gray-200 flex items-center justify-center gap-2">
                            <RotateCcw size={14}/> Refaire
                        </button>
                        <button onClick={handleSubmitReport} disabled={isSaving} className="flex-[2] py-4 bg-gray-950 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl flex justify-center items-center gap-2 disabled:opacity-50 active:scale-95 transition-all">
@@ -453,7 +520,18 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                    </div>
                 </div>
               )}
-              {audioUrl && <audio ref={audioPreviewRef} src={audioUrl} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={() => setIsPlaying(false)} onTimeUpdate={(e) => setPlaybackTime(e.currentTarget.currentTime)} className="hidden" />}
+              {/* Balise audio cachée pour la lecture */}
+              {audioUrl && (
+                  <audio 
+                    ref={audioPreviewRef} 
+                    src={audioUrl} 
+                    onPlay={() => setIsPlaying(true)} 
+                    onPause={() => setIsPlaying(false)} 
+                    onEnded={() => setIsPlaying(false)} 
+                    onTimeUpdate={(e) => setPlaybackTime(e.currentTarget.currentTime)}
+                    className="hidden"
+                  />
+              )}
            </div>
         </div>
       )}
