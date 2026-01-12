@@ -20,6 +20,7 @@ interface SettingsProps {
 
 const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   const [newMessage, setNewMessage] = useState('');
+  const [newColor, setNewColor] = useState<'neutral' | 'green' | 'yellow' | 'red'>('neutral');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSavingMusic, setIsSavingMusic] = useState(false);
   const [isSavingLogo, setIsSavingLogo] = useState(false);
@@ -120,9 +121,10 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     if (!newMessage.trim()) return;
     setIsUpdating(true);
     try {
-      const { error } = await supabase.from('ticker_messages').insert([{ content: newMessage.trim(), color: 'neutral' }]);
+      const { error } = await supabase.from('ticker_messages').insert([{ content: newMessage.trim(), color: newColor }]);
       if (error) throw error;
       setNewMessage('');
+      setNewColor('neutral');
     } catch (error: any) { alert(`Erreur : ${error.message}`); } finally { setIsUpdating(false); }
   };
 
@@ -131,6 +133,15 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
     setIsUpdating(true);
     try { if (msg.id) await supabase.from('ticker_messages').delete().eq('id', msg.id); } 
     catch (error: any) { alert(`Erreur : ${error.message}`); } finally { setIsUpdating(false); }
+  };
+
+  const getColorClass = (c: string) => {
+      switch(c) {
+          case 'green': return 'bg-green-100 text-green-700 border-green-200';
+          case 'yellow': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+          case 'red': return 'bg-red-100 text-red-700 border-red-200';
+          default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      }
   };
 
   const getFullSchemaScript = () => `
@@ -320,17 +331,42 @@ create policy "Public" on public.accounting_transactions for all using (true) wi
 
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8">
            <h3 className="font-black text-xl mb-6 flex items-center gap-2 uppercase italic"><Megaphone size={24} className="text-orange-500"/> Flash Info TV</h3>
-           <div className="flex gap-3 mb-6">
-                <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Texte à diffuser..." className="flex-1 p-4 bg-gray-50 rounded-2xl font-bold outline-none" />
-                <button onClick={handleAddMessage} className="px-8 bg-gray-900 text-white rounded-2xl font-black uppercase text-xs">Ajouter</button>
+           
+           <div className="flex flex-col md:flex-row gap-3 mb-6">
+                <div className="flex-1 flex gap-3">
+                    <input 
+                        type="text" 
+                        value={newMessage} 
+                        onChange={e => setNewMessage(e.target.value)} 
+                        placeholder="Texte à diffuser..." 
+                        className="flex-1 p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-orange-500 transition-colors" 
+                    />
+                    <select 
+                        value={newColor} 
+                        onChange={(e) => setNewColor(e.target.value as any)}
+                        className="p-4 bg-gray-50 rounded-2xl font-bold outline-none uppercase text-xs border-r-8 border-transparent cursor-pointer"
+                    >
+                        <option value="neutral">⚪ Standard</option>
+                        <option value="green">🟢 Info</option>
+                        <option value="yellow">🟡 Important</option>
+                        <option value="red">🔴 Urgent</option>
+                    </select>
+                </div>
+                <button onClick={handleAddMessage} disabled={isUpdating} className="px-8 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase text-xs hover:bg-orange-600 transition-colors shadow-lg active:scale-95">
+                    {isUpdating ? <Loader2 className="animate-spin" /> : 'Ajouter'}
+                </button>
            </div>
+
            <div className="space-y-2">
                {tickerMessages.map((m, i) => (
-                   <div key={m.id || i} className="p-4 bg-gray-50 rounded-xl flex justify-between items-center">
+                   <div key={m.id || i} className={`p-4 rounded-xl flex justify-between items-center border ${getColorClass(m.color)}`}>
                        <span className="font-bold">{m.content}</span>
-                       <button onClick={() => handleDeleteMessage(m)} className="text-red-500"><Trash2 size={18}/></button>
+                       <button onClick={() => handleDeleteMessage(m)} className="p-2 bg-white rounded-full text-red-500 shadow-sm hover:scale-110 transition-transform"><Trash2 size={16}/></button>
                    </div>
                ))}
+               {tickerMessages.length === 0 && (
+                   <p className="text-center text-gray-400 text-sm font-bold py-4">Aucun message en diffusion</p>
+               )}
            </div>
       </div>
 
