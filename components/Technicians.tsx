@@ -204,7 +204,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       const fileExt = audioBlob.type.includes('mp4') ? 'mp4' : 'webm';
       const fileName = `report_${target.id}_${timestamp}.${fileExt}`;
       
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('voice_reports')
         .upload(fileName, audioBlob);
       
@@ -215,7 +215,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       }
 
       // 2. Mise à jour de l'intervention
-      const audioPath = uploadData.path;
       // On ajoute l'info audio à la description existante ou nouvelle
       const currentDesc = target.description || "";
       const additionalInfo = formReport.workDone ? `\nNote: ${formReport.workDone}` : "";
