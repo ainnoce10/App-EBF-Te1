@@ -60,7 +60,12 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const [showTvSettings, setShowTvSettings] = useState(false);
 
   const products = liveStock.length > 0 ? liveStock : [];
-  const planning = liveInterventions.length > 0 ? liveInterventions : [];
+  
+  // Filtrage des interventions : Uniquement 'En cours' ou 'En attente'
+  const planning = liveInterventions.length > 0 
+    ? liveInterventions.filter(i => i.status === 'En cours' || i.status === 'En attente') 
+    : [];
+
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
   // 0. CHARGEMENT REGLAGES TV
