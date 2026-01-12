@@ -543,39 +543,90 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                   <h3 className="text-xl font-black uppercase italic tracking-tight text-gray-950">Nouvelle Mission</h3>
                   <button onClick={() => setShowNewInterventionModal(false)} className="p-3 bg-gray-100 rounded-full text-gray-500"><X size={20}/></button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-4">
+              
+              <div className="space-y-4">
+                  {/* Ligne 1 : Client & Tel */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Client</label>
-                        <input type="text" placeholder="Nom" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
+                        <input type="text" placeholder="Nom du client" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
                       </div>
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Tél</label>
-                        <input type="text" placeholder="+225" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.clientPhone} onChange={e => setNewIntervention({...newIntervention, clientPhone: e.target.value})}/>
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Téléphone</label>
+                        <input type="text" placeholder="+225 XX XX XX XX" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.clientPhone} onChange={e => setNewIntervention({...newIntervention, clientPhone: e.target.value})}/>
                       </div>
                   </div>
-                  <div className="space-y-4">
+
+                  {/* Ligne 2 : Technicien & Date */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Technicien</label>
                         <select className="w-full bg-transparent font-black text-sm outline-none" value={newIntervention.technician} onChange={e => setNewIntervention({...newIntervention, technician: e.target.value})}>
-                            <option value="">Choisir...</option>
+                            <option value="">Choisir un technicien...</option>
                             {techniciansList.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
                         </select>
                       </div>
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Date</label>
-                        <input type="date" className="w-full bg-transparent font-bold text-[10px] outline-none" value={newIntervention.date} onChange={e => setNewIntervention({...newIntervention, date: e.target.value})}/>
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Date Intervention</label>
+                        <input type="date" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.date} onChange={e => setNewIntervention({...newIntervention, date: e.target.value})}/>
                       </div>
                   </div>
-              </div>
-              <div className="mt-6 space-y-4">
-                  <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Instructions</label>
-                    <textarea placeholder="Description..." className="w-full bg-transparent font-bold text-sm h-24 outline-none resize-none" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
+
+                  {/* Ligne 3 : Domaine & Type */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Domaine</label>
+                        <select className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.domain} onChange={e => setNewIntervention({...newIntervention, domain: e.target.value as any})}>
+                            <option value="Électricité">Électricité</option>
+                            <option value="Plomberie">Plomberie</option>
+                            <option value="Froid">Froid</option>
+                            <option value="Bâtiment">Bâtiment</option>
+                        </select>
+                      </div>
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Type de mission</label>
+                        <select className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.interventionType} onChange={e => setNewIntervention({...newIntervention, interventionType: e.target.value as any})}>
+                            <option value="Dépannage">Dépannage</option>
+                            <option value="Installation">Installation</option>
+                            <option value="Désinstallation">Désinstallation</option>
+                            <option value="Entretien">Entretien</option>
+                            <option value="Maintenance">Maintenance</option>
+                            <option value="Tuyauterie">Tuyauterie</option>
+                            <option value="Appareillage">Appareillage</option>
+                            <option value="Fillerie">Fillerie</option>
+                            <option value="Rénovation">Rénovation</option>
+                            <option value="Réhabilitation">Réhabilitation</option>
+                            <option value="Expertise">Expertise</option>
+                            <option value="Devis">Devis</option>
+                        </select>
+                      </div>
                   </div>
-                  <button onClick={handleCreateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-950 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-widest shadow-xl flex justify-center items-center gap-2 active:scale-95 transition-all disabled:opacity-50">
+
+                  {/* Ligne 4 : Site & Lieu */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Site / Ville</label>
+                        <select className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.site} onChange={e => setNewIntervention({...newIntervention, site: e.target.value as any})}>
+                            <option value="Abidjan">Abidjan</option>
+                            <option value="Bouaké">Bouaké</option>
+                            <option value="Korhogo">Korhogo</option>
+                        </select>
+                      </div>
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Lieu précis / Adresse</label>
+                        <input type="text" placeholder="Ex: Cocody Riviera 3" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.location} onChange={e => setNewIntervention({...newIntervention, location: e.target.value})}/>
+                      </div>
+                  </div>
+
+                  {/* Ligne 5 : Description */}
+                  <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Instructions / Description</label>
+                    <textarea placeholder="Détails de la mission..." className="w-full bg-transparent font-bold text-sm h-24 outline-none resize-none" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
+                  </div>
+
+                  <button onClick={handleCreateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-950 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-widest shadow-xl flex justify-center items-center gap-2 active:scale-95 transition-all disabled:opacity-50 mt-2">
                     {isSaving ? <Loader2 className="animate-spin" size={16} /> : <CalendarPlus size={18}/>}
-                    {isSaving ? 'EN COURS...' : 'CONFIRMER'}
+                    {isSaving ? 'EN COURS...' : 'CONFIRMER LA MISSION'}
                   </button>
               </div>
            </div>
