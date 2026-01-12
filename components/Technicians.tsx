@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Intervention, Employee } from '../types';
 import { supabase } from '../lib/supabase';
@@ -272,7 +271,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       const fileExt = audioBlob.type.includes('mp4') ? 'mp4' : 'webm';
       const fileName = `report_${target.id}_${timestamp}.${fileExt}`;
       
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('voice_reports')
         .upload(fileName, audioBlob);
       
