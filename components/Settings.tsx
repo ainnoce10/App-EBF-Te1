@@ -155,7 +155,8 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
   };
 
   const getFullSchemaScript = () => `
--- 1. CONFIGURATION STORAGE (Dossier pour les rapports vocaux)
+-- 1. CONFIGURATION STORAGE (Mise à jour pour inclure 'voice_reports')
+-- Note : L'ajout de 'voice_reports' ci-dessous est nouveau.
 insert into storage.buckets (id, name, public) 
 values ('assets', 'assets', true), ('voice_reports', 'voice_reports', true)
 on conflict (id) do nothing;
@@ -177,7 +178,8 @@ create table if not exists public.hardware_transactions ( id text primary key, t
 create table if not exists public.secretariat_transactions ( id text primary key, type text, category text, amount numeric default 0, date date, description text, site text, created_at timestamp with time zone default now() );
 create table if not exists public.accounting_transactions ( id text primary key, type text, category text, amount numeric default 0, date date, description text, site text, created_at timestamp with time zone default now() );
 
--- 4. MISE A JOUR DE SCHEMA (Ajout sécurisé des colonnes manquantes pour le vocal)
+-- 4. === [NOUVEAU] === MISE A JOUR DE SCHEMA POUR LE VOCAL
+-- Ce bloc ajoute la colonne 'has_report' si elle n'existe pas déjà.
 do $$ 
 begin 
   if not exists (select 1 from information_schema.columns where table_name = 'interventions' and column_name = 'has_report') then 
@@ -189,7 +191,7 @@ end $$;
 drop publication if exists supabase_realtime;
 create publication supabase_realtime for all tables;
 
--- 6. SÉCURITÉ (RLS)
+-- 6. SÉCURITÉ (RLS) - Réinitialisation pour toutes les tables
 alter table public.tv_settings enable row level security;
 drop policy if exists "Public" on public.tv_settings;
 create policy "Public" on public.tv_settings for all using (true) with check (true);
@@ -332,7 +334,12 @@ create policy "Public" on public.accounting_transactions for all using (true) wi
                   <button onClick={() => setShowSql(false)}><X/></button>
               </div>
               <div className="p-8 overflow-y-auto">
-                  <p className="text-xs text-blue-600 font-bold mb-4 uppercase tracking-widest">Utilisez ce script pour ajouter les buckets audio et les politiques de sécurité sans effacer vos tables actuelles.</p>
+                  <p className="text-xs text-blue-600 font-bold mb-4 uppercase tracking-widest leading-relaxed">
+                      Ce script est une <strong>MISE À JOUR CUMULATIVE</strong>. <br/>
+                      Il contient tout le nécessaire (anciennes tables + nouveautés vocal/logo). <br/>
+                      Vous pouvez copier et exécuter tout le bloc ci-dessous dans l'éditeur SQL de Supabase : <br/>
+                      <span className="text-orange-600">vos données existantes ne seront pas effacées</span>, il ajoutera seulement ce qui manque.
+                  </p>
                   <pre className="bg-gray-900 text-green-400 p-6 rounded-2xl text-xs overflow-auto max-h-60 mb-8">{getFullSchemaScript()}</pre>
                   <button onClick={() => { navigator.clipboard.writeText(getFullSchemaScript()); alert("Script SQL copié !"); }} className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black uppercase shadow-xl active:scale-95 transition-all">Copier pour Supabase SQL Editor</button>
               </div>
