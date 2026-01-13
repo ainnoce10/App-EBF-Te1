@@ -60,166 +60,118 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // TV Settings State
-  const [overscanPadding, setOverscanPadding] = useState(5); 
-  const [zoomLevel, setZoomLevel] = useState(1); 
+  // --- NOUVELLE LOGIQUE DE MISE A L'ECHELLE (FIXE 1920x1080) ---
+  const BASE_WIDTH = 1920;
+  const BASE_HEIGHT = 1080;
+  
+  const [windowSize, setWindowSize] = useState({ w: typeof window !== 'undefined' ? window.innerWidth : 1920, h: typeof window !== 'undefined' ? window.innerHeight : 1080 });
+  const [userScaleModifier, setUserScaleModifier] = useState(1); // Ajustement manuel utilisateur
   const [showTvSettings, setShowTvSettings] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const products = liveStock.length > 0 ? liveStock : [];
-  
-  // Filtrage des interventions
-  const planning = liveInterventions.length > 0 
-    ? liveInterventions.filter(i => i.status === 'En cours' || i.status === 'En attente') 
-    : [];
+  // Détection route TV
+  const isTvRoute = typeof window !== 'undefined' && (window.location.pathname.includes('/tv') || window.location.search.includes('mode=tv'));
 
-  const achievements = liveAchievements.length > 0 ? liveAchievements : [];
-  const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
-
-  // 0. CHARGEMENT REGLAGES TV & FULLSCREEN LISTENER
+  // Initialisation Dimensions & Settings
   useEffect(() => {
-    // Détection spécifique de la route /tv pour appliquer des réglages "Safe Zone" par défaut
-    const isTvRoute = window.location.pathname.includes('/tv') || window.location.search.includes('mode=tv');
-
-    // Marge (Overscan)
-    const savedPadding = localStorage.getItem('ebf_tv_padding');
-    if (savedPadding) {
-        setOverscanPadding(parseFloat(savedPadding));
-    } else if (isTvRoute) {
-        // SUR /TV : Marge de sécurité importante (8%) pour éviter les coupures physiques
-        setOverscanPadding(8);
-    }
-
-    // Zoom
-    const savedZoom = localStorage.getItem('ebf_tv_zoom');
-    if (savedZoom) {
-        setZoomLevel(parseFloat(savedZoom));
-    } else if (isTvRoute) {
-        // SUR /TV : Zoom drastiquement réduit (0.60) pour tout faire rentrer sur un écran 43" (1080p ou 720p viewport)
-        setZoomLevel(0.60);
-    }
+    const handleResize = () => setWindowSize({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', handleResize);
     
-    if (initialMusicUrl) setAudioSrc(initialMusicUrl);
+    // Charger réglage utilisateur si existant
+    const savedScale = localStorage.getItem('ebf_tv_scale_mod');
+    if (savedScale) {
+        setUserScaleModifier(parseFloat(savedScale));
+    } else if (isTvRoute) {
+        // Par défaut sur TV, on réduit un peu plus (90%) pour être sûr (Safe Area)
+        setUserScaleModifier(0.90); 
+    }
 
-    // Listener pour mettre à jour l'état si l'utilisateur utilise Echap
+    // Listener plein écran
     const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', handleFsChange);
-    return () => document.removeEventListener('fullscreenchange', handleFsChange);
-  }, [initialMusicUrl]);
 
-  // TENTATIVE AUTOMATIQUE DE PLEIN ÉCRAN AU CHARGEMENT
-  useEffect(() => {
+    // Tentative Fullscreen Auto
     const attemptFullscreen = async () => {
         try {
-            if (!document.fullscreenElement) {
-                await document.documentElement.requestFullscreen();
-            }
-        } catch (e) {
-            console.log("Plein écran auto bloqué par le navigateur (Attente interaction)", e);
-            // Si le plein écran auto échoue, on affiche le bouton "Lancer"
-            setAutoplayFailed(true);
-        }
+            if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+        } catch (e) { console.log("Fullscreen auto bloqué", e); setAutoplayFailed(true); }
     };
-    
-    // Petit délai pour assurer que le rendu est prêt
-    const timer = setTimeout(attemptFullscreen, 1000);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(attemptFullscreen, 1500);
+
+    return () => {
+        window.removeEventListener('resize', handleResize);
+        document.removeEventListener('fullscreenchange', handleFsChange);
+        clearTimeout(timer);
+    };
   }, []);
 
-  const updateOverscan = (delta: number) => {
-      setOverscanPadding(prev => {
-          const newVal = Math.max(0, Math.min(20, prev + delta)); 
-          localStorage.setItem('ebf_tv_padding', newVal.toString());
-          return newVal;
-      });
-  };
+  // Calcul du Facteur d'Échelle (Scale)
+  // On calcule le ratio pour faire rentrer 1920x1080 dans la fenêtre actuelle
+  const scaleX = windowSize.w / BASE_WIDTH;
+  const scaleY = windowSize.h / BASE_HEIGHT;
+  const fitScale = Math.min(scaleX, scaleY);
+  
+  // Echelle finale = (Fit Mathématique) * (Ajustement Utilisateur)
+  const finalScale = fitScale * userScaleModifier;
 
-  const updateZoom = (delta: number) => {
-      setZoomLevel(prev => {
-          const newVal = Math.max(0.3, Math.min(1.5, parseFloat((prev + delta).toFixed(2))));
-          localStorage.setItem('ebf_tv_zoom', newVal.toString());
+  const handleUserScaleChange = (delta: number) => {
+      setUserScaleModifier(prev => {
+          const newVal = Math.max(0.5, Math.min(1.5, parseFloat((prev + delta).toFixed(2))));
+          localStorage.setItem('ebf_tv_scale_mod', newVal.toString());
           return newVal;
       });
   };
 
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(console.error);
-    } else {
-        if (document.exitFullscreen) document.exitFullscreen().catch(console.error);
-    }
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+    else if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
   };
 
-  // 1. Ecoute Realtime
+  // --- DONNEES ---
+  const products = liveStock.length > 0 ? liveStock : [];
+  const planning = liveInterventions.length > 0 
+    ? liveInterventions.filter(i => i.status === 'En cours' || i.status === 'En attente') 
+    : [];
+  const achievements = liveAchievements.length > 0 ? liveAchievements : [];
+  const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
+
+  // --- AUDIO & DATA SYNC ---
   useEffect(() => {
+    if (initialMusicUrl) setAudioSrc(initialMusicUrl);
+    
     const channel = supabase.channel('tv-music-showcase')
-        .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'tv_settings' },
-            (payload) => {
-                if ((payload.new as any)?.key === 'background_music') {
-                    const newVal = (payload.new as any).value;
-                    if (newVal) setAudioSrc(newVal);
-                }
-            }
-        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tv_settings' }, (payload) => {
+            if ((payload.new as any)?.key === 'background_music') setAudioSrc((payload.new as any).value);
+        })
         .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [initialMusicUrl]);
 
-    return () => {
-        supabase.removeChannel(channel);
-    };
-  }, []);
-
-  // 2. Gestion Playback Audio Robuste
   useEffect(() => {
     if (audioRef.current && audioSrc) {
         setAudioLoading(true);
         audioRef.current.volume = 0.5;
-        
         const tryPlay = async () => {
              try {
-                 if (!isMuted) {
-                    await audioRef.current?.play();
-                    // Si la musique joue, on considère que l'autoplay a réussi (bouton caché)
-                    // SAUF si le plein écran a échoué (géré par le useEffect précédent)
-                 }
+                 if (!isMuted) await audioRef.current?.play();
              } catch (error) {
-                 console.log("Autoplay audio bloqué.", error);
                  setAutoplayFailed(true);
                  setIsMuted(true);
-             } finally {
-                 setAudioLoading(false);
-             }
+             } finally { setAudioLoading(false); }
         };
         tryPlay();
     }
   }, [audioSrc]);
 
-  // Pause audio quand une VIDÉO de réalisation est jouée
+  // Pause audio quand vidéo joue
   useEffect(() => {
       const currentAch = achievements[achievementIdx];
       const isVideoPlaying = activeMode === 'REALISATIONS' && currentAch?.mediaType === 'video';
-      
       if (audioRef.current) {
-          if (isVideoPlaying) {
-              audioRef.current.pause();
-          } else if (!isMuted && !autoplayFailed) {
-              audioRef.current.play().catch(() => {});
-          }
+          if (isVideoPlaying) audioRef.current.pause();
+          else if (!isMuted && !autoplayFailed) audioRef.current.play().catch(() => {});
       }
   }, [activeMode, achievementIdx, achievements, isMuted, autoplayFailed]);
-
-  const handleStartShow = async () => {
-    setIsMuted(false);
-    setAutoplayFailed(false);
-    if(audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(console.error);
-    }
-    try {
-        if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
-    } catch (e) { console.error("Erreur plein écran manuel:", e); }
-  };
 
   const toggleMute = () => {
       if (isMuted) {
@@ -231,29 +183,14 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       }
   };
 
-  const getMessageColorClass = (color: string) => {
-    switch(color) {
-        case 'green': return 'text-green-400';
-        case 'yellow': return 'text-yellow-400';
-        case 'red': return 'text-red-500';
-        default: return 'text-white';
-    }
+  const handleStartShow = async () => {
+    setIsMuted(false);
+    setAutoplayFailed(false);
+    if(audioRef.current) { audioRef.current.currentTime = 0; audioRef.current.play().catch(() => {}); }
+    try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); } catch (e) {}
   };
 
-  const todayDate = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-
-  // Tailles de texte ajustées pour mieux supporter les petits facteurs de zoom
-  const getTitleSizeClass = (text: string) => {
-    const len = text.length;
-    if (len < 20) return "text-2xl md:text-5xl lg:text-6xl xl:text-7xl"; 
-    if (len < 40) return "text-xl md:text-4xl lg:text-5xl xl:text-6xl"; 
-    if (len < 80) return "text-lg md:text-3xl lg:text-4xl xl:text-5xl"; 
-    return "text-base md:text-2xl lg:text-3xl xl:text-4xl"; 
-  };
-
-  // --- CYCLES D'AFFICHAGE ---
-
-  // 1. Changement de mode global (60s)
+  // --- CYCLES ---
   useEffect(() => {
     const modeInterval = setInterval(() => {
       setActiveMode((prev) => {
@@ -265,363 +202,244 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return () => clearInterval(modeInterval);
   }, []);
 
-  // 2. Cycle Produits (10s)
   useEffect(() => {
     if (activeMode !== 'PUBLICITE' || products.length === 0) return;
-    const interval = setInterval(() => {
-      setProductIdx((prev) => (prev + 1) % products.length);
-    }, 10000); 
+    const interval = setInterval(() => setProductIdx((prev) => (prev + 1) % products.length), 10000); 
     return () => clearInterval(interval);
   }, [activeMode, products.length]);
 
-  // 3. Cycle Planning (20s)
   const itemsPerPage = 3;
   const totalPlanningPages = Math.ceil(planning.length / itemsPerPage) || 1;
-
   useEffect(() => {
-    if (activeMode !== 'PLANNING' || planning.length === 0) {
-        setPlanningPage(0); 
-        return;
-    }
-    const interval = setInterval(() => {
-      setPlanningPage((prev) => (prev + 1) % totalPlanningPages);
-    }, 20000); 
+    if (activeMode !== 'PLANNING' || planning.length === 0) { setPlanningPage(0); return; }
+    const interval = setInterval(() => setPlanningPage((prev) => (prev + 1) % totalPlanningPages), 20000); 
     return () => clearInterval(interval);
   }, [activeMode, planning.length, totalPlanningPages]);
 
-  // 4. Cycle Réalisations
   useEffect(() => {
-      if (activeMode !== 'REALISATIONS' || achievements.length === 0) {
-          setAchievementIdx(0);
-          return;
-      }
+      if (activeMode !== 'REALISATIONS' || achievements.length === 0) { setAchievementIdx(0); return; }
       const currentItem = achievements[achievementIdx];
-      // Si image : délai fixe. Si vidéo : attend fin de lecture (géré par onEnded)
       if (currentItem.mediaType === 'image') {
-          const timer = window.setTimeout(() => {
-              setAchievementIdx(prev => (prev + 1) % achievements.length);
-          }, 10000);
+          const timer = window.setTimeout(() => setAchievementIdx(prev => (prev + 1) % achievements.length), 10000);
           return () => clearTimeout(timer);
       }
   }, [activeMode, achievements, achievementIdx]);
 
-  const handleVideoEnded = () => {
-      setAchievementIdx(prev => (prev + 1) % achievements.length);
-  };
+  const handleVideoEnded = () => setAchievementIdx(prev => (prev + 1) % achievements.length);
 
-  // --- DATA ---
+  // --- RENDER HELPERS ---
   const currentProduct = products[productIdx];
   const currentPlanningSlice = planning.slice(planningPage * itemsPerPage, (planningPage + 1) * itemsPerPage);
   const currentAchievement = achievements[achievementIdx];
+  const todayDate = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  const outerStyle = {
-      padding: `${overscanPadding}vmin`
+  const getMessageColorClass = (color: string) => {
+    switch(color) {
+        case 'green': return 'text-green-400';
+        case 'yellow': return 'text-yellow-400';
+        case 'red': return 'text-red-500';
+        default: return 'text-white';
+    }
   };
 
-  const innerContentStyle: React.CSSProperties = {
-      transform: `scale(${zoomLevel})`,
-      transformOrigin: 'center center',
-      width: `${100 / zoomLevel}%`,
-      height: `${100 / zoomLevel}%`,
-      display: 'flex',
-      flexDirection: 'column'
+  const getTitleSizeClass = (text: string) => {
+      const len = text.length;
+      if (len < 20) return "text-7xl";
+      if (len < 40) return "text-6xl";
+      return "text-5xl";
   };
 
   return (
-    <div 
-        className="fixed top-0 left-0 w-full h-[100dvh] z-[500] bg-black flex items-center justify-center overflow-hidden font-sans select-none text-white transition-all duration-300 box-border"
-        style={outerStyle}
-    >
+    <div className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center z-[9999]">
       
-      {/* WRAPPER DE MISE A L'ECHELLE (ZOOM) */}
-      <div className="relative overflow-hidden bg-black rounded-xl md:rounded-3xl shadow-2xl ring-1 ring-white/10" style={innerContentStyle}>
-
+      {/* Container de Base 1920x1080 mis à l'échelle */}
+      <div 
+        className="relative bg-gray-900 overflow-hidden shadow-2xl origin-center"
+        style={{
+            width: `${BASE_WIDTH}px`,
+            height: `${BASE_HEIGHT}px`,
+            transform: `scale(${finalScale})`,
+        }}
+      >
           {audioSrc && (
-              <audio 
-                ref={audioRef} 
-                loop 
-                src={audioSrc} 
-                preload="auto"
-                onPlay={() => setAutoplayFailed(false)}
-                onError={(e) => console.error("Erreur lecture audio:", e)}
-              />
+              <audio ref={audioRef} loop src={audioSrc} preload="auto" onPlay={() => setAutoplayFailed(false)} onError={(e) => console.error("Audio err", e)} />
           )}
 
           {autoplayFailed && (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[600] animate-bounce flex flex-col items-center gap-4">
-                  <button 
-                    onClick={handleStartShow}
-                    className="bg-green-600 hover:bg-green-500 text-white px-10 py-6 rounded-[2rem] font-black text-2xl shadow-[0_0_50px_rgba(34,197,94,0.6)] flex items-center gap-4 hover:scale-110 transition-transform"
-                  >
-                      <Play size={32} fill="currentColor" /> 
-                      <span>LANCER LA TV & SON</span>
-                  </button>
-                  <p className="text-white/70 font-bold uppercase tracking-widest bg-black/50 px-4 py-2 rounded-xl">Cliquez pour activer l'ambiance sonore</p>
+              <div className="absolute inset-0 z-[600] bg-black/60 backdrop-blur-sm flex items-center justify-center animate-fade-in">
+                 <div className="text-center animate-bounce">
+                    <button onClick={handleStartShow} className="bg-green-600 text-white px-12 py-8 rounded-[3rem] font-black text-4xl shadow-2xl flex items-center gap-6 hover:scale-110 transition-transform">
+                        <Play size={48} fill="currentColor" /> LANCER LA TV
+                    </button>
+                    <p className="text-white/80 font-bold uppercase mt-6 text-2xl tracking-widest">Cliquez pour activer le son et le plein écran</p>
+                 </div>
               </div>
           )}
 
-          {/* HEADER TV */}
-          <div className="bg-gray-950 px-4 py-4 md:px-10 md:h-28 flex flex-col md:flex-row items-center justify-between border-b-4 md:border-b-[8px] border-orange-600 shadow-2xl z-50 gap-4 md:gap-0 shrink-0 transition-colors duration-500">
-              <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 w-full md:w-auto">
-                  <div className="bg-white/10 px-4 py-2 md:px-6 md:py-4 rounded-xl md:rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+          {/* === HEADER TV (Design 1920px) === */}
+          <div className="h-28 bg-gray-950 px-10 flex items-center justify-between border-b-8 border-orange-600 shadow-2xl z-50 relative shrink-0">
+              <div className="flex items-center gap-12">
+                  <div className="bg-white/10 px-6 py-3 rounded-2xl">
                     <Logo url={customLogo} size="lg" theme="dark" label="TV" />
                   </div>
                   
-                  {/* NAVIGATION MODES */}
-                  <div className="flex gap-2 md:gap-4 bg-white/5 p-1.5 md:p-2 rounded-2xl md:rounded-3xl border border-white/10 w-full md:w-auto justify-center">
-                      <button 
-                        onClick={() => setActiveMode('PUBLICITE')}
-                        className={`flex items-center justify-center gap-2 md:gap-4 px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl font-black text-xs md:text-xl uppercase transition-all flex-1 md:flex-none ${activeMode === 'PUBLICITE' ? 'bg-orange-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
-                      >
-                        <LayoutGrid size={16} className="md:w-6 md:h-6" />
-                        <span className="hidden md:inline">Nos</span> Produits
-                      </button>
-                      <button 
-                        onClick={() => setActiveMode('PLANNING')}
-                        className={`flex items-center justify-center gap-2 md:gap-4 px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl font-black text-xs md:text-xl uppercase transition-all flex-1 md:flex-none ${activeMode === 'PLANNING' ? 'bg-blue-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
-                      >
-                        <ClipboardList size={16} className="md:w-6 md:h-6" />
-                        Chantiers
-                      </button>
-                      <button 
-                        onClick={() => setActiveMode('REALISATIONS')}
-                        className={`flex items-center justify-center gap-2 md:gap-4 px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl font-black text-xs md:text-xl uppercase transition-all flex-1 md:flex-none ${activeMode === 'REALISATIONS' ? 'bg-purple-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
-                      >
-                        <Trophy size={16} className="md:w-6 md:h-6" />
-                        Réalisations
-                      </button>
+                  {/* Tabs */}
+                  <div className="flex gap-4 bg-white/5 p-2 rounded-3xl border border-white/10">
+                      {['PUBLICITE', 'PLANNING', 'REALISATIONS'].map((mode) => (
+                        <button 
+                            key={mode}
+                            onClick={() => setActiveMode(mode as any)}
+                            className={`flex items-center gap-4 px-8 py-3 rounded-2xl font-black text-xl uppercase transition-all
+                            ${activeMode === mode 
+                                ? (mode === 'PUBLICITE' ? 'bg-orange-600' : mode === 'PLANNING' ? 'bg-blue-600' : 'bg-purple-600') + ' text-white shadow-lg scale-105' 
+                                : 'text-white/30 hover:text-white'}`}
+                        >
+                            {mode === 'PUBLICITE' ? <LayoutGrid size={24}/> : mode === 'PLANNING' ? <ClipboardList size={24}/> : <Trophy size={24}/>}
+                            {mode === 'PUBLICITE' ? 'Nos Produits' : mode === 'PLANNING' ? 'Chantiers' : 'Réalisations'}
+                        </button>
+                      ))}
                   </div>
               </div>
 
-              <div className="flex items-center gap-4 md:gap-8 absolute top-4 right-4 md:static">
-                  {/* BOUTON FULLSCREEN */}
-                  <button 
-                      onClick={toggleFullscreen}
-                      className="hidden md:flex p-3 rounded-full border border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-all"
-                      title="Plein écran"
-                  >
-                      {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-                  </button>
-
-                  {/* BOUTON REGLAGE TV */}
+              {/* Controls */}
+              <div className="flex items-center gap-6">
+                  {/* Bouton Réglages TV */}
                   <div className="relative">
-                      <button 
-                        onClick={() => setShowTvSettings(!showTvSettings)}
-                        className={`p-3 rounded-full border transition-all ${showTvSettings ? 'bg-orange-600 text-white border-orange-500' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white'}`}
-                      >
-                          <Settings size={20} className={showTvSettings ? "animate-spin-slow" : ""} />
+                      <button onClick={() => setShowTvSettings(!showTvSettings)} className={`p-4 rounded-full border-2 transition-all ${showTvSettings ? 'bg-orange-600 border-orange-500 text-white' : 'bg-white/5 border-white/10 text-white/50'}`}>
+                          <Settings size={28} className={showTvSettings ? "animate-spin-slow" : ""} />
                       </button>
-
-                      {/* POPUP DE REGLAGE */}
                       {showTvSettings && (
-                          <div className="absolute top-16 right-0 bg-gray-900 border border-gray-700 p-6 rounded-2xl shadow-2xl w-72 z-[100] animate-fade-in">
-                              <h4 className="flex items-center gap-2 text-white font-black uppercase text-sm mb-4 border-b border-gray-700 pb-2">
-                                  <Monitor size={16} className="text-orange-500"/> Ajuster Écran TV
+                          <div className="absolute top-20 right-0 bg-gray-900 border-2 border-gray-700 p-8 rounded-3xl shadow-2xl w-96 z-[100] animate-fade-in origin-top-right">
+                              <h4 className="flex items-center gap-3 text-white font-black text-xl mb-6 border-b border-gray-700 pb-4">
+                                  <Monitor size={24} className="text-orange-500"/> Calibrage Écran
                               </h4>
-                              
                               <div className="space-y-6">
-                                  {/* Marge Control */}
                                   <div>
-                                      <div className="flex justify-between text-xs font-bold text-gray-400 mb-2">
-                                          <span>Marge noire (Overscan)</span>
-                                          <span className="text-white">{overscanPadding}%</span>
+                                      <div className="flex justify-between text-sm font-bold text-gray-400 mb-3">
+                                          <span>Taille d'affichage</span>
+                                          <span className="text-white">{Math.round(userScaleModifier * 100)}%</span>
                                       </div>
-                                      <div className="flex items-center gap-3">
-                                          <button onClick={() => updateOverscan(-0.5)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Minus size={16}/></button>
-                                          <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
-                                              <div className="h-full bg-orange-500 transition-all" style={{ width: `${(overscanPadding / 20) * 100}%` }}></div>
+                                      <div className="flex items-center gap-4">
+                                          <button onClick={() => handleUserScaleChange(-0.01)} className="p-3 bg-gray-800 rounded-xl hover:bg-gray-700 text-white"><Minus size={20}/></button>
+                                          <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden">
+                                              <div className="h-full bg-blue-500 transition-all" style={{ width: `${((userScaleModifier - 0.5) / 1) * 100}%` }}></div>
                                           </div>
-                                          <button onClick={() => updateOverscan(0.5)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Plus size={16}/></button>
+                                          <button onClick={() => handleUserScaleChange(0.01)} className="p-3 bg-gray-800 rounded-xl hover:bg-gray-700 text-white"><Plus size={20}/></button>
                                       </div>
-                                  </div>
-
-                                  {/* Zoom Control */}
-                                  <div>
-                                      <div className="flex justify-between text-xs font-bold text-gray-400 mb-2">
-                                          <span>Zoom Contenu</span>
-                                          <span className="text-white">{Math.round(zoomLevel * 100)}%</span>
-                                      </div>
-                                      <div className="flex items-center gap-3">
-                                          <button onClick={() => updateZoom(-0.05)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Scan size={16}/></button>
-                                          <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
-                                              <div className="h-full bg-blue-500 transition-all" style={{ width: `${((zoomLevel - 0.3) / 1.2) * 100}%` }}></div>
-                                          </div>
-                                          <button onClick={() => updateZoom(0.05)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Maximize2 size={16}/></button>
-                                      </div>
-                                      <p className="text-[10px] text-gray-500 mt-2 italic text-center">Utilisez le Zoom si le contenu est trop gros.</p>
+                                      <p className="text-xs text-gray-500 mt-3 italic text-center leading-relaxed">
+                                          Si l'image est trop grande pour votre TV, réduisez le pourcentage jusqu'à ce que tout rentre.
+                                      </p>
                                   </div>
                               </div>
                           </div>
                       )}
                   </div>
 
-                  <button 
-                    onClick={toggleMute}
-                    className={`p-3 rounded-full border transition-all ${isMuted ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-green-500/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'}`}
-                  >
-                      {audioLoading ? <Loader2 size={20} className="animate-spin" /> : (isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />)}
+                  <button onClick={toggleFullscreen} className="p-4 rounded-full border-2 border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white hover:border-white/30 transition-all">
+                      {isFullscreen ? <Minimize2 size={28} /> : <Maximize2 size={28} />}
                   </button>
-                  
-                  <div className="hidden md:flex bg-green-600/10 px-4 py-2 rounded-full border border-green-500/30 items-center gap-3">
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.8)]"></div>
-                    <span className="text-green-500 font-black text-lg uppercase tracking-widest">En Direct</span>
-                  </div>
+                  <button onClick={toggleMute} className={`p-4 rounded-full border-2 transition-all ${isMuted ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-green-500/20 border-green-500/50 text-green-400 shadow-[0_0_20px_rgba(34,197,94,0.3)]'}`}>
+                      {audioLoading ? <Loader2 size={28} className="animate-spin" /> : (isMuted ? <VolumeX size={28} /> : <Volume2 size={28} />)}
+                  </button>
                   {onClose && (
-                    <button onClick={onClose} className="p-2 md:p-4 bg-red-600/10 hover:bg-red-600 text-red-600 hover:text-white rounded-full transition-all border border-red-500/20">
-                      <X size={20} className="md:w-8 md:h-8" />
+                    <button onClick={onClose} className="p-4 bg-red-600/10 hover:bg-red-600 text-red-600 hover:text-white rounded-full transition-all border-2 border-red-500/20 ml-4">
+                      <X size={28} />
                     </button>
                   )}
               </div>
           </div>
 
-          {/* CONTENU PRINCIPAL */}
+          {/* === CONTENU PRINCIPAL === */}
           <div className={`flex-1 flex flex-col overflow-hidden relative transition-colors duration-1000 ease-in-out min-h-0 ${activeMode === 'PLANNING' ? 'bg-[#0f172a]' : 'bg-gray-900'}`}>
               
-              {/* MODE PUBLICITE (PRODUITS) */}
+              {/* MODE PUBLICITE */}
               {activeMode === 'PUBLICITE' && (
                   currentProduct ? (
-                    <div className="flex flex-col lg:flex-row w-full animate-fade-in h-full min-h-0">
-                        {/* ZONE IMAGE */}
-                        <div className="w-full lg:w-[45%] h-[45%] lg:h-full relative flex items-center justify-center p-4 md:p-8 bg-gray-950 overflow-hidden shrink-0">
+                    <div className="flex w-full h-full animate-fade-in">
+                        {/* Image */}
+                        <div className="w-[45%] h-full relative flex items-center justify-center bg-gray-950 p-12 overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/10 to-transparent opacity-50"></div>
                             <div key={currentProduct.id} className="relative w-full h-full flex items-center justify-center animate-scale-in">
-                                <div className="absolute w-[90%] h-[90%] bg-white/5 blur-[60px] rounded-full animate-pulse-slow"></div>
+                                <div className="absolute w-[80%] h-[80%] bg-white/5 blur-[100px] rounded-full animate-pulse-slow"></div>
                                 <img 
-                                  src={currentProduct.imageUrls?.[0] || 'https://placehold.co/800x800/1a1a1a/ffffff?text=EBF+Ivoire'} 
-                                  alt={currentProduct.name}
-                                  className="relative z-10 w-full h-full object-cover rounded-3xl md:rounded-[2.5rem] shadow-[0_30px_80px_rgba(0,0,0,0.9)] border-4 md:border-[8px] border-white/20 bg-gray-800 animate-float"
+                                  src={currentProduct.imageUrls?.[0] || 'https://placehold.co/800x800/1a1a1a/ffffff?text=EBF'} 
+                                  className="relative z-10 max-w-full max-h-full object-contain rounded-[3rem] shadow-[0_40px_100px_rgba(0,0,0,0.8)] border-[12px] border-white/10 animate-float"
                                 />
                             </div>
                         </div>
-                        
-                        {/* ZONE TEXTE */}
-                        <div className="w-full lg:w-[55%] h-[55%] lg:h-full bg-white text-gray-950 flex flex-col p-6 md:p-16 justify-center shadow-[-20px_0_100px_rgba(0,0,0,0.4)] relative overflow-hidden">
-                            <div className="flex flex-col h-full justify-between space-y-4 md:space-y-8 animate-slide-up relative z-10 max-h-full">
-                                <div className="flex-1 min-h-0 flex flex-col justify-center">
-                                    <div className="w-full">
-                                        <span className="px-4 py-1.5 md:px-8 md:py-3 bg-orange-600 text-white rounded-lg md:rounded-xl text-xs md:text-2xl font-black uppercase mb-2 md:mb-6 inline-block shadow-lg tracking-widest shrink-0">
-                                        {currentProduct.category}
-                                        </span>
-                                        <h1 className={`${getTitleSizeClass(currentProduct.name)} font-black leading-tight md:leading-[0.95] tracking-tighter mb-4 md:mb-8 text-gray-950 uppercase italic line-clamp-4`}>
-                                        {currentProduct.name}
-                                        </h1>
-                                        <div className="flex flex-wrap items-center gap-4 md:gap-10 text-gray-400 font-black text-xs md:text-2xl uppercase tracking-widest shrink-0 pb-2">
-                                            <div className="flex items-center gap-2 md:gap-3"><Zap size={16} className="md:w-8 md:h-8 text-orange-600" /> {currentProduct.supplier}</div>
-                                            <div className="flex items-center gap-2 md:gap-3"><ShieldCheck size={16} className="md:w-8 md:h-8 text-green-600" /> Certifié EBF</div>
-                                        </div>
-                                    </div>
+                        {/* Texte */}
+                        <div className="w-[55%] h-full bg-white flex flex-col justify-center p-20 shadow-[-50px_0_150px_rgba(0,0,0,0.5)] relative z-10">
+                            <span className="self-start px-8 py-3 bg-orange-600 text-white rounded-2xl text-2xl font-black uppercase mb-8 shadow-xl tracking-widest">{currentProduct.category}</span>
+                            <h1 className={`${getTitleSizeClass(currentProduct.name)} font-black leading-none tracking-tighter mb-10 text-gray-950 uppercase italic`}>{currentProduct.name}</h1>
+                            
+                            <div className="flex gap-12 mb-12 border-b border-gray-100 pb-8">
+                                <div className="flex items-center gap-4 text-gray-400 font-black text-2xl uppercase tracking-widest">
+                                    <Zap size={32} className="text-orange-600" /> {currentProduct.supplier}
                                 </div>
+                                <div className="flex items-center gap-4 text-gray-400 font-black text-2xl uppercase tracking-widest">
+                                    <ShieldCheck size={32} className="text-green-600" /> Certifié EBF
+                                </div>
+                            </div>
 
-                                <div className="shrink-0 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-10 pt-2 md:pt-4 border-t border-gray-100/50">
-                                    <div className="bg-gray-950 p-6 md:p-10 rounded-2xl md:rounded-[3rem] text-white w-full md:flex-1 border-b-[8px] md:border-b-[20px] border-orange-600 shadow-xl">
-                                        <p className="text-sm md:text-2xl font-black uppercase text-orange-500 mb-2 md:mb-4 tracking-widest">Prix Exceptionnel</p>
-                                        <p className="text-4xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-none text-white whitespace-nowrap">
-                                          {currentProduct.unitPrice.toLocaleString()} <span className="text-xl md:text-4xl text-gray-600 font-bold ml-1">F</span>
-                                        </p>
-                                    </div>
-                                </div>
+                            <div className="bg-gray-950 p-12 rounded-[3rem] text-white border-b-[24px] border-orange-600 shadow-2xl self-start min-w-[60%]">
+                                <p className="text-2xl font-black uppercase text-orange-500 mb-4 tracking-[0.2em]">Prix Exceptionnel</p>
+                                <p className="text-[7rem] font-black tracking-tighter leading-none whitespace-nowrap">
+                                    {currentProduct.unitPrice.toLocaleString()} <span className="text-4xl text-gray-500 font-bold ml-2">F</span>
+                                </p>
                             </div>
                         </div>
                     </div>
-                  ) : <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-white" size={64}/></div>
+                  ) : <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-white" size={100}/></div>
               )}
 
               {/* MODE PLANNING */}
               {activeMode === 'PLANNING' && (
-                <div className="flex w-full p-6 md:p-16 animate-fade-in flex-col h-full min-h-0 overflow-hidden">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 md:mb-8 shrink-0 border-b border-white/10 pb-4 md:pb-6 gap-4">
-                        <div className="flex flex-col md:flex-row md:items-baseline gap-4 md:gap-8">
-                          <h2 className="text-2xl md:text-6xl lg:text-7xl font-black tracking-tighter text-white uppercase italic truncate drop-shadow-lg pr-4">
-                              Chantiers EBF
-                          </h2>
-                          <span className="text-orange-500 font-black text-xl md:text-5xl uppercase tracking-widest drop-shadow-md">
-                            {todayDate}
-                          </span>
+                <div className="w-full h-full p-16 flex flex-col animate-fade-in">
+                    <div className="flex justify-between items-end mb-10 border-b border-white/10 pb-8">
+                        <div>
+                           <h2 className="text-7xl font-black text-white uppercase italic tracking-tighter mb-2">Chantiers EBF</h2>
+                           <span className="text-orange-500 font-black text-5xl uppercase tracking-widest">{todayDate}</span>
                         </div>
-                        
-                        <div className="flex items-center gap-4">
-                            <span className="text-white/30 font-mono font-bold">Page {planningPage + 1}/{totalPlanningPages}</span>
-                            <Calendar size={40} className="md:w-[80px] md:h-[80px] text-blue-500 animate-pulse shrink-0" />
+                        <div className="flex items-center gap-6 bg-white/5 px-8 py-4 rounded-3xl border border-white/10">
+                            <span className="text-white/40 font-mono font-bold text-2xl">Page {planningPage + 1}/{totalPlanningPages}</span>
+                            <Calendar size={60} className="text-blue-500 animate-pulse" />
                         </div>
                     </div>
                     
-                    {/* GRILLE */}
-                    <div 
-                        key={planningPage} 
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 min-h-0 animate-slide-up"
-                    >
+                    <div className="grid grid-cols-3 gap-10 flex-1 min-h-0">
                         {currentPlanningSlice.map((inter) => (
-                            <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-6 md:p-8 rounded-3xl flex flex-col gap-4 shadow-2xl h-full relative overflow-hidden group">
-                                <div className="flex justify-between items-start mb-4">
-                                     <span className={`px-4 py-1.5 md:px-5 md:py-2 rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest inline-block text-center shadow-lg
-                                      ${inter.status === 'Terminé' ? 'bg-green-500 text-white' : 
-                                        inter.status === 'En cours' ? 'bg-orange-500 text-white' : 
-                                        inter.status === 'En attente' ? 'bg-blue-600 text-white' :
-                                        'bg-gray-700 text-gray-300'}`}>
+                            <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-10 rounded-[3rem] flex flex-col shadow-2xl relative overflow-hidden animate-slide-up">
+                                <div className="flex justify-between items-start mb-6">
+                                    <span className={`px-6 py-2 rounded-xl font-black text-xl uppercase tracking-widest shadow-lg ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
                                       {inter.status}
                                     </span>
-                                    
                                     {inter.site && (
-                                        <div className="flex items-center gap-2 md:gap-3 bg-white/10 px-4 py-1.5 md:px-5 md:py-2 rounded-xl border border-white/10 backdrop-blur-md animate-pulse-soft">
-                                            <MapPin className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />
-                                            <span className="text-xs md:text-base font-black text-orange-500 uppercase tracking-tighter">
-                                                {inter.site}
-                                            </span>
+                                        <div className="flex items-center gap-3 bg-black/20 px-5 py-2 rounded-xl">
+                                            <MapPin className="text-orange-500" size={24} />
+                                            <span className="text-xl font-black text-orange-500 uppercase">{inter.site}</span>
                                         </div>
                                     )}
                                 </div>
-
-                                <div className="flex-1 flex flex-col justify-start min-h-0 space-y-4">
-                                    <div className="flex flex-wrap items-center gap-3 mb-1">
-                                         {inter.interventionType && (
-                                            <span className="px-3 py-1 bg-gray-700/50 border border-gray-600 text-gray-200 rounded-lg text-sm md:text-xl font-black uppercase">
-                                               {inter.interventionType}
-                                            </span>
-                                        )}
-                                        {inter.domain && (
-                                            <span className="px-2 py-1 bg-blue-900/30 border border-blue-500/50 text-blue-300 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider">
-                                               {inter.domain}
-                                            </span>
-                                        )}
-                                    </div>
-
+                                
+                                <div className="space-y-6 flex-1 flex flex-col">
                                     <div>
-                                        <span className="text-gray-400 text-[10px] uppercase font-bold tracking-widest block mb-1">Client</span>
-                                        <h4 className="text-white text-xl md:text-3xl font-black tracking-tight leading-none uppercase truncate">
-                                            {inter.client}
-                                        </h4>
+                                        <span className="text-gray-400 text-sm uppercase font-bold tracking-widest block mb-2">Client</span>
+                                        <h4 className="text-white text-4xl font-black uppercase leading-none truncate">{inter.client}</h4>
                                     </div>
-
                                     {inter.location && (
-                                        <div className="flex items-center gap-2 text-gray-300">
-                                            <MapPin size={24} className="text-orange-500 shrink-0" />
-                                            <span className="text-lg md:text-xl font-bold uppercase tracking-wide line-clamp-1">
-                                                {inter.location}
-                                            </span>
+                                        <div className="flex items-center gap-4 text-gray-300 text-2xl font-bold">
+                                            <MapPin size={32} className="text-orange-500 shrink-0"/> {inter.location}
                                         </div>
                                     )}
-
-                                    {inter.clientPhone && (
-                                        <div className="flex items-center gap-2 text-green-400">
-                                            <Phone size={24} className="text-green-500 shrink-0" />
-                                            <span className="text-lg md:text-xl font-mono font-black tracking-widest">
-                                                {inter.clientPhone}
-                                            </span>
-                                        </div>
-                                    )}
-
-                                    <div className="mt-auto bg-black/40 p-3 md:p-4 rounded-xl border-t border-white/5 flex-1 min-h-0 overflow-hidden relative flex items-center justify-center">
-                                        <p className="text-gray-100 text-lg md:text-2xl lg:text-3xl font-bold leading-tight line-clamp-3 md:line-clamp-4 text-center">
-                                            {inter.description}
-                                        </p>
+                                    <div className="bg-black/30 p-6 rounded-3xl border border-white/5 flex-1 min-h-0">
+                                        <p className="text-gray-200 text-3xl font-bold leading-tight line-clamp-4">{inter.description}</p>
                                     </div>
                                 </div>
                             </div>
                         ))}
-                        
-                        {Array.from({ length: Math.max(0, 3 - currentPlanningSlice.length) }).map((_, i) => (
-                            <div key={`empty-${i}`} className="border-2 border-dashed border-white/5 rounded-3xl flex items-center justify-center opacity-10 h-full">
-                                <span className="text-white font-black text-4xl uppercase">EBF</span>
+                         {Array.from({ length: Math.max(0, 3 - currentPlanningSlice.length) }).map((_, i) => (
+                            <div key={`empty-${i}`} className="border-4 border-dashed border-white/5 rounded-[3rem] flex items-center justify-center opacity-10">
+                                <span className="text-white font-black text-6xl uppercase">Libre</span>
                             </div>
                         ))}
                     </div>
@@ -631,7 +449,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               {/* MODE REALISATIONS */}
               {activeMode === 'REALISATIONS' && (
                   currentAchievement ? (
-                      <div className="flex w-full h-full relative bg-black flex items-center justify-center animate-fade-in">
+                      <div className="w-full h-full relative bg-black flex items-center justify-center animate-fade-in">
                           {currentAchievement.mediaType === 'video' ? (
                               <video 
                                 ref={videoRef}
@@ -643,95 +461,52 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                 onError={handleVideoEnded}
                               />
                           ) : (
-                              <img 
-                                src={currentAchievement.mediaUrl}
-                                className="w-full h-full object-contain animate-scale-in"
-                                alt={currentAchievement.title}
-                              />
+                              <img src={currentAchievement.mediaUrl} className="w-full h-full object-contain animate-scale-in" />
                           )}
                           
-                          {/* Overlay Description Réalisation */}
-                          <div className="absolute bottom-12 left-0 right-0 flex justify-center px-8 z-20">
-                              <div className="bg-black/70 backdrop-blur-xl px-8 py-6 md:px-12 md:py-8 rounded-[2rem] border border-white/10 text-center max-w-5xl shadow-2xl animate-slide-up">
-                                  <div className="flex justify-center mb-2">
-                                      <span className="bg-purple-600 text-white px-3 py-1 rounded-lg text-xs md:text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                                         {currentAchievement.mediaType === 'video' ? <Video size={14}/> : <ImageIcon size={14}/>} 
-                                         Réalisation
+                          <div className="absolute bottom-16 left-0 right-0 flex justify-center z-20">
+                              <div className="bg-black/70 backdrop-blur-xl px-16 py-10 rounded-[3rem] border border-white/10 text-center max-w-4xl shadow-2xl animate-slide-up">
+                                  <div className="flex justify-center mb-4">
+                                      <span className="bg-purple-600 text-white px-6 py-2 rounded-xl text-xl font-black uppercase tracking-widest flex items-center gap-3">
+                                         {currentAchievement.mediaType === 'video' ? <Video size={24}/> : <ImageIcon size={24}/>} Réalisation
                                       </span>
                                   </div>
-                                  <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tight mb-2 leading-none">
-                                      {currentAchievement.title}
-                                  </h2>
-                                  {currentAchievement.description && (
-                                      <p className="text-lg md:text-2xl text-gray-300 font-medium line-clamp-2">
-                                          {currentAchievement.description}
-                                      </p>
-                                  )}
+                                  <h2 className="text-6xl font-black text-white uppercase tracking-tight mb-4 leading-none">{currentAchievement.title}</h2>
+                                  {currentAchievement.description && <p className="text-3xl text-gray-300 font-medium">{currentAchievement.description}</p>}
                               </div>
                           </div>
                       </div>
-                  ) : <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-white" size={64}/></div>
+                  ) : <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-white" size={100}/></div>
               )}
-
           </div>
 
-          {/* FLASH INFO - FOND NOIR */}
-          <div className="h-14 md:h-24 bg-black relative z-[200] border-t-4 md:border-t-[8px] border-orange-600 overflow-hidden flex items-center shadow-[0_-10px_50px_rgba(0,0,0,0.5)] shrink-0 rounded-b-xl md:rounded-b-3xl">
-              <div className="bg-gray-950 h-full px-4 md:px-8 flex items-center justify-center z-20 shadow-[10px_0_30px_rgba(0,0,0,0.8)] border-r-4 border-orange-500 rounded-bl-xl md:rounded-bl-3xl">
-                  <Megaphone size={24} className="md:w-10 md:h-10 text-orange-500 animate-bounce" />
+          {/* === FOOTER TICKER (Design 1920px) === */}
+          <div className="h-24 bg-black relative z-[200] border-t-8 border-orange-600 flex items-center shadow-2xl shrink-0">
+              <div className="bg-gray-950 h-full px-12 flex items-center justify-center z-20 border-r-8 border-orange-500 shadow-2xl">
+                  <Megaphone size={48} className="text-orange-500 animate-bounce" />
               </div>
-              
               <div className="flex-1 overflow-hidden whitespace-nowrap">
                   <div className="inline-block animate-tv-ticker">
                       {flashes.concat(flashes).concat(flashes).map((msg, i) => (
-                          <span 
-                            key={i} 
-                            className={`${getMessageColorClass(msg.color)} text-xl md:text-6xl font-black px-8 md:px-20 uppercase italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] tracking-tight transition-colors duration-500`}
-                          >
-                              {msg.content} <span className="text-orange-950/30 mx-4 md:mx-8">///</span>
+                          <span key={i} className={`${getMessageColorClass(msg.color)} text-5xl font-black px-24 uppercase italic tracking-tight`}>
+                              {msg.content} <span className="text-white/20 mx-12">///</span>
                           </span>
                       ))}
                   </div>
               </div>
           </div>
+
       </div>
 
       <style>{`
-        @keyframes tv-ticker {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-33.33%); }
-        }
-        .animate-tv-ticker {
-          animation: tv-ticker 35s linear infinite;
-        }
-        @keyframes scale-in {
-          0% { transform: scale(0.5); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        .animate-scale-in {
-          animation: scale-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(2deg); }
-        }
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-        .animate-spin-slow {
-          animation: spin 3s linear infinite;
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
+        @keyframes tv-ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-33.33%); } }
+        .animate-tv-ticker { animation: tv-ticker 40s linear infinite; }
+        @keyframes scale-in { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .animate-scale-in { animation: scale-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-30px); } }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .animate-spin-slow { animation: spin 4s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );
