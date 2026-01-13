@@ -17,9 +17,7 @@ import {
   Tv,
   Trophy,
   Loader2,
-  Clock,
-  CloudSun,
-  Maximize2
+  CloudSun
 } from 'lucide-react';
 import { Logo } from '../constants';
 
