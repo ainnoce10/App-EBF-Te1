@@ -33,7 +33,21 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
   
   // États pour la Caisse
   const [showCaisseModal, setShowCaisseModal] = useState(false);
-  const [newTransaction, setNewTransaction] = useState<{type: 'in'|'out', amount: string, reason: string, site: string}>({ type: 'in', amount: '', reason: '', site: 'Abidjan' });
+  const [newTransaction, setNewTransaction] = useState<{
+      type: 'in'|'out', 
+      amount: string, 
+      civility: string,
+      clientName: string, 
+      reason: string, 
+      site: string
+  }>({ 
+      type: 'in', 
+      amount: '', 
+      civility: 'M',
+      clientName: '',
+      reason: '', 
+      site: 'Abidjan' 
+  });
 
   // Refs pour les inputs de fichiers cachés
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
@@ -114,6 +128,8 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
     setNewTransaction({ 
         type: 'in', 
         amount: item.unitPrice.toString(), 
+        civility: 'M',
+        clientName: '',
         reason: `Vente : ${item.name}`,
         site: item.site as string
     });
@@ -146,20 +162,27 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
   const handleSaveTransaction = async () => {
     if (!newTransaction.amount) return;
     const newId = `TRX-HW-${Math.floor(Math.random() * 100000)}`;
+    
+    // Construction description
+    let finalDesc = newTransaction.reason || (newTransaction.type === 'in' ? 'Vente comptoir' : 'Dépense diverse');
+    if (newTransaction.clientName) {
+        finalDesc += ` - Client: ${newTransaction.civility} ${newTransaction.clientName}`;
+    }
+
     const trx: Transaction = {
         id: newId,
         type: newTransaction.type === 'in' ? 'Recette' : 'Dépense',
         category: newTransaction.type === 'in' ? 'Vente Magasin' : 'Achat Stock',
         amount: parseInt(newTransaction.amount),
         date: new Date().toISOString().split('T')[0],
-        description: newTransaction.reason || (newTransaction.type === 'in' ? 'Vente comptoir' : 'Dépense diverse'),
+        description: finalDesc,
         site: newTransaction.site
     };
     try {
         // Sauvegarde dans la table hardware_transactions
         const { error } = await supabase.from('hardware_transactions').insert([trx]);
         if (error) throw error;
-        setNewTransaction({ type: 'in', amount: '', reason: '', site: 'Abidjan' });
+        setNewTransaction({ type: 'in', amount: '', civility: 'M', clientName: '', reason: '', site: 'Abidjan' });
         setShowCaisseModal(false);
     } catch (error) { console.error(error); alert("Erreur enregistrement: " + (error as any).message); }
   };
@@ -263,7 +286,7 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
                     <p className="text-lg font-black text-red-600">-{todayOutcome.toLocaleString()}</p>
                 </div>
                 <button 
-                  onClick={() => { setNewTransaction({ type: 'in', amount: '', reason: '', site: 'Abidjan' }); setShowCaisseModal(true); }}
+                  onClick={() => { setNewTransaction({ type: 'in', amount: '', civility: 'M', clientName: '', reason: '', site: 'Abidjan' }); setShowCaisseModal(true); }}
                   className="p-3 bg-orange-500 hover:bg-orange-600 rounded-xl text-white font-bold shadow-md flex flex-col items-center justify-center active:scale-95 col-span-2 md:col-span-1 transition-colors"
                 >
                     <Plus size={20} /> <span className="text-xs uppercase mt-1">Vente / Achat</span>
@@ -369,7 +392,22 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
                         <button onClick={() => setNewTransaction({...newTransaction, type: 'out'})} className={`flex-1 py-3 rounded-lg font-bold text-sm ${newTransaction.type === 'out' ? 'bg-white shadow-sm text-red-600' : 'text-gray-500'}`}>ACHAT (Sortie)</button>
                     </div>
                     <input type="number" placeholder="Montant (FCFA)" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-xl outline-none" value={newTransaction.amount} onChange={e => setNewTransaction({...newTransaction, amount: e.target.value})} autoFocus/>
-                    <input type="text" placeholder="Détails (ex: Nom du client)" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" value={newTransaction.reason} onChange={e => setNewTransaction({...newTransaction, reason: e.target.value})}/>
+                    
+                    {/* Nom Client */}
+                    <div className="flex gap-2">
+                        <select 
+                            value={newTransaction.civility}
+                            onChange={(e) => setNewTransaction({...newTransaction, civility: e.target.value})}
+                            className="bg-gray-50 rounded-xl font-bold text-xs px-2 outline-none border border-transparent focus:border-orange-500"
+                        >
+                            <option value="M">M</option>
+                            <option value="Mme">Mme</option>
+                            <option value="Mlle">Mlle</option>
+                        </select>
+                        <input type="text" placeholder="Nom Client / Tiers" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" value={newTransaction.clientName} onChange={e => setNewTransaction({...newTransaction, clientName: e.target.value})}/>
+                    </div>
+
+                    <input type="text" placeholder="Détails (ex: Ref Produit)" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" value={newTransaction.reason} onChange={e => setNewTransaction({...newTransaction, reason: e.target.value})}/>
                     
                     <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Site de la transaction</label>

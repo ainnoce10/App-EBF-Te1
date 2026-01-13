@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Intervention, Transaction } from '../types';
 import { supabase } from '../lib/supabase';
@@ -67,7 +66,19 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
       return secretariatTransactions.filter(t => t.type === 'Dépense' && t.date === today).reduce((acc, t) => acc + t.amount, 0);
   }, [secretariatTransactions]);
 
-  const [newTransaction, setNewTransaction] = useState<{type: 'in'|'out', amount: string, reason: string}>({ type: 'out', amount: '', reason: '' });
+  const [newTransaction, setNewTransaction] = useState<{
+      type: 'in'|'out', 
+      amount: string, 
+      civility: string,
+      clientName: string,
+      reason: string
+  }>({ 
+      type: 'out', 
+      amount: '', 
+      civility: 'M',
+      clientName: '',
+      reason: '' 
+  });
 
   const handleCall = (phone: string) => {
     if (!phone || phone.includes('X')) {
@@ -80,20 +91,27 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
   const handleSaveTransaction = async () => {
     if (!newTransaction.amount) return;
     const newId = `TRX-SEC-${Math.floor(Math.random() * 10000)}`;
+    
+    // Construction description
+    let finalDesc = newTransaction.reason;
+    if (newTransaction.clientName) {
+        finalDesc += ` - Client: ${newTransaction.civility} ${newTransaction.clientName}`;
+    }
+
     const trx: Transaction = {
         id: newId,
         type: newTransaction.type === 'in' ? 'Recette' : 'Dépense',
         category: newTransaction.type === 'in' ? 'Caisse' : 'Service', 
         amount: parseInt(newTransaction.amount),
         date: new Date().toISOString().split('T')[0],
-        description: newTransaction.reason,
+        description: finalDesc,
         site: 'Abidjan' 
     };
     try {
         // Sauvegarde dans secretariat_transactions
         const { error } = await supabase.from('secretariat_transactions').insert([trx]);
         if (error) throw error;
-        setNewTransaction({ type: 'out', amount: '', reason: '' });
+        setNewTransaction({ type: 'out', amount: '', civility: 'M', clientName: '', reason: '' });
         setShowCaisseModal(false);
     } catch (error) { console.error(error); }
   };
@@ -206,6 +224,21 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
                         <button onClick={() => setNewTransaction({...newTransaction, type: 'out'})} className={`flex-1 py-3 rounded-lg font-bold text-sm ${newTransaction.type === 'out' ? 'bg-white shadow-sm text-red-600' : 'text-gray-500'}`}>SORTIE</button>
                     </div>
                     <input type="number" placeholder="Montant (FCFA)" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-xl outline-none" value={newTransaction.amount} onChange={e => setNewTransaction({...newTransaction, amount: e.target.value})} autoFocus/>
+                    
+                    {/* Nom Client */}
+                    <div className="flex gap-2">
+                        <select 
+                            value={newTransaction.civility}
+                            onChange={(e) => setNewTransaction({...newTransaction, civility: e.target.value})}
+                            className="bg-gray-50 rounded-xl font-bold text-xs px-2 outline-none border border-transparent focus:border-orange-500"
+                        >
+                            <option value="M">M</option>
+                            <option value="Mme">Mme</option>
+                            <option value="Mlle">Mlle</option>
+                        </select>
+                        <input type="text" placeholder="Nom Client / Tiers" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" value={newTransaction.clientName} onChange={e => setNewTransaction({...newTransaction, clientName: e.target.value})}/>
+                    </div>
+
                     <input type="text" placeholder="Motif" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" value={newTransaction.reason} onChange={e => setNewTransaction({...newTransaction, reason: e.target.value})}/>
                     <button onClick={handleSaveTransaction} className="w-full py-4 bg-gray-900 text-white rounded-xl font-bold uppercase shadow-lg">Valider</button>
                 </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_EMPLOYEES } from '../constants';
 import { Transaction, Employee, Site } from '../types';
@@ -43,7 +42,14 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
   
   // State pour le formulaire Employé (Ajout ou Edition)
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
-  const [employeeFormData, setEmployeeFormData] = useState({ name: '', assignedName: '', role: '', site: 'Abidjan', entryDate: new Date().toISOString().split('T')[0] });
+  const [employeeFormData, setEmployeeFormData] = useState({ 
+      civility: 'M',
+      name: '', 
+      assignedName: '', 
+      role: '', 
+      site: 'Abidjan', 
+      entryDate: new Date().toISOString().split('T')[0] 
+  });
   
   // Gestion Photo et Position
   const [newEmployeePhoto, setNewEmployeePhoto] = useState<File | null>(null);
@@ -150,8 +156,19 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
 
   const handleEditEmployee = (emp: Employee) => {
       setEditingEmployeeId(emp.id);
+      
+      // Extraction civilité
+      let civ = 'M';
+      let cleanName = emp.name;
+      const parts = emp.name.split(' ');
+      if (['M', 'Mme', 'Mlle'].includes(parts[0])) {
+          civ = parts[0];
+          cleanName = parts.slice(1).join(' ');
+      }
+
       setEmployeeFormData({
-          name: emp.name,
+          civility: civ,
+          name: cleanName,
           assignedName: emp.assignedName || '',
           role: emp.role,
           site: emp.site as string,
@@ -197,8 +214,10 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
             photoUrl = publicUrl;
         }
 
+        const fullName = `${employeeFormData.civility} ${employeeFormData.name}`.trim();
+
         const employeePayload = { 
-            name: employeeFormData.name, 
+            name: fullName, 
             assignedName: employeeFormData.assignedName, 
             role: employeeFormData.role, 
             site: employeeFormData.site, 
@@ -222,7 +241,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
         // Reset form
         setIsAddingEmployee(false);
         setEditingEmployeeId(null);
-        setEmployeeFormData({ name: '', assignedName: '', role: '', site: 'Abidjan', entryDate: new Date().toISOString().split('T')[0] });
+        setEmployeeFormData({ civility: 'M', name: '', assignedName: '', role: '', site: 'Abidjan', entryDate: new Date().toISOString().split('T')[0] });
         setNewEmployeePhoto(null);
         setNewEmployeePhotoPreview(null);
         setPhotoPos({ x: 50, y: 50 });
@@ -611,11 +630,22 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                            </div>
                       </div>
 
-                      {/* Champs Nom distincts */}
+                      {/* Champs Nom distincts avec Civilité */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nom Complet (Administratif)</label>
-                              <input type="text" placeholder="Ex: KOUASSI Jean-Pierre" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all text-sm" value={employeeFormData.name} onChange={e => setEmployeeFormData({...employeeFormData, name: e.target.value})}/>
+                              <div className="flex gap-2">
+                                  <select 
+                                      value={employeeFormData.civility} 
+                                      onChange={e => setEmployeeFormData({...employeeFormData, civility: e.target.value})}
+                                      className="bg-white rounded-xl font-bold text-xs px-2 outline-none border-2 border-transparent focus:border-blue-500"
+                                  >
+                                      <option value="M">M</option>
+                                      <option value="Mme">Mme</option>
+                                      <option value="Mlle">Mlle</option>
+                                  </select>
+                                  <input type="text" placeholder="Ex: KOUASSI Jean-Pierre" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all text-sm" value={employeeFormData.name} onChange={e => setEmployeeFormData({...employeeFormData, name: e.target.value})}/>
+                              </div>
                           </div>
 
                           <div className="space-y-2">

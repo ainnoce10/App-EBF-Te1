@@ -28,6 +28,7 @@ interface TechniciansProps {
 }
 
 type StatusFilterType = 'Tous' | 'En attente' | 'En cours' | 'Terminé avec rapport' | 'Terminé sans rapport';
+type Civility = 'M' | 'Mme' | 'Mlle';
 
 const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,8 +56,11 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
   
   const [formReport, setFormReport] = useState({ client: '', workDone: '' });
+  
+  // États séparés pour la création (Civilité + Nom)
+  const [newCivility, setNewCivility] = useState<Civility>('M');
+  const [newClientName, setNewClientName] = useState('');
   const [newIntervention, setNewIntervention] = useState({
-    client: '',
     clientPhone: '',
     domain: 'Électricité' as any,
     interventionType: 'Dépannage' as any,
@@ -66,6 +70,10 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     technician: '',
     date: new Date().toISOString().split('T')[0]
   });
+
+  // États séparés pour l'édition (Civilité + Nom)
+  const [editCivility, setEditCivility] = useState<Civility>('M');
+  const [editClientName, setEditClientName] = useState('');
 
   // --- LOGIQUE ENREGISTREMENT ET LECTURE ---
   const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'review'>('idle');
@@ -80,6 +88,22 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const chunksRef = useRef<Blob[]>([]);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Helper pour parser le nom lors de l'ouverture de l'édition
+  const parseClientName = (fullName: string) => {
+      const parts = fullName.split(' ');
+      if (['M', 'Mme', 'Mlle'].includes(parts[0])) {
+          return { civ: parts[0] as Civility, name: parts.slice(1).join(' ') };
+      }
+      return { civ: 'M' as Civility, name: fullName };
+  };
+
+  const handleOpenEdit = (inter: Intervention) => {
+      const { civ, name } = parseClientName(inter.client);
+      setEditCivility(civ);
+      setEditClientName(name);
+      setEditIntervention(inter);
+  };
 
   // Nettoyage au démontage ou fermeture
   useEffect(() => {
@@ -232,10 +256,12 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     if (!editIntervention) return;
     setIsSaving(true);
     try {
+        const fullClientName = `${editCivility} ${editClientName}`.trim();
+        
         const { error } = await supabase
             .from('interventions')
             .update({
-                client: editIntervention.client,
+                client: fullClientName,
                 clientPhone: editIntervention.clientPhone,
                 domain: editIntervention.domain,
                 interventionType: editIntervention.interventionType,
@@ -325,15 +351,18 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   };
 
   const handleCreateIntervention = async () => {
-    if (!newIntervention.client || !newIntervention.description || !newIntervention.technician) {
+    if (!newClientName || !newIntervention.description || !newIntervention.technician) {
       alert("Veuillez remplir le client, la description et choisir un technicien.");
       return;
     }
     setIsSaving(true);
     const id = `INT-${Math.floor(Math.random() * 9000) + 1000}`;
+    const fullClientName = `${newCivility} ${newClientName}`.trim();
+
     try {
       const { error } = await supabase.from('interventions').insert([{
         id,
+        client: fullClientName,
         ...newIntervention,
         status: 'En attente',
         has_report: false
@@ -341,6 +370,10 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       if (error) throw error;
       triggerCelebration();
       setShowNewInterventionModal(false);
+      // Reset
+      setNewClientName('');
+      setNewCivility('M');
+      setNewIntervention({ ...newIntervention, description: '', location: '', clientPhone: '' });
     } catch (err: any) {
       alert("Erreur création : " + err.message);
     } finally {
@@ -423,7 +456,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
               <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${getStatusColorClass(inter)}`}>
                 {inter.status}
               </span>
-              <button onClick={(e) => { e.stopPropagation(); setEditIntervention(inter); }} className="p-2 bg-gray-50 text-gray-400 hover:text-blue-600 rounded-lg active:bg-blue-50 transition-colors"><Edit size={14}/></button>
+              <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(inter); }} className="p-2 bg-gray-50 text-gray-400 hover:text-blue-600 rounded-lg active:bg-blue-50 transition-colors"><Edit size={14}/></button>
             </div>
             <h3 className="font-black text-xl mb-1 uppercase italic line-clamp-1">{inter.client}</h3>
             <div className="flex flex-col gap-1 mb-4">
@@ -550,11 +583,28 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
               </div>
               
               <div className="space-y-4">
-                  {/* Ligne 1 : Client & Tel */}
+                  {/* Ligne 1 : Client & Tel (MODIFIÉ POUR CIVILTÉ) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Client</label>
-                        <input type="text" placeholder="Nom du client" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.client} onChange={e => setNewIntervention({...newIntervention, client: e.target.value})}/>
+                        <div className="flex gap-2">
+                            <select 
+                                value={newCivility}
+                                onChange={(e) => setNewCivility(e.target.value as Civility)}
+                                className="bg-white rounded-xl font-bold text-xs px-2 outline-none border border-transparent focus:border-orange-500"
+                            >
+                                <option value="M">M</option>
+                                <option value="Mme">Mme</option>
+                                <option value="Mlle">Mlle</option>
+                            </select>
+                            <input 
+                                type="text" 
+                                placeholder="Nom du client" 
+                                className="w-full bg-transparent font-bold text-sm outline-none" 
+                                value={newClientName} 
+                                onChange={e => setNewClientName(e.target.value)}
+                            />
+                        </div>
                       </div>
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Téléphone</label>
@@ -657,7 +707,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 font-bold text-blue-700 text-sm flex items-center gap-3"><Phone size={18}/> {viewIntervention.clientPhone || "Inconnu"}</div>
                       <div className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 text-gray-700 text-sm leading-relaxed font-medium min-h-[120px] max-h-[200px] overflow-y-auto whitespace-pre-wrap">{viewIntervention.description}</div>
                       <div className="flex gap-3 pt-4">
-                          <button onClick={() => { setEditIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest">Modifier</button>
+                          <button onClick={() => { handleOpenEdit(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest">Modifier</button>
                           <button onClick={() => { handleOpenReportForIntervention(viewIntervention); setViewIntervention(null); }} className="flex-1 py-4 bg-orange-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-lg"><Mic size={18}/> Rapport</button>
                       </div>
                   </div>
@@ -689,11 +739,27 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                        </select>
                    </div>
 
-                   {/* Ligne 1 : Client & Tel */}
+                   {/* Ligne 1 : Client & Tel (MODIFIÉ POUR CIVILTÉ) */}
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Client</label>
-                        <input type="text" className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.client} onChange={e => setEditIntervention({...editIntervention, client: e.target.value})}/>
+                        <div className="flex gap-2">
+                             <select 
+                                value={editCivility}
+                                onChange={(e) => setEditCivility(e.target.value as Civility)}
+                                className="bg-white rounded-xl font-bold text-xs px-2 outline-none border border-transparent focus:border-orange-500"
+                            >
+                                <option value="M">M</option>
+                                <option value="Mme">Mme</option>
+                                <option value="Mlle">Mlle</option>
+                            </select>
+                            <input 
+                                type="text" 
+                                className="w-full bg-transparent font-bold text-sm outline-none" 
+                                value={editClientName} 
+                                onChange={e => setEditClientName(e.target.value)}
+                            />
+                        </div>
                       </div>
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Téléphone</label>
