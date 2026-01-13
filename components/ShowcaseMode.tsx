@@ -619,8 +619,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                     )}
 
                                     {/* 5. DETAILS (Description) */}
-                                    <div className="mt-auto bg-black/40 p-3 md:p-4 rounded-xl border-t border-white/5 flex-1 min-h-0 overflow-hidden relative">
-                                        <p className="text-gray-100 text-lg md:text-2xl lg:text-3xl font-bold leading-tight line-clamp-3 md:line-clamp-4">
+                                    <div className="mt-auto bg-black/40 p-3 md:p-4 rounded-xl border-t border-white/5 flex-1 min-h-0 overflow-hidden relative flex items-center justify-center">
+                                        <p className="text-gray-100 text-lg md:text-2xl lg:text-3xl font-bold leading-tight line-clamp-3 md:line-clamp-4 text-center">
                                             {inter.description}
                                         </p>
                                     </div>
