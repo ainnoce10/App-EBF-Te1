@@ -43,6 +43,11 @@ body {
   background: #94a3b8; 
 }
 
+/* TV Specific: Masquer la souris quand elle est immobile */
+body.tv-mode {
+    cursor: none;
+}
+
 .ticker-wrap {
   width: 100%;
   overflow: hidden;

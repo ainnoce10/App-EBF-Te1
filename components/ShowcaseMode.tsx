@@ -12,6 +12,7 @@ import {
   ClipboardList,
   MapPin,
   Volume2,
+  Volume1,
   VolumeX,
   Play,
   Maximize2,
@@ -21,7 +22,8 @@ import {
   Monitor,
   Scan,
   Phone,
-  Loader2
+  Loader2,
+  Tv
 } from 'lucide-react';
 import { Logo } from '../constants';
 
@@ -48,40 +50,132 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   
   // Audio state
   const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(0.5);
   const [audioSrc, setAudioSrc] = useState(initialMusicUrl || '');
   const [autoplayFailed, setAutoplayFailed] = useState(false);
   const [audioLoading, setAudioLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // TV UX State
+  const [osdMessage, setOsdMessage] = useState<{icon: React.ReactNode, text: string} | null>(null);
+  const osdTimeoutRef = useRef<number | null>(null);
+  const [cursorVisible, setCursorVisible] = useState(true);
+  const cursorTimeoutRef = useRef<number | null>(null);
+
   // TV Settings State (Overscan & Zoom)
-  // Augmentation de la marge par défaut à 5% pour être plus sûr sur les vieilles TV
-  const [overscanPadding, setOverscanPadding] = useState(5); 
-  const [zoomLevel, setZoomLevel] = useState(1); // Echelle (1 = 100%)
+  const [overscanPadding, setOsdverscanPadding] = useState(2); // Défaut réduit pour les écrans modernes
+  const [zoomLevel, setZoomLevel] = useState(1);
   const [showTvSettings, setShowTvSettings] = useState(false);
 
   const products = liveStock.length > 0 ? liveStock : [];
   
-  // Filtrage des interventions : Uniquement 'En cours' ou 'En attente'
+  // Filtrage des interventions
   const planning = liveInterventions.length > 0 
     ? liveInterventions.filter(i => i.status === 'En cours' || i.status === 'En attente') 
     : [];
 
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
-  // 0. CHARGEMENT REGLAGES TV
+  // --- 0. GESTION DU CURSEUR (Souris fantôme sur TV) ---
+  useEffect(() => {
+    const hideCursor = () => setCursorVisible(false);
+    const showCursor = () => {
+        setCursorVisible(true);
+        if (cursorTimeoutRef.current) clearTimeout(cursorTimeoutRef.current);
+        cursorTimeoutRef.current = window.setTimeout(hideCursor, 3000);
+    };
+
+    window.addEventListener('mousemove', showCursor);
+    window.addEventListener('click', showCursor);
+    // Masquer initialement après 3s
+    cursorTimeoutRef.current = window.setTimeout(hideCursor, 3000);
+
+    return () => {
+        window.removeEventListener('mousemove', showCursor);
+        window.removeEventListener('click', showCursor);
+        if (cursorTimeoutRef.current) clearTimeout(cursorTimeoutRef.current);
+    };
+  }, []);
+
+  // --- 1. GESTION TÉLÉCOMMANDE (CLAVIER) ---
+  useEffect(() => {
+    const handleRemoteControl = (e: KeyboardEvent) => {
+        // Afficher curseur si interaction clavier (rare mais utile)
+        setCursorVisible(true);
+        if (cursorTimeoutRef.current) clearTimeout(cursorTimeoutRef.current);
+        cursorTimeoutRef.current = window.setTimeout(() => setCursorVisible(false), 3000);
+
+        switch(e.key) {
+            case 'ArrowRight': // Mode Suivant
+                setActiveMode('PLANNING');
+                showOSD(<ClipboardList size={24}/>, "MODE: CHANTIERS");
+                break;
+            case 'ArrowLeft': // Mode Précédent
+                setActiveMode('PUBLICITE');
+                showOSD(<LayoutGrid size={24}/>, "MODE: PRODUITS");
+                break;
+            case 'ArrowUp': // Volume +
+                changeVolume(0.1);
+                break;
+            case 'ArrowDown': // Volume -
+                changeVolume(-0.1);
+                break;
+            case 'Enter': // OK / Select -> Mute/Unmute ou Play
+                if (autoplayFailed) handleStartShow();
+                else toggleMute();
+                break;
+            case 'Backspace': // Retour (WebOS/Tizen)
+            case 'Escape':
+                if (onClose) onClose();
+                break;
+            case 'MediaPlayPause':
+                toggleMute();
+                break;
+            default:
+                break;
+        }
+    };
+
+    window.addEventListener('keydown', handleRemoteControl);
+    return () => window.removeEventListener('keydown', handleRemoteControl);
+  }, [volume, isMuted, autoplayFailed]);
+
+  const showOSD = (icon: React.ReactNode, text: string) => {
+      setOsdMessage({ icon, text });
+      if (osdTimeoutRef.current) clearTimeout(osdTimeoutRef.current);
+      osdTimeoutRef.current = window.setTimeout(() => setOsdMessage(null), 2000);
+  };
+
+  const changeVolume = (delta: number) => {
+      let newVol = Math.max(0, Math.min(1, volume + delta));
+      newVol = parseFloat(newVol.toFixed(1)); // Éviter flottants bizarres
+      setVolume(newVol);
+      if (audioRef.current) audioRef.current.volume = newVol;
+      
+      // Feedback visuel
+      if (newVol === 0) showOSD(<VolumeX size={24}/>, "VOLUME: MUET");
+      else showOSD(<Volume2 size={24}/>, `VOLUME: ${Math.round(newVol * 100)}%`);
+      
+      // Si on monte le son et que c'était muet, on démute
+      if (isMuted && delta > 0) {
+          setIsMuted(false);
+          if (audioRef.current) audioRef.current.muted = false;
+      }
+  };
+
+  // --- CHARGEMENT REGLAGES ---
   useEffect(() => {
     const savedPadding = localStorage.getItem('ebf_tv_padding');
-    if (savedPadding) setOverscanPadding(parseFloat(savedPadding));
+    if (savedPadding) setOsdverscanPadding(parseFloat(savedPadding));
 
     const savedZoom = localStorage.getItem('ebf_tv_zoom');
     if (savedZoom) setZoomLevel(parseFloat(savedZoom));
     
-    // Si la musique change via les props (depuis App.tsx)
     if (initialMusicUrl) setAudioSrc(initialMusicUrl);
   }, [initialMusicUrl]);
 
   const updateOverscan = (delta: number) => {
-      setOverscanPadding(prev => {
+      setOsdverscanPadding(prev => {
           const newVal = Math.max(0, Math.min(15, prev + delta)); 
           localStorage.setItem('ebf_tv_padding', newVal.toString());
           return newVal;
@@ -96,7 +190,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       });
   };
 
-  // 1. Ecoute Realtime pour la musique (Si change sans rechargement)
+  // --- AUDIO ENGINE ---
   useEffect(() => {
     const channel = supabase.channel('tv-music-showcase')
         .on(
@@ -116,11 +210,10 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     };
   }, []);
 
-  // 2. Gestion Playback Robuste
   useEffect(() => {
     if (audioRef.current && audioSrc) {
         setAudioLoading(true);
-        audioRef.current.volume = 0.5;
+        audioRef.current.volume = volume;
         
         const tryPlay = async () => {
              try {
@@ -145,6 +238,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     setAutoplayFailed(false);
     if(audioRef.current) {
         audioRef.current.currentTime = 0;
+        audioRef.current.muted = false;
+        audioRef.current.volume = volume;
         audioRef.current.play().catch(console.error);
     }
     try {
@@ -155,10 +250,13 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const toggleMute = () => {
       if (isMuted) {
           setIsMuted(false);
+          if (audioRef.current) audioRef.current.muted = false;
           audioRef.current?.play().catch(() => setAutoplayFailed(true));
+          showOSD(<Volume2 size={24}/>, "SON ACTIVÉ");
       } else {
           setIsMuted(true);
-          audioRef.current?.pause();
+          if (audioRef.current) audioRef.current.muted = true;
+          showOSD(<VolumeX size={24}/>, "SON COUPÉ");
       }
   };
 
@@ -181,6 +279,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return "text-lg md:text-3xl lg:text-4xl xl:text-5xl"; 
   };
 
+  // --- CYCLES D'AFFICHAGE ---
   useEffect(() => {
     const modeInterval = setInterval(() => {
       setActiveMode((prev) => (prev === 'PUBLICITE' ? 'PLANNING' : 'PUBLICITE'));
@@ -213,17 +312,16 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const currentProduct = products[productIdx];
   const currentPlanningSlice = planning.slice(planningPage * itemsPerPage, (planningPage + 1) * itemsPerPage);
 
-  const outerStyle = {
-      padding: `${overscanPadding}vmin`
-  };
-
+  // Styles dynamiques
+  const outerStyle = { padding: `${overscanPadding}vmin` };
   const innerContentStyle: React.CSSProperties = {
       transform: `scale(${zoomLevel})`,
       transformOrigin: 'center center',
       width: `${100 / zoomLevel}%`,
       height: `${100 / zoomLevel}%`,
       display: 'flex',
-      flexDirection: 'column'
+      flexDirection: 'column',
+      cursor: cursorVisible ? 'auto' : 'none' // Cache la souris
   };
 
   return (
@@ -232,6 +330,14 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
         style={outerStyle}
     >
       
+      {/* OSD (ON SCREEN DISPLAY) - FEEDBACK TELECOMMANDE */}
+      {osdMessage && (
+          <div className="absolute top-8 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-4 bg-gray-900/90 backdrop-blur-md px-8 py-4 rounded-full border border-white/20 shadow-2xl animate-fade-in">
+              <div className="text-orange-500">{osdMessage.icon}</div>
+              <span className="font-black text-xl uppercase tracking-widest text-white">{osdMessage.text}</span>
+          </div>
+      )}
+
       {/* WRAPPER DE MISE A L'ECHELLE (ZOOM) */}
       <div className="relative overflow-hidden bg-black rounded-xl md:rounded-3xl shadow-2xl ring-1 ring-white/10" style={innerContentStyle}>
 
@@ -246,16 +352,29 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               />
           )}
 
+          {/* ECRAN D'ACCUEIL / DEMANDE D'INTERACTION (Anti-Autoplay Policy) */}
           {autoplayFailed && (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[600] animate-bounce flex flex-col items-center gap-4">
+              <div className="absolute inset-0 z-[600] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center animate-fade-in">
                   <button 
                     onClick={handleStartShow}
-                    className="bg-green-600 hover:bg-green-500 text-white px-10 py-6 rounded-[2rem] font-black text-2xl shadow-[0_0_50px_rgba(34,197,94,0.6)] flex items-center gap-4 hover:scale-110 transition-transform"
+                    className="bg-green-600 hover:bg-green-500 text-white px-12 py-8 rounded-[3rem] font-black text-3xl shadow-[0_0_80px_rgba(34,197,94,0.5)] flex items-center gap-6 hover:scale-110 transition-transform animate-pulse"
                   >
-                      <Play size={32} fill="currentColor" /> 
-                      <span>LANCER LA TV & SON</span>
+                      <Tv size={48} /> 
+                      <span>LANCER TV EBF</span>
                   </button>
-                  <p className="text-white/70 font-bold uppercase tracking-widest bg-black/50 px-4 py-2 rounded-xl">Cliquez pour activer l'ambiance sonore</p>
+                  <p className="text-white/50 font-bold uppercase tracking-widest mt-8 flex items-center gap-2">
+                      <Volume2 size={20}/> Musique d'ambiance disponible
+                  </p>
+                  <div className="mt-12 flex gap-8 opacity-50">
+                      <div className="flex flex-col items-center gap-2">
+                          <div className="w-12 h-12 border-2 border-white rounded flex items-center justify-center">OK</div>
+                          <span className="text-[10px] font-bold uppercase">Valider</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-2">
+                          <div className="w-12 h-12 border-2 border-white rounded flex items-center justify-center">⬅️</div>
+                          <span className="text-[10px] font-bold uppercase">Naviguer</span>
+                      </div>
+                  </div>
               </div>
           )}
 
@@ -284,7 +403,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                   </div>
               </div>
 
-              <div className="flex items-center gap-4 md:gap-8 absolute top-4 right-4 md:static">
+              <div className="flex items-center gap-4 md:gap-8 absolute top-4 right-4 md:static transition-opacity duration-500" style={{ opacity: cursorVisible ? 1 : 0 }}>
                   {/* BOUTON REGLAGE TV */}
                   <div className="relative">
                       <button 
@@ -342,7 +461,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                     onClick={toggleMute}
                     className={`p-3 rounded-full border transition-all ${isMuted ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-green-500/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'}`}
                   >
-                      {audioLoading ? <Loader2 size={20} className="animate-spin" /> : (isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />)}
+                      {audioLoading ? <Loader2 size={20} className="animate-spin" /> : (isMuted ? <VolumeX size={20} /> : <Volume1 size={20} />)}
                   </button>
                   
                   <button onClick={() => document.documentElement.requestFullscreen().catch(console.error)} className="hidden md:block p-3 rounded-full border bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10">
