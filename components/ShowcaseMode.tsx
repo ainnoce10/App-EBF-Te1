@@ -67,41 +67,56 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const [showTvSettings, setShowTvSettings] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Détection route TV
-  const isTvRoute = typeof window !== 'undefined' && (window.location.pathname.includes('/tv') || window.location.search.includes('mode=tv'));
+  // Détection route TV (Strictement séparée)
+  const isTvRoute = typeof window !== 'undefined' && (
+      window.location.pathname.includes('/tv') || 
+      window.location.search.includes('mode=tv')
+  );
+
+  // Clé de stockage distincte pour ne pas mélanger les réglages PC et TV
+  const storageKey = isTvRoute ? 'ebf_tv_scale_v2' : 'ebf_desktop_scale_v2';
 
   // Initialisation Dimensions & Settings
   useEffect(() => {
     const handleResize = () => setWindowSize({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener('resize', handleResize);
     
-    // Charger réglage utilisateur si existant
-    const savedScale = localStorage.getItem('ebf_tv_scale_mod');
+    // Charger réglage utilisateur
+    const savedScale = localStorage.getItem(storageKey);
+    
     if (savedScale) {
         setUserScaleModifier(parseFloat(savedScale));
-    } else if (isTvRoute) {
-        // SUR TV : On réduit à 85% par défaut pour éviter les bords coupés et l'effet "gros"
-        setUserScaleModifier(0.85); 
+    } else {
+        // DEFAUTS : 
+        // Sur TV (/tv) => 0.80 (80%) pour éviter l'effet "gros" et coupé
+        // Sur PC => 1.0 (100%) pour un affichage normal
+        if (isTvRoute) {
+            setUserScaleModifier(0.80); 
+        } else {
+            setUserScaleModifier(1.0);
+        }
     }
 
     // Listener plein écran
     const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', handleFsChange);
 
-    // Tentative Fullscreen Auto
-    const attemptFullscreen = async () => {
-        try {
-            if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
-        } catch (e) { console.log("Fullscreen auto bloqué", e); setAutoplayFailed(true); }
-    };
-    const timer = setTimeout(attemptFullscreen, 1500);
+    // Tentative Fullscreen Auto uniquement sur TV
+    if (isTvRoute) {
+        const attemptFullscreen = async () => {
+            try {
+                if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+            } catch (e) { console.log("Fullscreen auto bloqué", e); setAutoplayFailed(true); }
+        };
+        const timer = setTimeout(attemptFullscreen, 1500);
+        return () => clearTimeout(timer);
+    }
 
     return () => {
         window.removeEventListener('resize', handleResize);
         document.removeEventListener('fullscreenchange', handleFsChange);
-        clearTimeout(timer);
     };
-  }, []);
+  }, [isTvRoute, storageKey]);
 
   // Calcul du Facteur d'Échelle (Scale)
   const scaleX = windowSize.w / BASE_WIDTH;
@@ -112,8 +127,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
   const handleUserScaleChange = (delta: number) => {
       setUserScaleModifier(prev => {
-          const newVal = Math.max(0.5, Math.min(1.5, parseFloat((prev + delta).toFixed(2))));
-          localStorage.setItem('ebf_tv_scale_mod', newVal.toString());
+          const newVal = Math.max(0.4, Math.min(1.5, parseFloat((prev + delta).toFixed(2))));
+          localStorage.setItem(storageKey, newVal.toString());
           return newVal;
       });
   };
@@ -238,11 +253,12 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     }
   };
 
+  // Rétablissement des tailles pour le mode PC (car le zoom gérera la TV)
   const getTitleSizeClass = (text: string) => {
       const len = text.length;
-      if (len < 20) return "text-5xl"; // Réduit de 7xl
-      if (len < 40) return "text-4xl"; // Réduit de 6xl
-      return "text-3xl";
+      if (len < 20) return "text-7xl";
+      if (len < 40) return "text-6xl";
+      return "text-5xl";
   };
 
   return (
@@ -306,7 +322,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                       {showTvSettings && (
                           <div className="absolute top-16 right-0 bg-gray-900 border-2 border-gray-700 p-6 rounded-3xl shadow-2xl w-80 z-[100] animate-fade-in origin-top-right">
                               <h4 className="flex items-center gap-3 text-white font-black text-lg mb-4 border-b border-gray-700 pb-3">
-                                  <Monitor size={20} className="text-orange-500"/> Calibrage
+                                  <Monitor size={20} className="text-orange-500"/> Calibrage ({isTvRoute ? 'TV' : 'PC'})
                               </h4>
                               <div className="space-y-4">
                                   <div>
@@ -317,7 +333,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                       <div className="flex items-center gap-3">
                                           <button onClick={() => handleUserScaleChange(-0.01)} className="p-2 bg-gray-800 rounded-xl hover:bg-gray-700 text-white"><Minus size={16}/></button>
                                           <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
-                                              <div className="h-full bg-blue-500 transition-all" style={{ width: `${((userScaleModifier - 0.5) / 1) * 100}%` }}></div>
+                                              <div className="h-full bg-blue-500 transition-all" style={{ width: `${((userScaleModifier - 0.4) / 1.1) * 100}%` }}></div>
                                           </div>
                                           <button onClick={() => handleUserScaleChange(0.01)} className="p-2 bg-gray-800 rounded-xl hover:bg-gray-700 text-white"><Plus size={16}/></button>
                                       </div>
