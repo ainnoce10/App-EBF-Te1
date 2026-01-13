@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_EMPLOYEES } from '../constants';
 import { Transaction, Employee, Site } from '../types';
@@ -14,9 +15,13 @@ import {
   Briefcase,
   TrendingUp,
   Wallet,
-  Calendar,
   Camera,
-  Edit
+  Edit,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  Calendar
 } from 'lucide-react';
 
 interface AccountingProps {
@@ -39,8 +44,11 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
   // State pour le formulaire Employé (Ajout ou Edition)
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
   const [employeeFormData, setEmployeeFormData] = useState({ name: '', assignedName: '', role: '', site: 'Abidjan', entryDate: new Date().toISOString().split('T')[0] });
+  
+  // Gestion Photo et Position
   const [newEmployeePhoto, setNewEmployeePhoto] = useState<File | null>(null);
   const [newEmployeePhotoPreview, setNewEmployeePhotoPreview] = useState<string | null>(null);
+  const [photoPos, setPhotoPos] = useState({ x: 50, y: 50 });
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Transaction Form State
@@ -110,7 +118,21 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
     if (file) {
         setNewEmployeePhoto(file);
         setNewEmployeePhotoPreview(URL.createObjectURL(file));
+        setPhotoPos({ x: 50, y: 50 }); // Reset position on new photo
     }
+  };
+
+  const movePhoto = (direction: 'up' | 'down' | 'left' | 'right') => {
+      setPhotoPos(prev => {
+          const step = 10;
+          switch(direction) {
+              case 'up': return { ...prev, y: Math.max(0, prev.y - step) };
+              case 'down': return { ...prev, y: Math.min(100, prev.y + step) };
+              case 'left': return { ...prev, x: Math.max(0, prev.x - step) };
+              case 'right': return { ...prev, x: Math.min(100, prev.x + step) };
+              default: return prev;
+          }
+      });
   };
 
   const handleToggleStatus = async (empId: string) => {
@@ -137,11 +159,26 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
       });
       setNewEmployeePhotoPreview(emp.photoUrl || null);
       setNewEmployeePhoto(null);
+      
+      // Parse position
+      let x = 50, y = 50;
+      if (emp.photoPosition) {
+          const parts = emp.photoPosition.split(' ');
+          if (parts.length === 2) {
+              x = parseInt(parts[0]);
+              y = parseInt(parts[1]);
+          }
+      }
+      setPhotoPos({ x, y });
+      
       setIsAddingEmployee(true); // Reuse the adding form logic
   };
 
   const handleSaveEmployee = async () => {
-    if (!employeeFormData.name) return;
+    if (!employeeFormData.name || !employeeFormData.assignedName) {
+        alert("Le Nom Complet et le Nom Assigné sont obligatoires.");
+        return;
+    }
     setIsSaving(true);
     
     try {
@@ -162,12 +199,13 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
 
         const employeePayload = { 
             name: employeeFormData.name, 
-            assignedName: employeeFormData.assignedName || employeeFormData.name, // Fallback au nom complet
+            assignedName: employeeFormData.assignedName, 
             role: employeeFormData.role, 
             site: employeeFormData.site, 
             status: 'Actif', 
             entryDate: employeeFormData.entryDate,
-            photoUrl: photoUrl || undefined
+            photoUrl: photoUrl || undefined,
+            photoPosition: `${photoPos.x}% ${photoPos.y}%`
         };
 
         if (editingEmployeeId) {
@@ -187,6 +225,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
         setEmployeeFormData({ name: '', assignedName: '', role: '', site: 'Abidjan', entryDate: new Date().toISOString().split('T')[0] });
         setNewEmployeePhoto(null);
         setNewEmployeePhotoPreview(null);
+        setPhotoPos({ x: 50, y: 50 });
 
     } catch (error: any) { 
         alert("Erreur sauvegarde employé: " + error.message);
@@ -510,7 +549,13 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                              <div key={emp.id} className="p-4 border-2 border-gray-100 rounded-2xl flex justify-between items-center bg-white hover:border-gray-200 transition-colors">
                                  <div className="flex items-center gap-4">
                                      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-black text-xs border border-gray-200 overflow-hidden shrink-0">
-                                         {emp.photoUrl ? <img src={emp.photoUrl} className="w-full h-full object-cover"/> : emp.name.substring(0,2).toUpperCase()}
+                                         {emp.photoUrl ? (
+                                             <img 
+                                                src={emp.photoUrl} 
+                                                className="w-full h-full object-cover"
+                                                style={{ objectPosition: emp.photoPosition || '50% 50%' }}
+                                             />
+                                         ) : emp.name.substring(0,2).toUpperCase()}
                                      </div>
                                      <div>
                                         <p className="font-bold text-gray-900">{emp.assignedName || emp.name}</p>
@@ -533,28 +578,51 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                  ) : (
                    <div className="space-y-6">
                       
-                      {/* Photo Upload */}
-                      <div className="flex flex-col items-center gap-4">
-                           <div onClick={() => photoInputRef.current?.click()} className="w-24 h-24 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-200 overflow-hidden relative">
-                               {newEmployeePhotoPreview ? (
-                                   <img src={newEmployeePhotoPreview} className="w-full h-full object-cover" />
-                               ) : (
-                                   <Camera size={32} className="text-gray-400"/>
+                      {/* Photo Upload & Positioning */}
+                      <div className="flex flex-col items-center gap-4 bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                           <div className="relative">
+                               {/* Image Container */}
+                               <div onClick={() => photoInputRef.current?.click()} className="w-32 h-32 rounded-full bg-white border-4 border-white shadow-xl flex items-center justify-center cursor-pointer hover:scale-105 transition-transform overflow-hidden relative z-10">
+                                   {newEmployeePhotoPreview ? (
+                                       <img 
+                                        src={newEmployeePhotoPreview} 
+                                        className="w-full h-full object-cover" 
+                                        style={{ objectPosition: `${photoPos.x}% ${photoPos.y}%` }}
+                                       />
+                                   ) : (
+                                       <Camera size={40} className="text-gray-300"/>
+                                   )}
+                                   <input type="file" ref={photoInputRef} className="hidden" accept="image/*" onChange={handlePhotoSelect} />
+                               </div>
+                               
+                               {/* Arrows Controls */}
+                               {newEmployeePhotoPreview && (
+                                   <div className="absolute inset-0 -m-8 flex items-center justify-center pointer-events-none">
+                                       <button onClick={() => movePhoto('up')} className="absolute -top-1 pointer-events-auto p-1.5 bg-gray-900 text-white rounded-full shadow-md hover:bg-orange-500 transition-colors"><ArrowUp size={14}/></button>
+                                       <button onClick={() => movePhoto('down')} className="absolute -bottom-1 pointer-events-auto p-1.5 bg-gray-900 text-white rounded-full shadow-md hover:bg-orange-500 transition-colors"><ArrowDown size={14}/></button>
+                                       <button onClick={() => movePhoto('left')} className="absolute -left-1 pointer-events-auto p-1.5 bg-gray-900 text-white rounded-full shadow-md hover:bg-orange-500 transition-colors"><ArrowLeft size={14}/></button>
+                                       <button onClick={() => movePhoto('right')} className="absolute -right-1 pointer-events-auto p-1.5 bg-gray-900 text-white rounded-full shadow-md hover:bg-orange-500 transition-colors"><ArrowRight size={14}/></button>
+                                   </div>
                                )}
-                               <input type="file" ref={photoInputRef} className="hidden" accept="image/*" onChange={handlePhotoSelect} />
                            </div>
-                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Photo de profil</p>
+                           <div className="text-center">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Photo de profil</p>
+                                {newEmployeePhotoPreview && <p className="text-[9px] text-orange-500 font-bold mt-1">Utilisez les flèches pour cadrer</p>}
+                           </div>
                       </div>
 
-                      <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nom Complet</label>
-                          <input type="text" placeholder="Ex: Kouassi Jean" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all" value={employeeFormData.name} onChange={e => setEmployeeFormData({...employeeFormData, name: e.target.value})}/>
-                      </div>
+                      {/* Champs Nom distincts */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nom Complet (Administratif)</label>
+                              <input type="text" placeholder="Ex: KOUASSI Jean-Pierre" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all text-sm" value={employeeFormData.name} onChange={e => setEmployeeFormData({...employeeFormData, name: e.target.value})}/>
+                          </div>
 
-                      <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nom Assigné (Planning)</label>
-                          <input type="text" placeholder="Ex: Jean K." className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all" value={employeeFormData.assignedName} onChange={e => setEmployeeFormData({...employeeFormData, assignedName: e.target.value})}/>
-                          <p className="text-[9px] text-gray-400 font-bold ml-1">Ce nom apparaîtra sur la TV et les fiches missions.</p>
+                          <div className="space-y-2">
+                              <label className="text-[10px] font-black text-orange-500 uppercase tracking-widest ml-1 flex items-center gap-1"><Users size={12}/> Nom Assigné (Planning TV)</label>
+                              <input type="text" placeholder="Ex: Jean K." className="w-full p-4 bg-orange-50 text-orange-900 rounded-2xl font-black outline-none border-2 border-orange-100 focus:border-orange-500 transition-all text-sm" value={employeeFormData.assignedName} onChange={e => setEmployeeFormData({...employeeFormData, assignedName: e.target.value})}/>
+                              <p className="text-[9px] text-gray-400 font-bold ml-1">C'est ce nom qui apparaîtra dans les fiches missions.</p>
+                          </div>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4">

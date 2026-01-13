@@ -173,7 +173,7 @@ create table if not exists public.stock ( id text primary key, name text not nul
 create table if not exists public.interventions ( id text primary key, client text, "clientPhone" text, domain text, "interventionType" text, description text, location text, technician text, status text, date date, site text, created_at timestamp with time zone default now() );
 
 -- employees: ajout photoUrl et assignedName si manquant
-create table if not exists public.employees ( id text primary key, name text, "assignedName" text, role text, site text, status text, "entryDate" date, "photoUrl" text, created_at timestamp with time zone default now() );
+create table if not exists public.employees ( id text primary key, name text, "assignedName" text, role text, site text, status text, "entryDate" date, "photoUrl" text, "photoPosition" text, created_at timestamp with time zone default now() );
 do $$ 
 begin 
   if not exists (select 1 from information_schema.columns where table_name = 'employees' and column_name = 'photoUrl') then 
@@ -182,6 +182,9 @@ begin
   if not exists (select 1 from information_schema.columns where table_name = 'employees' and column_name = 'assignedName') then 
     alter table public.employees add column "assignedName" text; 
   end if; 
+  if not exists (select 1 from information_schema.columns where table_name = 'employees' and column_name = 'photoPosition') then 
+    alter table public.employees add column "photoPosition" text default '50% 50%'; 
+  end if;
 end $$;
 
 create table if not exists public.hardware_transactions ( id text primary key, type text, category text, amount numeric default 0, date date, description text, site text, created_at timestamp with time zone default now() );

@@ -64,6 +64,7 @@ export interface Employee {
   status: 'Actif' | 'Congés' | 'Inactif';
   entryDate: string;
   photoUrl?: string;
+  photoPosition?: string; // Format "50% 50%"
 }
 
 export interface Achievement {
