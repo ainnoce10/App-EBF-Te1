@@ -16,7 +16,10 @@ import {
   Phone,
   Tv,
   Trophy,
-  Loader2
+  Loader2,
+  Clock,
+  CloudSun,
+  PlayCircle
 } from 'lucide-react';
 import { Logo } from '../constants';
 
@@ -54,6 +57,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   
   // Video Player Ref
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const products = liveStock.length > 0 ? liveStock : [];
   
@@ -65,9 +69,14 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const achievements = liveAchievements.length > 0 ? liveAchievements : [];
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
+  // --- HORLOGE ---
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // --- AUDIO ENGINE ---
   useEffect(() => {
-    // Écoute des changements de musique en temps réel
     const channel = supabase.channel('tv-music-showcase')
         .on(
             'postgres_changes',
@@ -105,7 +114,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     }
   }, [audioSrc]);
 
-  // Gestion intelligente de l'audio pendant les vidéos
+  // Gestion audio/vidéo
   useEffect(() => {
       const currentAch = achievements[achievementIdx];
       const isVideoPlaying = activeMode === 'REALISATIONS' && currentAch?.mediaType === 'video';
@@ -119,7 +128,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       }
   }, [activeMode, achievementIdx, achievements, isMuted, autoplayFailed]);
 
-  // --- INTERACTION UTILISATEUR (Pour débloquer l'audio) ---
   const handleStartShow = async () => {
     setIsMuted(false);
     setAutoplayFailed(false);
@@ -133,21 +141,15 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   };
 
   const toggleMute = () => {
-      if (isMuted) {
-          setIsMuted(false);
-          if (audioRef.current) {
-              audioRef.current.muted = false;
-              audioRef.current.play().catch(() => setAutoplayFailed(true));
-          }
-      } else {
-          setIsMuted(true);
-          if (audioRef.current) audioRef.current.muted = true;
+      setIsMuted(!isMuted);
+      if (audioRef.current) {
+          audioRef.current.muted = !audioRef.current.muted;
+          if (!audioRef.current.muted) audioRef.current.play().catch(() => setAutoplayFailed(true));
       }
   };
 
-  // --- CYCLES D'AFFICHAGE AUTOMATIQUES ---
-  
-  // 1. Changement de mode global (toutes les 60 secondes)
+  // --- CYCLES ---
+  // 1. Changement de mode (60s)
   useEffect(() => {
     const modeInterval = setInterval(() => {
       setActiveMode((prev) => {
@@ -159,7 +161,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return () => clearInterval(modeInterval);
   }, []);
 
-  // 2. Cycle Produits (toutes les 10 secondes)
+  // 2. Produits (10s)
   useEffect(() => {
     if (activeMode !== 'PUBLICITE' || products.length === 0) return;
     const interval = setInterval(() => {
@@ -168,7 +170,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return () => clearInterval(interval);
   }, [activeMode, products.length]);
 
-  // 3. Cycle Planning (3 items par page, toutes les 15 secondes)
+  // 3. Planning (15s) - 3 items max
   const itemsPerPage = 3; 
   const totalPlanningPages = Math.ceil(planning.length / itemsPerPage) || 1;
   useEffect(() => {
@@ -182,301 +184,322 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return () => clearInterval(interval);
   }, [activeMode, planning.length, totalPlanningPages]);
 
-  // 4. Cycle Réalisations (Image: 10s, Vidéo: Auto)
+  // 4. Réalisations
   useEffect(() => {
       if (activeMode !== 'REALISATIONS' || achievements.length === 0) {
           setAchievementIdx(0);
           return;
       }
       const currentItem = achievements[achievementIdx];
-      let timer: number;
-      
-      // Si c'est une image, on change après 10s. Si c'est une vidéo, le onEnded s'en charge.
       if (currentItem.mediaType === 'image') {
-          timer = window.setTimeout(() => {
+          const timer = window.setTimeout(() => {
               setAchievementIdx(prev => (prev + 1) % achievements.length);
           }, 10000);
+          return () => clearTimeout(timer);
       }
-      return () => clearTimeout(timer);
   }, [activeMode, achievements.length, achievementIdx]);
 
   const handleVideoEnded = () => {
       setAchievementIdx(prev => (prev + 1) % achievements.length);
   };
 
-  // --- DONNÉES COURANTES ---
+  // --- DATA ---
   const currentProduct = products[productIdx];
   const currentPlanningSlice = planning.slice(planningPage * itemsPerPage, (planningPage + 1) * itemsPerPage);
   const currentAchievement = achievements[achievementIdx];
-  const todayDate = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const todayDateFull = currentTime.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  // Helpers de rendu
   const getMessageColorClass = (color: string) => {
     switch(color) {
-        case 'green': return 'text-green-400';
-        case 'yellow': return 'text-yellow-400';
+        case 'green': return 'text-green-500';
+        case 'yellow': return 'text-yellow-500';
         case 'red': return 'text-red-500';
         default: return 'text-white';
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black text-white font-sans overflow-hidden flex flex-col z-50">
+    <div className="fixed inset-0 bg-gray-100 flex overflow-hidden font-sans select-none z-[1000]">
       
-      {/* LECTEUR AUDIO INVISIBLE */}
+      {/* AUDIO HIDDEN */}
       {audioSrc && (
           <audio 
             ref={audioRef} 
             loop 
             src={audioSrc} 
             preload="auto"
-            onPlay={() => setAutoplayFailed(false)}
             onError={(e) => console.error("Erreur lecture audio:", e)}
           />
       )}
 
-      {/* OVERLAY SI AUTOPLAY BLOQUÉ */}
+      {/* OVERLAY AUTOPLAY */}
       {autoplayFailed && (
-          <div className="absolute inset-0 z-[1000] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center animate-fade-in">
+          <div className="absolute inset-0 z-[2000] bg-black/90 flex flex-col items-center justify-center animate-fade-in">
               <button 
                 onClick={handleStartShow}
-                className="bg-orange-600 hover:bg-orange-500 text-white px-12 py-8 rounded-[3rem] font-black text-4xl shadow-[0_0_80px_rgba(249,115,22,0.6)] flex items-center gap-6 hover:scale-105 transition-transform animate-pulse"
+                className="bg-orange-600 hover:bg-orange-500 text-white px-12 py-6 rounded-2xl font-black text-3xl shadow-2xl flex items-center gap-4 hover:scale-105 transition-transform animate-bounce"
               >
-                  <Tv size={60} /> 
-                  <span>LANCER TV EBF</span>
+                  <Tv size={40} /> 
+                  <span>ACTIVER L'AFFICHAGE</span>
               </button>
-              <p className="text-white/50 mt-8 font-bold text-xl uppercase tracking-widest">Cliquez pour activer le son et le plein écran</p>
           </div>
       )}
 
-      {/* 1. HEADER (FIXE: 15% HAUTEUR MAX) */}
-      <header className="h-[12vh] shrink-0 bg-gray-950 border-b-8 border-orange-600 flex items-center justify-between px-6 shadow-2xl relative z-20">
-          <div className="flex items-center gap-6">
-              <div className="bg-white p-2 rounded-xl h-16 w-auto flex items-center">
-                  <Logo url={customLogo} size="md" theme="light" />
+      {/* --- SIDEBAR GAUCHE (Type App) --- */}
+      <aside className="w-[340px] bg-white border-r border-gray-200 flex flex-col justify-between shadow-xl z-20 shrink-0">
+          <div>
+              {/* Logo Header */}
+              <div className="h-32 flex items-center justify-center border-b border-gray-100 p-6">
+                  <Logo url={customLogo} size="lg" />
+              </div>
+
+              {/* Menu Items (Indicateurs de mode) */}
+              <div className="p-4 space-y-3">
+                  <div className={`p-4 rounded-2xl flex items-center gap-4 transition-all duration-500 ${activeMode === 'PUBLICITE' ? 'bg-orange-500 text-white shadow-lg scale-105' : 'bg-gray-50 text-gray-400'}`}>
+                      <LayoutGrid size={28} />
+                      <div>
+                          <p className="font-black uppercase text-sm tracking-wider">Catalogue</p>
+                          <p className="text-[10px] font-bold opacity-80 uppercase">Nos Produits</p>
+                      </div>
+                  </div>
+
+                  <div className={`p-4 rounded-2xl flex items-center gap-4 transition-all duration-500 ${activeMode === 'PLANNING' ? 'bg-blue-600 text-white shadow-lg scale-105' : 'bg-gray-50 text-gray-400'}`}>
+                      <ClipboardList size={28} />
+                      <div>
+                          <p className="font-black uppercase text-sm tracking-wider">Planning</p>
+                          <p className="text-[10px] font-bold opacity-80 uppercase">Interventions</p>
+                      </div>
+                  </div>
+
+                  <div className={`p-4 rounded-2xl flex items-center gap-4 transition-all duration-500 ${activeMode === 'REALISATIONS' ? 'bg-purple-600 text-white shadow-lg scale-105' : 'bg-gray-50 text-gray-400'}`}>
+                      <Trophy size={28} />
+                      <div>
+                          <p className="font-black uppercase text-sm tracking-wider">Réalisations</p>
+                          <p className="text-[10px] font-bold opacity-80 uppercase">Nos Succès</p>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          {/* Sidebar Footer Info */}
+          <div className="p-6 bg-gray-50 border-t border-gray-100">
+              <div className="mb-6 space-y-4">
+                  <div className="flex items-center gap-3 text-gray-600">
+                      <Clock size={24} className="text-orange-500"/>
+                      <div>
+                          <p className="text-2xl font-black leading-none">{currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-widest">{todayDateFull}</p>
+                      </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-600">
+                      <CloudSun size={24} className="text-blue-500"/>
+                      <div>
+                          <p className="text-lg font-black leading-none">Abidjan</p>
+                          <p className="text-[10px] font-bold uppercase tracking-widest">30°C Ensoleillé</p>
+                      </div>
+                  </div>
               </div>
               
-              {/* Indicateurs de mode */}
-              <div className="flex bg-white/10 rounded-xl p-1.5 border border-white/10">
-                  <div className={`px-6 py-2 rounded-lg font-black uppercase tracking-wider flex items-center gap-3 transition-all ${activeMode === 'PUBLICITE' ? 'bg-orange-600 text-white shadow-lg' : 'text-white/30'}`}>
-                      <LayoutGrid size={20}/> Produits
-                  </div>
-                  <div className={`px-6 py-2 rounded-lg font-black uppercase tracking-wider flex items-center gap-3 transition-all ${activeMode === 'PLANNING' ? 'bg-blue-600 text-white shadow-lg' : 'text-white/30'}`}>
-                      <ClipboardList size={20}/> Chantiers
-                  </div>
-                  <div className={`px-6 py-2 rounded-lg font-black uppercase tracking-wider flex items-center gap-3 transition-all ${activeMode === 'REALISATIONS' ? 'bg-purple-600 text-white shadow-lg' : 'text-white/30'}`}>
-                      <Trophy size={20}/> Réalisations
-                  </div>
+              <div className="flex gap-2">
+                 <button onClick={toggleMute} className="flex-1 py-3 bg-white border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-100 flex items-center justify-center">
+                     {isMuted ? <VolumeX size={20}/> : <Volume2 size={20}/>}
+                 </button>
+                 {onClose && (
+                    <button onClick={onClose} className="flex-1 py-3 bg-red-50 border border-red-100 rounded-xl text-red-500 hover:bg-red-100 flex items-center justify-center font-black text-xs uppercase">
+                        Fermer
+                    </button>
+                 )}
               </div>
           </div>
+      </aside>
 
-          <div className="flex items-center gap-4">
-              <div className="text-right hidden xl:block">
-                  <p className="text-2xl font-black leading-none">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{todayDate}</p>
-              </div>
-              <button onClick={toggleMute} className="p-4 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
-                  {isMuted ? <VolumeX size={24} className="text-red-400"/> : <Volume2 size={24} className="text-green-400"/>}
-              </button>
-              {onClose && (
-                  <button onClick={onClose} className="p-4 bg-red-600/20 text-red-500 rounded-full hover:bg-red-600 hover:text-white transition-colors">
-                      <X size={24}/>
-                  </button>
-              )}
-          </div>
-      </header>
-
-      {/* 2. CONTENU PRINCIPAL (EXTENSIBLE: FLEX-1) */}
-      <main className="flex-1 min-h-0 relative bg-gray-900 overflow-hidden">
+      {/* --- CONTENU PRINCIPAL (DROITE) --- */}
+      <main className="flex-1 flex flex-col min-w-0 bg-gray-900 relative overflow-hidden">
           
-          {/* MODE: PUBLICITE (PRODUITS) */}
-          {activeMode === 'PUBLICITE' && (
-              currentProduct ? (
-                  <div className="flex w-full h-full animate-fade-in">
-                      {/* Image Gauche (45%) */}
-                      <div className="w-[45%] h-full bg-black relative flex items-center justify-center p-8 border-r border-white/10">
-                          <div className="absolute inset-0 bg-gradient-to-tr from-orange-900/20 to-transparent"></div>
-                          <img 
-                              src={currentProduct.imageUrls?.[0] || 'https://placehold.co/800x800/1a1a1a/ffffff?text=No+Image'} 
-                              alt={currentProduct.name}
-                              className="max-w-full max-h-full object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-10"
-                          />
-                      </div>
-                      {/* Infos Droite (55%) */}
-                      <div className="w-[55%] h-full bg-white text-gray-900 p-12 flex flex-col justify-center">
-                          <div className="mb-auto">
-                              <span className="inline-block px-4 py-2 bg-orange-100 text-orange-600 rounded-lg text-lg font-black uppercase tracking-widest mb-4">
+          {/* Header Zone (Titre Module) */}
+          <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-8 shrink-0 relative z-10">
+               <h1 className="text-3xl font-black text-gray-900 uppercase italic tracking-tighter flex items-center gap-3">
+                   {activeMode === 'PUBLICITE' && <><span className="text-orange-500">///</span> Catalogue Numérique</>}
+                   {activeMode === 'PLANNING' && <><span className="text-blue-600">///</span> Planning Opérationnel</>}
+                   {activeMode === 'REALISATIONS' && <><span className="text-purple-600">///</span> Portfolio EBF</>}
+               </h1>
+               <div className="flex items-center gap-2 px-4 py-1.5 bg-green-100 text-green-700 rounded-full border border-green-200">
+                   <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
+                   <span className="text-xs font-black uppercase tracking-widest">Diffusion Live</span>
+               </div>
+          </header>
+
+          {/* CONTENT BODY (Flex-1) */}
+          <div className="flex-1 relative overflow-hidden flex flex-col">
+              
+              {/* MODE 1: PUBLICITE */}
+              {activeMode === 'PUBLICITE' && (
+                  currentProduct ? (
+                      <div className="flex-1 flex animate-fade-in bg-white">
+                          <div className="w-1/2 h-full p-8 flex items-center justify-center bg-gray-50 relative overflow-hidden">
+                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-gray-50 to-gray-200 opacity-50"></div>
+                             <img 
+                                src={currentProduct.imageUrls?.[0]} 
+                                className="max-w-full max-h-full object-contain drop-shadow-2xl z-10 animate-scale-in"
+                                alt={currentProduct.name}
+                             />
+                          </div>
+                          <div className="w-1/2 h-full p-12 flex flex-col justify-center bg-white">
+                              <span className="inline-block px-4 py-2 bg-orange-100 text-orange-600 rounded-lg text-sm font-black uppercase tracking-widest mb-4 w-fit">
                                   {currentProduct.category}
                               </span>
-                              <h1 className="text-6xl font-black uppercase leading-tight tracking-tighter mb-6 line-clamp-3">
+                              <h2 className="text-5xl font-black text-gray-900 leading-tight uppercase mb-8 line-clamp-3">
                                   {currentProduct.name}
-                              </h1>
-                              <div className="flex gap-8 mb-8">
-                                  <div className="flex items-center gap-3 text-gray-500 font-bold uppercase tracking-wider text-xl">
-                                      <Zap className="text-orange-500" size={24}/> {currentProduct.supplier}
+                              </h2>
+                              <div className="space-y-6 mb-12">
+                                  <div className="flex items-center gap-4 text-gray-500">
+                                      <Zap size={28} className="text-orange-500"/>
+                                      <span className="text-xl font-bold uppercase tracking-wider">{currentProduct.supplier}</span>
                                   </div>
-                                  <div className="flex items-center gap-3 text-gray-500 font-bold uppercase tracking-wider text-xl">
-                                      <ShieldCheck className="text-green-500" size={24}/> Stock: {currentProduct.quantity}
+                                  <div className="flex items-center gap-4 text-gray-500">
+                                      <ShieldCheck size={28} className="text-green-500"/>
+                                      <span className="text-xl font-bold uppercase tracking-wider">Garantie EBF</span>
+                                  </div>
+                              </div>
+                              <div className="mt-auto bg-gray-900 text-white p-8 rounded-3xl shadow-2xl flex items-center justify-between">
+                                  <div>
+                                      <p className="text-gray-400 text-xs font-black uppercase tracking-[0.2em] mb-1">Prix Promo</p>
+                                      <p className="text-6xl font-black tracking-tighter">{currentProduct.unitPrice.toLocaleString()}<span className="text-2xl text-orange-500 ml-1">F</span></p>
+                                  </div>
+                                  <div className="bg-orange-600 p-4 rounded-2xl">
+                                      <Zap size={32} className="text-white"/>
                                   </div>
                               </div>
                           </div>
-                          
-                          <div className="bg-gray-900 text-white p-8 rounded-3xl flex items-center justify-between shadow-2xl">
-                              <div>
-                                  <p className="text-sm font-bold text-gray-400 uppercase tracking-[0.2em] mb-1">Prix Unitaire</p>
-                                  <p className="text-7xl font-black tracking-tighter text-white">
-                                      {currentProduct.unitPrice.toLocaleString()} <span className="text-2xl text-orange-500">FCFA</span>
-                                  </p>
-                              </div>
-                              <div className="bg-orange-600 p-4 rounded-2xl">
-                                  <Zap size={40} className="text-white"/>
-                              </div>
-                          </div>
                       </div>
-                  </div>
-              ) : (
-                  <div className="flex items-center justify-center h-full text-white/20">
-                      <Loader2 size={60} className="animate-spin"/>
-                  </div>
-              )
-          )}
+                  ) : <div className="flex-1 flex items-center justify-center text-white"><Loader2 className="animate-spin" size={48}/></div>
+              )}
 
-          {/* MODE: PLANNING (CHANTIERS) - GRILLE STRICTE */}
-          {activeMode === 'PLANNING' && (
-              <div className="w-full h-full p-8 flex flex-col animate-slide-up bg-[#0f172a]">
-                  <div className="flex justify-between items-end mb-6 shrink-0 border-b border-white/10 pb-4">
-                      <div>
-                          <h2 className="text-5xl font-black uppercase italic tracking-tighter text-white">Planning Chantiers</h2>
-                          <p className="text-blue-400 font-bold text-xl uppercase tracking-widest mt-2">{todayDate}</p>
+              {/* MODE 2: PLANNING */}
+              {activeMode === 'PLANNING' && (
+                  <div className="flex-1 bg-[#0f172a] p-8 flex flex-col animate-slide-up">
+                      <div className="flex items-center justify-between mb-6 text-white/50">
+                           <span className="text-lg font-bold uppercase tracking-widest">Suivi des Techniciens</span>
+                           <span className="bg-white/10 px-4 py-1 rounded-full text-xs font-mono">Page {planningPage + 1}/{totalPlanningPages}</span>
                       </div>
-                      <div className="bg-white/10 px-6 py-2 rounded-full font-mono text-xl font-bold text-blue-300">
-                          Page {planningPage + 1} / {totalPlanningPages}
-                      </div>
-                  </div>
-
-                  {/* GRILLE 3 COLONNES QUI REMPLIT L'ESPACE RESTANT */}
-                  <div className="flex-1 grid grid-cols-3 gap-8 min-h-0">
-                      {currentPlanningSlice.map((inter) => (
-                          <div key={inter.id} className="bg-white/5 border border-white/10 rounded-[2rem] p-6 flex flex-col h-full relative overflow-hidden shadow-lg group">
-                              <div className="flex justify-between items-start mb-4">
-                                  <span className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
-                                      {inter.status}
-                                  </span>
-                                  {inter.site && (
-                                      <span className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase">
-                                          <MapPin size={14}/> {inter.site}
+                      <div className="grid grid-cols-3 gap-6 flex-1 min-h-0">
+                          {currentPlanningSlice.map(inter => (
+                              <div key={inter.id} className="bg-white/5 border border-white/10 rounded-3xl p-6 flex flex-col relative overflow-hidden">
+                                  <div className="flex justify-between items-start mb-4">
+                                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
+                                          {inter.status}
                                       </span>
-                                  )}
+                                      {inter.site && <span className="text-xs font-bold text-gray-400 uppercase flex items-center gap-1"><MapPin size={12}/> {inter.site}</span>}
+                                  </div>
+                                  <h3 className="text-2xl font-black text-white uppercase leading-none mb-2 line-clamp-2">{inter.client}</h3>
+                                  <p className="text-xs text-gray-400 font-bold uppercase mb-4">{inter.interventionType} • {inter.domain}</p>
+                                  <div className="flex-1 bg-black/20 rounded-2xl p-4 mb-4 min-h-0">
+                                      <p className="text-sm font-medium text-gray-300 leading-snug line-clamp-5">{inter.description}</p>
+                                  </div>
+                                  <div className="mt-auto pt-4 border-t border-white/5 flex items-center gap-3 text-green-400">
+                                      <Phone size={18}/>
+                                      <span className="text-lg font-mono font-black tracking-widest">{inter.clientPhone || '---'}</span>
+                                  </div>
                               </div>
-
-                              <h3 className="text-2xl font-black uppercase leading-tight mb-2 text-white line-clamp-2">
-                                  {inter.client}
-                              </h3>
-                              <p className="text-sm text-gray-400 font-bold uppercase mb-4">
-                                  {inter.interventionType} • {inter.domain}
-                              </p>
-
-                              {/* Description: Flex-1 pour prendre l'espace restant dans la carte */}
-                              <div className="flex-1 bg-black/20 rounded-2xl p-4 mb-4 min-h-0 overflow-hidden">
-                                  <p className="text-lg font-medium text-gray-300 leading-snug line-clamp-6">
-                                      {inter.description}
-                                  </p>
+                          ))}
+                          {/* Empty placeholders */}
+                          {[...Array(itemsPerPage - currentPlanningSlice.length)].map((_, i) => (
+                              <div key={`empty-${i}`} className="bg-white/5 border border-white/5 border-dashed rounded-3xl flex items-center justify-center opacity-10">
+                                  <Calendar size={48} className="text-white"/>
                               </div>
+                          ))}
+                      </div>
+                  </div>
+              )}
 
-                              <div className="mt-auto flex items-center gap-3 text-green-400 pt-4 border-t border-white/5">
-                                  <Phone size={20}/>
-                                  <span className="text-xl font-mono font-black tracking-wider">
-                                      {inter.clientPhone || 'Numéro non disponible'}
-                                  </span>
+              {/* MODE 3: REALISATIONS */}
+              {activeMode === 'REALISATIONS' && (
+                  currentAchievement ? (
+                      <div className="flex-1 relative bg-black flex items-center justify-center animate-fade-in">
+                          {currentAchievement.mediaType === 'video' ? (
+                              <video 
+                                ref={videoRef}
+                                src={currentAchievement.mediaUrl}
+                                className="w-full h-full object-contain"
+                                autoPlay
+                                muted={isMuted}
+                                onEnded={handleVideoEnded}
+                                onError={handleVideoEnded}
+                              />
+                          ) : (
+                              <img 
+                                src={currentAchievement.mediaUrl}
+                                className="w-full h-full object-contain animate-scale-in"
+                                alt={currentAchievement.title}
+                              />
+                          )}
+                          <div className="absolute bottom-8 left-0 right-0 flex justify-center">
+                              <div className="bg-black/70 backdrop-blur-md px-10 py-6 rounded-3xl border border-white/10 text-center max-w-4xl">
+                                  <h2 className="text-3xl font-black text-white uppercase tracking-tight mb-2">{currentAchievement.title}</h2>
+                                  {currentAchievement.description && <p className="text-lg text-gray-300 line-clamp-2">{currentAchievement.description}</p>}
                               </div>
                           </div>
-                      ))}
-                      
-                      {/* Remplissage vide pour garder la grille alignée */}
-                      {[...Array(itemsPerPage - currentPlanningSlice.length)].map((_, i) => (
-                          <div key={`empty-${i}`} className="bg-white/5 border border-white/5 border-dashed rounded-[2rem] flex items-center justify-center opacity-20">
-                              <Calendar size={60} />
-                          </div>
+                          {currentAchievement.mediaType === 'video' && (
+                              <div className="absolute top-8 right-8 bg-red-600 text-white px-4 py-2 rounded-full flex items-center gap-2 animate-pulse">
+                                  <PlayCircle size={20}/> <span className="text-xs font-black uppercase">Lecture Vidéo</span>
+                              </div>
+                          )}
+                      </div>
+                  ) : <div className="flex-1 flex items-center justify-center text-white/20"><Loader2 className="animate-spin" size={48}/></div>
+              )}
+
+          </div>
+
+          {/* FOOTER TICKER (Bas de la zone de contenu) */}
+          <div className="h-16 bg-black border-t-4 border-orange-600 flex items-center shrink-0 z-20">
+              <div className="h-full bg-gray-900 px-6 flex items-center justify-center border-r-4 border-orange-500 shrink-0">
+                  <Megaphone size={24} className="text-orange-500 animate-pulse" />
+              </div>
+              <div className="flex-1 overflow-hidden whitespace-nowrap bg-black">
+                  <div className="inline-block animate-tv-ticker leading-[4rem]">
+                      {flashes.concat(flashes).concat(flashes).map((msg, i) => (
+                          <span key={i} className={`${getMessageColorClass(msg.color)} text-3xl font-black px-16 uppercase italic tracking-tight`}>
+                              {msg.content} <span className="text-gray-800 mx-8">///</span>
+                          </span>
                       ))}
                   </div>
               </div>
-          )}
-
-          {/* MODE: REALISATIONS (PLEIN ECRAN) */}
-          {activeMode === 'REALISATIONS' && (
-              currentAchievement ? (
-                  <div className="w-full h-full relative bg-black flex items-center justify-center animate-fade-in">
-                      {currentAchievement.mediaType === 'video' ? (
-                          <video 
-                              ref={videoRef}
-                              src={currentAchievement.mediaUrl}
-                              className="w-full h-full object-contain"
-                              autoPlay
-                              muted={isMuted}
-                              onEnded={handleVideoEnded}
-                              onError={handleVideoEnded}
-                          />
-                      ) : (
-                          <img 
-                              src={currentAchievement.mediaUrl} 
-                              alt={currentAchievement.title}
-                              className="w-full h-full object-contain animate-scale-in"
-                          />
-                      )}
-                      
-                      <div className="absolute bottom-12 left-0 right-0 flex justify-center z-20">
-                          <div className="bg-black/70 backdrop-blur-xl border border-white/20 px-12 py-6 rounded-3xl text-center max-w-5xl shadow-2xl">
-                              <h2 className="text-4xl font-black uppercase text-white tracking-tight mb-2">
-                                  {currentAchievement.title}
-                              </h2>
-                              {currentAchievement.description && (
-                                  <p className="text-xl text-gray-300 line-clamp-2">
-                                      {currentAchievement.description}
-                                  </p>
-                              )}
-                          </div>
-                      </div>
-                  </div>
-              ) : (
-                <div className="flex items-center justify-center h-full text-white/20">
-                    <Loader2 size={60} className="animate-spin"/>
-                </div>
-              )
-          )}
+          </div>
 
       </main>
 
-      {/* 3. FOOTER (TICKER FIXE: 8% HAUTEUR) */}
-      <footer className="h-[10vh] shrink-0 bg-black border-t-8 border-orange-600 flex items-center relative z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-          <div className="h-full bg-gray-900 px-8 flex items-center justify-center border-r-4 border-orange-500 min-w-[120px]">
-              <Megaphone size={32} className="text-orange-500 animate-pulse" />
-          </div>
-          <div className="flex-1 overflow-hidden whitespace-nowrap bg-black">
-              <div className="inline-block animate-tv-ticker py-2">
-                  {flashes.concat(flashes).concat(flashes).map((msg, i) => (
-                      <span key={i} className={`${getMessageColorClass(msg.color)} text-3xl font-black px-16 uppercase italic tracking-tight`}>
-                          {msg.content} <span className="text-gray-800 mx-8">///</span>
-                      </span>
-                  ))}
-              </div>
-          </div>
-      </footer>
-
-      {/* STYLES SPECIFIQUES AU COMPOSANT */}
       <style>{`
         @keyframes tv-ticker {
           0% { transform: translateX(0); }
           100% { transform: translateX(-33.33%); }
         }
         .animate-tv-ticker {
-          animation: tv-ticker 40s linear infinite;
+          animation: tv-ticker 30s linear infinite;
         }
         @keyframes scale-in {
-          0% { transform: scale(1.1); opacity: 0; }
+          0% { transform: scale(0.95); opacity: 0; }
           100% { transform: scale(1); opacity: 1; }
         }
         .animate-scale-in {
-          animation: scale-in 1.5s ease-out forwards;
+          animation: scale-in 0.5s ease-out forwards;
+        }
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .line-clamp-3 {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .line-clamp-5 {
+          display: -webkit-box;
+          -webkit-line-clamp: 5;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
       `}</style>
     </div>
