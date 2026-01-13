@@ -21,7 +21,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Calendar,
-  Calculator,
   Printer,
   CheckCircle2
 } from 'lucide-react';
