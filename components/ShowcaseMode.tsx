@@ -86,8 +86,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     if (savedPadding) {
         setOverscanPadding(parseFloat(savedPadding));
     } else if (isTvRoute) {
-        // SUR /TV : Marge par défaut plus grande (6%) pour éviter les coupures de bordure TV
-        setOverscanPadding(6);
+        // SUR /TV : Marge de sécurité importante (8%) pour éviter les coupures physiques
+        setOverscanPadding(8);
     }
 
     // Zoom
@@ -95,8 +95,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     if (savedZoom) {
         setZoomLevel(parseFloat(savedZoom));
     } else if (isTvRoute) {
-        // SUR /TV : Zoom réduit (0.85) pour tout faire rentrer sur un 43" sans débordement
-        setZoomLevel(0.85);
+        // SUR /TV : Zoom drastiquement réduit (0.60) pour tout faire rentrer sur un écran 43" (1080p ou 720p viewport)
+        setZoomLevel(0.60);
     }
     
     if (initialMusicUrl) setAudioSrc(initialMusicUrl);
@@ -128,7 +128,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
   const updateOverscan = (delta: number) => {
       setOverscanPadding(prev => {
-          const newVal = Math.max(0, Math.min(15, prev + delta)); 
+          const newVal = Math.max(0, Math.min(20, prev + delta)); 
           localStorage.setItem('ebf_tv_padding', newVal.toString());
           return newVal;
       });
@@ -136,7 +136,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
   const updateZoom = (delta: number) => {
       setZoomLevel(prev => {
-          const newVal = Math.max(0.5, Math.min(1.5, parseFloat((prev + delta).toFixed(2))));
+          const newVal = Math.max(0.3, Math.min(1.5, parseFloat((prev + delta).toFixed(2))));
           localStorage.setItem('ebf_tv_zoom', newVal.toString());
           return newVal;
       });
@@ -242,6 +242,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
   const todayDate = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
+  // Tailles de texte ajustées pour mieux supporter les petits facteurs de zoom
   const getTitleSizeClass = (text: string) => {
     const len = text.length;
     if (len < 20) return "text-2xl md:text-5xl lg:text-6xl xl:text-7xl"; 
@@ -428,7 +429,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                       <div className="flex items-center gap-3">
                                           <button onClick={() => updateOverscan(-0.5)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Minus size={16}/></button>
                                           <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
-                                              <div className="h-full bg-orange-500 transition-all" style={{ width: `${(overscanPadding / 15) * 100}%` }}></div>
+                                              <div className="h-full bg-orange-500 transition-all" style={{ width: `${(overscanPadding / 20) * 100}%` }}></div>
                                           </div>
                                           <button onClick={() => updateOverscan(0.5)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Plus size={16}/></button>
                                       </div>
@@ -443,7 +444,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                       <div className="flex items-center gap-3">
                                           <button onClick={() => updateZoom(-0.05)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Scan size={16}/></button>
                                           <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
-                                              <div className="h-full bg-blue-500 transition-all" style={{ width: `${((zoomLevel - 0.5) / 1) * 100}%` }}></div>
+                                              <div className="h-full bg-blue-500 transition-all" style={{ width: `${((zoomLevel - 0.3) / 1.2) * 100}%` }}></div>
                                           </div>
                                           <button onClick={() => updateZoom(0.05)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Maximize2 size={16}/></button>
                                       </div>
