@@ -46,17 +46,18 @@ const App: React.FC = () => {
 
   // --- DÉTECTION MODE TV AUTOMATIQUE & INITIALISATION ---
   useEffect(() => {
-    // 1. Détection via URL
+    // 1. Détection via URL (Paramètre 'mode' OU chemin '/tv')
     const params = new URLSearchParams(window.location.search);
     const modeParam = params.get('mode');
+    const pathName = window.location.pathname;
 
     // 2. Détection via User Agent (Pour Smart TV & Android TV)
     const ua = navigator.userAgent.toLowerCase();
     const isSmartTV = /smart-tv|smarttv|googletv|appletv|hbbtv|pov_tv|netcast|webos|tizen/.test(ua);
     const isAndroidTV = /android/.test(ua) && !/mobile/.test(ua); // Android sans "Mobile" est souvent une TV/Tablette
 
-    // Si URL explicite OU détection Smart TV => Mode Showcase
-    if (modeParam === 'tv' || isSmartTV || isAndroidTV) {
+    // Si URL explicite (/tv ou ?mode=tv) OU détection Smart TV => Mode Showcase
+    if (modeParam === 'tv' || pathName === '/tv' || isSmartTV || isAndroidTV) {
         setActiveTab('showcase');
     }
 
