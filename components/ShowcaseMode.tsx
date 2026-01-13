@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { 
   X, 
   Zap, 
-  ShieldCheck,
+  ShieldCheck, 
   Calendar,
   Megaphone,
   LayoutGrid,
@@ -461,13 +461,13 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                                 {technician?.photoUrl ? (
                                                     <img 
                                                       src={technician.photoUrl} 
-                                                      className="w-16 h-16 rounded-full object-cover border-2 border-orange-400 shadow-md" 
+                                                      className="w-24 h-24 rounded-full object-cover border-4 border-orange-400 shadow-md" 
                                                       alt={inter.technician}
                                                       style={{ objectPosition: technician.photoPosition || '50% 50%' }}
                                                     />
                                                 ) : (
-                                                    <div className="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center text-white border-2 border-orange-400 shadow-md">
-                                                        <User size={24}/>
+                                                    <div className="w-24 h-24 rounded-full bg-gray-700 flex items-center justify-center text-white border-4 border-orange-400 shadow-md">
+                                                        <User size={36}/>
                                                     </div>
                                                 )}
                                                 <p className="text-orange-400 font-black text-xl uppercase">{inter.technician}</p>
