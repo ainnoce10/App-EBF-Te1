@@ -385,18 +385,18 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                   currentProduct ? (
                     <div className="flex w-full h-full animate-fade-in">
                         {/* Image - Section Gauche */}
-                        <div className="w-[45%] h-full relative flex flex-col items-center justify-center bg-gray-950 p-8 overflow-hidden">
+                        <div className="w-[45%] h-full relative flex flex-col items-center justify-start bg-gray-950 p-8 pt-20 overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/10 to-transparent opacity-50"></div>
                             
                             {/* TITRE AJOUTÉ */}
                             <div className="relative z-10 mb-8 animate-slide-up">
-                                <h2 className="text-5xl font-black text-white uppercase tracking-widest flex items-center gap-4">
-                                    <span className="text-orange-500">EBF</span> Quincaillerie
+                                <h2 className="text-6xl font-black text-white uppercase tracking-widest text-center leading-tight">
+                                    EBF Quincaillerie
                                 </h2>
                             </div>
 
                             {/* CONTENEUR CARRE 1:1 */}
-                            <div key={currentProduct.id} className="relative aspect-square h-[65%] bg-white rounded-[3rem] shadow-[0_30px_80px_rgba(0,0,0,0.8)] border-[8px] border-white/10 animate-scale-in flex items-center justify-center z-20">
+                            <div key={currentProduct.id} className="relative aspect-square h-[75%] bg-white rounded-[3rem] shadow-[0_30px_80px_rgba(0,0,0,0.8)] border-[8px] border-white/10 animate-scale-in flex items-center justify-center z-20">
                                 <img 
                                   src={currentProduct.imageUrls?.[0] || 'https://placehold.co/800x800/1a1a1a/ffffff?text=EBF'} 
                                   className="w-[90%] h-[90%] object-contain animate-float"
