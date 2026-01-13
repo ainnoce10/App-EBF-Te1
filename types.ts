@@ -58,6 +58,7 @@ export interface Transaction {
 export interface Employee {
   id: string;
   name: string;
+  assignedName?: string;
   role: string;
   site: Site | string;
   status: 'Actif' | 'Congés' | 'Inactif';
@@ -71,5 +72,15 @@ export interface Achievement {
   description?: string;
   mediaUrl: string;
   mediaType: 'image' | 'video';
+  position?: string; // Format "50% 50%"
   date: string;
+}
+
+export interface AppNotification {
+  id: string;
+  type: 'stock' | 'intervention' | 'message';
+  title: string;
+  message: string;
+  severity: 'high' | 'medium' | 'low';
+  timestamp: string;
 }

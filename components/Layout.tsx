@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { NAV_ITEMS, Logo } from '../constants';
 import ScrollingTicker from './ScrollingTicker';
-import { TickerMessage } from '../types';
-import { Menu, X, LogOut, Bell, User, Wifi, WifiOff, ChevronRight, Play, Pause } from 'lucide-react';
+import { TickerMessage, AppNotification } from '../types';
+import { Menu, X, LogOut, Bell, User, Wifi, WifiOff, ChevronRight, Play, Pause, AlertTriangle, Package, Calendar } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,6 +17,7 @@ interface LayoutProps {
   customEndDate?: string;
   onCustomEndDateChange?: (date: string) => void;
   tickerMessages: TickerMessage[];
+  notifications?: AppNotification[];
   isLive?: boolean;
   customLogo?: string;
   musicUrl?: string;
@@ -36,11 +36,13 @@ const Layout: React.FC<LayoutProps> = ({
   customEndDate,
   onCustomEndDateChange,
   tickerMessages,
+  notifications = [],
   isLive = false,
   customLogo,
   musicUrl
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   
   // Audio Player State
   const [isPlaying, setIsPlaying] = useState(false);
@@ -58,6 +60,26 @@ const Layout: React.FC<LayoutProps> = ({
         }
     }
   }, [isPlaying, musicUrl]);
+
+  // Fermer les notifs si on clique ailleurs
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showNotifications && !(event.target as Element).closest('.notification-container')) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNotifications]);
+
+  const getNotificationIcon = (type: string) => {
+      switch(type) {
+          case 'stock': return <Package size={16} className="text-red-500"/>;
+          case 'intervention': return <Calendar size={16} className="text-orange-500"/>;
+          case 'message': return <AlertTriangle size={16} className="text-yellow-500"/>;
+          default: return <Bell size={16}/>;
+      }
+  };
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans" style={{ paddingLeft: 'var(--sal)', paddingRight: 'var(--sar)', paddingBottom: 'var(--sab)' }}>
@@ -216,10 +238,51 @@ const Layout: React.FC<LayoutProps> = ({
                         </div>
                     </div>
 
-                    <button className="relative p-2.5 text-gray-400 hover:text-orange-500 transition-colors bg-gray-50 rounded-xl hover:bg-orange-50 border border-transparent hover:border-orange-200 active:scale-95">
-                        <Bell size={20} />
-                        <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                    </button>
+                    {/* NOTIFICATION BELL & DROPDOWN */}
+                    <div className="relative notification-container">
+                        <button 
+                            onClick={() => setShowNotifications(!showNotifications)}
+                            className={`relative p-2.5 transition-colors bg-gray-50 rounded-xl border border-transparent active:scale-95
+                             ${showNotifications ? 'bg-orange-50 border-orange-200 text-orange-600' : 'text-gray-400 hover:text-orange-500 hover:bg-orange-50 hover:border-orange-200'}`}
+                        >
+                            <Bell size={20} className={notifications.length > 0 ? 'animate-swing' : ''} />
+                            {notifications.length > 0 && (
+                                <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse"></span>
+                            )}
+                        </button>
+
+                        {showNotifications && (
+                            <div className="absolute right-0 top-14 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 z-50 animate-scale-in origin-top-right">
+                                <div className="flex justify-between items-center mb-4 border-b border-gray-50 pb-2">
+                                    <h4 className="font-black text-gray-900 uppercase text-xs tracking-widest flex items-center gap-2">
+                                        <Bell size={14} className="text-orange-500"/> Alertes ({notifications.length})
+                                    </h4>
+                                    <button onClick={() => setShowNotifications(false)} className="text-gray-400 hover:text-gray-600"><X size={16}/></button>
+                                </div>
+                                <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                                    {notifications.length > 0 ? (
+                                        notifications.map((notif) => (
+                                            <div key={notif.id} className="p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors flex gap-3 items-start group cursor-pointer" onClick={() => onTabChange(notif.type === 'stock' ? 'hardware' : notif.type === 'intervention' ? 'technicians' : 'settings')}>
+                                                <div className={`mt-0.5 p-1.5 rounded-lg ${notif.severity === 'high' ? 'bg-red-100' : 'bg-orange-100'}`}>
+                                                    {getNotificationIcon(notif.type)}
+                                                </div>
+                                                <div>
+                                                    <p className={`text-xs font-black uppercase tracking-wide ${notif.severity === 'high' ? 'text-red-600' : 'text-gray-800'}`}>{notif.title}</p>
+                                                    <p className="text-[10px] text-gray-500 leading-tight mt-0.5 font-medium">{notif.message}</p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-6 text-gray-400">
+                                            <Bell size={24} className="mx-auto mb-2 opacity-20"/>
+                                            <p className="text-xs font-bold">Aucune alerte</p>
+                                            <p className="text-[10px]">Tout fonctionne correctement</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     <div className="md:hidden">
                          <div className="w-8 h-8 bg-gray-200 rounded-full overflow-hidden border-2 border-white shadow-sm">
@@ -331,6 +394,16 @@ const Layout: React.FC<LayoutProps> = ({
           @keyframes slideRight {
             from { transform: translateX(-100%); }
             to { transform: translateX(0); }
+          }
+          .animate-swing {
+             animation: swing 2s ease-in-out infinite;
+          }
+          @keyframes swing {
+            0%, 100% { transform: rotate(0deg); }
+            20% { transform: rotate(15deg); }
+            40% { transform: rotate(-10deg); }
+            60% { transform: rotate(5deg); }
+            80% { transform: rotate(-5deg); }
           }
           .no-scrollbar::-webkit-scrollbar {
             display: none;

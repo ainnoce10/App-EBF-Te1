@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Intervention, Employee } from '../types';
 import { supabase } from '../lib/supabase';
@@ -563,7 +564,11 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Technicien</label>
                         <select className="w-full bg-transparent font-black text-sm outline-none" value={newIntervention.technician} onChange={e => setNewIntervention({...newIntervention, technician: e.target.value})}>
                             <option value="">Choisir un technicien...</option>
-                            {techniciansList.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                            {techniciansList.map(t => (
+                              <option key={t.id} value={t.assignedName || t.name}>
+                                {t.assignedName || t.name}
+                              </option>
+                            ))}
                         </select>
                       </div>
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">

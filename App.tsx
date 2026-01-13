@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import Technicians from './components/Technicians';
@@ -8,7 +8,7 @@ import HardwareStore from './components/HardwareStore';
 import Achievements from './components/Achievements';
 import Settings from './components/Settings';
 import ShowcaseMode from './components/ShowcaseMode';
-import { Site, Period, StockItem, Intervention, Transaction, Employee, TickerMessage, Achievement } from './types';
+import { Site, Period, StockItem, Intervention, Transaction, Employee, TickerMessage, Achievement, AppNotification } from './types';
 import { TICKER_MESSAGES } from './constants';
 
 // Supabase Imports
@@ -42,6 +42,55 @@ const App: React.FC = () => {
   
   // Indicateur de connexion
   const [isLive, setIsLive] = useState(false);
+
+  // --- LOGIQUE DE NOTIFICATIONS TEMPS RÉEL ---
+  const notifications = useMemo<AppNotification[]>(() => {
+    const alerts: AppNotification[] = [];
+
+    // 1. Alertes Stock Faible
+    stock.forEach(item => {
+        if (item.quantity <= item.threshold) {
+            alerts.push({
+                id: `stock-${item.id}`,
+                type: 'stock',
+                title: 'Stock Critique',
+                message: `${item.name} (${item.quantity} restants, seuil: ${item.threshold})`,
+                severity: 'high',
+                timestamp: new Date().toISOString()
+            });
+        }
+    });
+
+    // 2. Alertes Interventions "En attente" depuis trop longtemps (simulé par statut simple)
+    interventions.forEach(inter => {
+        if (inter.status === 'En attente') {
+            alerts.push({
+                id: `inter-${inter.id}`,
+                type: 'intervention',
+                title: 'Mission en Attente',
+                message: `${inter.client} - ${inter.interventionType} (${inter.site})`,
+                severity: 'medium',
+                timestamp: inter.date
+            });
+        }
+    });
+
+    // 3. Messages Urgents (Rouge)
+    tickerMessages.forEach(msg => {
+        if (msg.color === 'red') {
+             alerts.push({
+                id: `msg-${msg.id}`,
+                type: 'message',
+                title: 'Message Urgent',
+                message: msg.content,
+                severity: 'high',
+                timestamp: new Date().toISOString()
+            });
+        }
+    });
+
+    return alerts;
+  }, [stock, interventions, tickerMessages]);
 
   // --- DÉTECTION MODE TV AUTOMATIQUE & INITIALISATION ---
   useEffect(() => {
@@ -245,6 +294,7 @@ const App: React.FC = () => {
         customEndDate={customEndDate}
         onCustomEndDateChange={setCustomEndDate}
         tickerMessages={tickerMessages}
+        notifications={notifications}
         isLive={isLive}
         customLogo={customLogo}
         musicUrl={backgroundMusic}

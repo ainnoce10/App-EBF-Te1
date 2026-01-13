@@ -512,7 +512,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               {/* MODE REALISATIONS */}
               {activeMode === 'REALISATIONS' && (
                   currentAchievement ? (
-                      <div className="w-full h-full flex animate-fade-in">
+                      <div key={currentAchievement.id} className="w-full h-full flex animate-fade-in">
                           {/* Partie Gauche : Texte & Description */}
                           <div className="w-[40%] h-full bg-white flex flex-col justify-center p-16 shadow-[40px_0_100px_rgba(0,0,0,0.5)] z-20 relative">
                               <div className="self-start mb-12">
@@ -561,7 +561,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                               ) : (
                                   <img 
                                       src={currentAchievement.mediaUrl} 
-                                      className="w-full h-full object-contain relative z-10 animate-scale-in shadow-2xl" 
+                                      className="w-full h-full object-cover relative z-10 animate-scale-in shadow-2xl" 
+                                      style={{ objectPosition: currentAchievement.position || '50% 50%' }}
                                   />
                               )}
                           </div>

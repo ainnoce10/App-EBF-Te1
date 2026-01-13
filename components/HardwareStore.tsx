@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { StockItem, Transaction } from '../types';
 import { supabase } from '../lib/supabase';
@@ -12,7 +11,8 @@ import {
   Edit,
   Camera,
   Package,
-  Wallet
+  Wallet,
+  Mic
 } from 'lucide-react';
 
 interface HardwareStoreProps {
@@ -29,6 +29,7 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [isManagementMode, setIsManagementMode] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   
   // États pour la Caisse
   const [showCaisseModal, setShowCaisseModal] = useState(false);
@@ -119,6 +120,29 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
     setShowCaisseModal(true);
   };
 
+  const handleVoiceSearch = () => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'fr-FR';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => setIsListening(true);
+      recognition.onend = () => setIsListening(false);
+      recognition.onerror = () => setIsListening(false);
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setSearchTerm(transcript);
+      };
+
+      recognition.start();
+    } else {
+      alert("La recherche vocale n'est pas supportée par ce navigateur.");
+    }
+  };
+
   const handleSaveTransaction = async () => {
     if (!newTransaction.amount) return;
     const newId = `TRX-HW-${Math.floor(Math.random() * 100000)}`;
@@ -197,8 +221,15 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
                 placeholder="Rechercher référence..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 md:pl-16 pr-4 py-3 md:py-4 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl md:rounded-2xl focus:outline-none font-bold text-gray-700 text-sm md:text-lg transition-all"
+                className="w-full pl-12 md:pl-16 pr-12 py-3 md:py-4 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-xl md:rounded-2xl focus:outline-none font-bold text-gray-700 text-sm md:text-lg transition-all"
             />
+            <button
+                onClick={handleVoiceSearch}
+                className={`absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full transition-all ${isListening ? 'bg-red-100 text-red-500 animate-pulse' : 'text-gray-400 hover:text-orange-500 hover:bg-gray-100'}`}
+                title="Recherche vocale"
+            >
+                <Mic size={20} />
+            </button>
         </div>
         <select 
             value={categoryFilter} 

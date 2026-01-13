@@ -15,7 +15,8 @@ import {
   TrendingUp,
   Wallet,
   Calendar,
-  Camera
+  Camera,
+  Edit
 } from 'lucide-react';
 
 interface AccountingProps {
@@ -34,7 +35,10 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
   // Data States
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
-  const [newEmployeeData, setNewEmployeeData] = useState({ name: '', role: '', site: 'Abidjan', entryDate: new Date().toISOString().split('T')[0] });
+  
+  // State pour le formulaire Employé (Ajout ou Edition)
+  const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
+  const [employeeFormData, setEmployeeFormData] = useState({ name: '', assignedName: '', role: '', site: 'Abidjan', entryDate: new Date().toISOString().split('T')[0] });
   const [newEmployeePhoto, setNewEmployeePhoto] = useState<File | null>(null);
   const [newEmployeePhotoPreview, setNewEmployeePhotoPreview] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -122,18 +126,32 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
     }
   };
 
+  const handleEditEmployee = (emp: Employee) => {
+      setEditingEmployeeId(emp.id);
+      setEmployeeFormData({
+          name: emp.name,
+          assignedName: emp.assignedName || '',
+          role: emp.role,
+          site: emp.site as string,
+          entryDate: emp.entryDate
+      });
+      setNewEmployeePhotoPreview(emp.photoUrl || null);
+      setNewEmployeePhoto(null);
+      setIsAddingEmployee(true); // Reuse the adding form logic
+  };
+
   const handleSaveEmployee = async () => {
-    if (!newEmployeeData.name) return;
+    if (!employeeFormData.name) return;
     setIsSaving(true);
     
-    const newId = `EMP-${Math.floor(Math.random() * 10000)}`;
-    let photoUrl = '';
-
     try {
-        // 1. Upload Photo if exists
+        let photoUrl = newEmployeePhotoPreview;
+
+        // 1. Upload Photo if changed
         if (newEmployeePhoto) {
+            const timestamp = Date.now();
             const fileExt = newEmployeePhoto.name.split('.').pop();
-            const fileName = `emp_${newId}.${fileExt}`;
+            const fileName = `emp_${timestamp}.${fileExt}`;
             const { error: uploadError } = await supabase.storage.from('assets').upload(fileName, newEmployeePhoto);
             
             if (uploadError) throw uploadError;
@@ -142,27 +160,36 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
             photoUrl = publicUrl;
         }
 
-        // 2. Save Employee Record
-        const newEmp: Employee = { 
-            id: newId, 
-            name: newEmployeeData.name, 
-            role: newEmployeeData.role, 
-            site: newEmployeeData.site, 
+        const employeePayload = { 
+            name: employeeFormData.name, 
+            assignedName: employeeFormData.assignedName || employeeFormData.name, // Fallback au nom complet
+            role: employeeFormData.role, 
+            site: employeeFormData.site, 
             status: 'Actif', 
-            entryDate: newEmployeeData.entryDate,
-            photoUrl 
+            entryDate: employeeFormData.entryDate,
+            photoUrl: photoUrl || undefined
         };
 
-        const { error } = await supabase.from('employees').insert([newEmp]);
-        if (error) throw error;
+        if (editingEmployeeId) {
+            // UPDATE
+            const { error } = await supabase.from('employees').update(employeePayload).eq('id', editingEmployeeId);
+            if (error) throw error;
+        } else {
+            // INSERT
+            const newId = `EMP-${Math.floor(Math.random() * 10000)}`;
+            const { error } = await supabase.from('employees').insert([{ id: newId, ...employeePayload }]);
+            if (error) throw error;
+        }
 
+        // Reset form
         setIsAddingEmployee(false);
-        setNewEmployeeData({ name: '', role: '', site: 'Abidjan', entryDate: new Date().toISOString().split('T')[0] });
+        setEditingEmployeeId(null);
+        setEmployeeFormData({ name: '', assignedName: '', role: '', site: 'Abidjan', entryDate: new Date().toISOString().split('T')[0] });
         setNewEmployeePhoto(null);
         setNewEmployeePhotoPreview(null);
 
     } catch (error: any) { 
-        alert("Erreur création employé: " + error.message);
+        alert("Erreur sauvegarde employé: " + error.message);
     } finally {
         setIsSaving(false);
     }
@@ -207,6 +234,29 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
         <button onClick={handleExport} className="bg-white border border-gray-200 text-gray-700 px-5 py-3 rounded-2xl flex items-center gap-2 shadow-sm text-xs font-black uppercase tracking-widest hover:bg-gray-50 active:scale-95 transition-all">
             <Download size={16} /> Exporter Global
         </button>
+      </div>
+
+      {/* SECTION RH (DEPLACÉE EN HAUT) */}
+      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6 md:p-8">
+        <h3 className="font-black text-gray-800 mb-6 flex items-center gap-2 text-sm uppercase tracking-wide">
+            <Users size={20} className="text-blue-500"/> Ressources Humaines
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <button onClick={() => setShowPayrollModal(true)} className="p-6 border-2 border-gray-100 rounded-3xl flex items-center gap-4 hover:border-orange-200 hover:bg-orange-50 transition-all group">
+                <div className="bg-orange-100 p-4 rounded-2xl text-orange-600 group-hover:scale-110 transition-transform"><FileText size={24} /></div>
+                <div className="text-left">
+                    <p className="font-black text-gray-900 text-lg">Fiches de Paie</p>
+                    <p className="text-xs text-gray-500 font-bold">Générer les bulletins mensuels</p>
+                </div>
+             </button>
+             <button onClick={() => { setShowEmployeeModal(true); setIsAddingEmployee(false); }} className="p-6 border-2 border-gray-100 rounded-3xl flex items-center gap-4 hover:border-blue-200 hover:bg-blue-50 transition-all group">
+                <div className="bg-blue-100 p-4 rounded-2xl text-blue-600 group-hover:scale-110 transition-transform"><Users size={24} /></div>
+                <div className="text-left">
+                    <p className="font-black text-gray-900 text-lg">Gestion Effectif</p>
+                    <p className="text-xs text-gray-500 font-bold">Ajouter ou modifier des employés</p>
+                </div>
+             </button>
+        </div>
       </div>
 
       {/* KPI CARDS (Specifique Compta) */}
@@ -312,29 +362,6 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
               )}
             </tbody>
           </table>
-        </div>
-      </div>
-      
-      {/* SECTION RH */}
-      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6 md:p-8">
-        <h3 className="font-black text-gray-800 mb-6 flex items-center gap-2 text-sm uppercase tracking-wide">
-            <Users size={20} className="text-blue-500"/> Ressources Humaines
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <button onClick={() => setShowPayrollModal(true)} className="p-6 border-2 border-gray-100 rounded-3xl flex items-center gap-4 hover:border-orange-200 hover:bg-orange-50 transition-all group">
-                <div className="bg-orange-100 p-4 rounded-2xl text-orange-600 group-hover:scale-110 transition-transform"><FileText size={24} /></div>
-                <div className="text-left">
-                    <p className="font-black text-gray-900 text-lg">Fiches de Paie</p>
-                    <p className="text-xs text-gray-500 font-bold">Générer les bulletins mensuels</p>
-                </div>
-             </button>
-             <button onClick={() => { setShowEmployeeModal(true); setIsAddingEmployee(false); }} className="p-6 border-2 border-gray-100 rounded-3xl flex items-center gap-4 hover:border-blue-200 hover:bg-blue-50 transition-all group">
-                <div className="bg-blue-100 p-4 rounded-2xl text-blue-600 group-hover:scale-110 transition-transform"><Users size={24} /></div>
-                <div className="text-left">
-                    <p className="font-black text-gray-900 text-lg">Gestion Effectif</p>
-                    <p className="text-xs text-gray-500 font-bold">Ajouter ou modifier des employés</p>
-                </div>
-             </button>
         </div>
       </div>
 
@@ -466,7 +493,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
            <div className="bg-white w-full h-[90vh] md:h-auto md:max-h-[85vh] md:max-w-3xl rounded-t-[2.5rem] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-slide-up">
              <div className="p-6 md:p-8 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
                 <div>
-                    <h3 className="text-2xl font-black text-gray-900 tracking-tight">{isAddingEmployee ? 'Nouvel Employé' : 'Effectif EBF'}</h3>
+                    <h3 className="text-2xl font-black text-gray-900 tracking-tight">{isAddingEmployee ? (editingEmployeeId ? 'Modifier Employé' : 'Nouvel Employé') : 'Effectif EBF'}</h3>
                     <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Gestion du personnel</p>
                 </div>
                 <button onClick={() => setShowEmployeeModal(false)} className="p-3 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"><X size={20}/></button>
@@ -475,7 +502,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
              <div className="p-6 md:p-8 flex-1 overflow-y-auto custom-scrollbar bg-white">
                  {!isAddingEmployee ? (
                    <>
-                     <button onClick={() => setIsAddingEmployee(true)} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs mb-6 shadow-lg flex items-center justify-center gap-2 transition-all">
+                     <button onClick={() => { setEditingEmployeeId(null); setIsAddingEmployee(true); }} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs mb-6 shadow-lg flex items-center justify-center gap-2 transition-all">
                         <PlusCircle size={18} /> Ajouter un collaborateur
                      </button>
                      <div className="space-y-3">
@@ -486,16 +513,19 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                                          {emp.photoUrl ? <img src={emp.photoUrl} className="w-full h-full object-cover"/> : emp.name.substring(0,2).toUpperCase()}
                                      </div>
                                      <div>
-                                        <p className="font-bold text-gray-900">{emp.name}</p>
+                                        <p className="font-bold text-gray-900">{emp.assignedName || emp.name}</p>
                                         <p className="text-xs text-gray-500 font-bold uppercase">{emp.role} • {emp.site}</p>
                                      </div>
                                  </div>
-                                 <button 
-                                    onClick={() => handleToggleStatus(emp.id)} 
-                                    className={`text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider border ${emp.status === 'Actif' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}
-                                 >
-                                     {emp.status}
-                                 </button>
+                                 <div className="flex gap-2">
+                                     <button onClick={() => handleEditEmployee(emp)} className="p-2 bg-gray-100 rounded-lg text-gray-600 hover:bg-blue-100 hover:text-blue-600 transition-colors"><Edit size={16}/></button>
+                                     <button 
+                                        onClick={() => handleToggleStatus(emp.id)} 
+                                        className={`text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider border ${emp.status === 'Actif' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}
+                                     >
+                                         {emp.status}
+                                     </button>
+                                 </div>
                              </div>
                          ))}
                      </div>
@@ -518,17 +548,23 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
 
                       <div className="space-y-2">
                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nom Complet</label>
-                          <input type="text" placeholder="Ex: Kouassi Jean" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all" value={newEmployeeData.name} onChange={e => setNewEmployeeData({...newEmployeeData, name: e.target.value})}/>
+                          <input type="text" placeholder="Ex: Kouassi Jean" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all" value={employeeFormData.name} onChange={e => setEmployeeFormData({...employeeFormData, name: e.target.value})}/>
+                      </div>
+
+                      <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nom Assigné (Planning)</label>
+                          <input type="text" placeholder="Ex: Jean K." className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all" value={employeeFormData.assignedName} onChange={e => setEmployeeFormData({...employeeFormData, assignedName: e.target.value})}/>
+                          <p className="text-[9px] text-gray-400 font-bold ml-1">Ce nom apparaîtra sur la TV et les fiches missions.</p>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Poste</label>
-                              <input type="text" placeholder="Ex: Technicien" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all" value={newEmployeeData.role} onChange={e => setNewEmployeeData({...newEmployeeData, role: e.target.value})}/>
+                              <input type="text" placeholder="Ex: Technicien" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all" value={employeeFormData.role} onChange={e => setEmployeeFormData({...employeeFormData, role: e.target.value})}/>
                           </div>
                           <div className="space-y-2">
                               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Site</label>
-                              <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all appearance-none" value={newEmployeeData.site} onChange={e => setNewEmployeeData({...newEmployeeData, site: e.target.value})}>
+                              <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all appearance-none" value={employeeFormData.site} onChange={e => setEmployeeFormData({...employeeFormData, site: e.target.value})}>
                                   <option value="Abidjan">Abidjan</option>
                                   <option value="Bouaké">Bouaké</option>
                                   <option value="Korhogo">Korhogo</option>
@@ -537,7 +573,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                       </div>
 
                       <div className="flex gap-4 pt-4">
-                         <button onClick={() => setIsAddingEmployee(false)} disabled={isSaving} className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-500 font-black uppercase text-xs tracking-widest rounded-2xl transition-colors">Annuler</button>
+                         <button onClick={() => { setIsAddingEmployee(false); setEditingEmployeeId(null); }} disabled={isSaving} className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-500 font-black uppercase text-xs tracking-widest rounded-2xl transition-colors">Annuler</button>
                          <button onClick={handleSaveEmployee} disabled={isSaving} className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-xs tracking-widest rounded-2xl shadow-lg transition-colors flex items-center justify-center gap-2">
                             {isSaving && <Loader2 className="animate-spin" size={16} />} Enregistrer
                          </button>
