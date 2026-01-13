@@ -14,7 +14,6 @@ import {
   Volume2,
   Volume1,
   VolumeX,
-  Play,
   Maximize2,
   Settings,
   Minus,
