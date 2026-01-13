@@ -20,7 +20,10 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowRight,
-  Calendar
+  Calendar,
+  Calculator,
+  Printer,
+  CheckCircle2
 } from 'lucide-react';
 
 interface AccountingProps {
@@ -65,6 +68,21 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
     description: '',
     site: 'Abidjan' as Site,
     date: new Date().toISOString().split('T')[0]
+  });
+
+  // --- ETATS PAIE ---
+  const [payrollStep, setPayrollStep] = useState<1 | 2>(1); // 1: Saisie, 2: Confirmation
+  const [selectedEmployeeForPay, setSelectedEmployeeForPay] = useState<Employee | null>(null);
+  const [payrollForm, setPayrollForm] = useState({
+      period: new Date().toLocaleString('fr-FR', { month: 'long', year: 'numeric' }),
+      baseSalary: 0,
+      transport: 0,
+      housing: 0,
+      overtime: 0,
+      bonus: 0,
+      advance: 0,
+      cnps: 0,
+      tax: 0
   });
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -253,9 +271,173 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
     }
   };
 
-  const handleGeneratePaie = () => {
+  // --- CALCUL PAIE ---
+  const calculatePayroll = () => {
+      const grossSalary = (payrollForm.baseSalary || 0) + (payrollForm.transport || 0) + (payrollForm.housing || 0) + (payrollForm.overtime || 0) + (payrollForm.bonus || 0);
+      const totalDeductions = (payrollForm.advance || 0) + (payrollForm.cnps || 0) + (payrollForm.tax || 0);
+      const netSalary = grossSalary - totalDeductions;
+      return { grossSalary, totalDeductions, netSalary };
+  };
+
+  const handleGenerateAndSavePayslip = async () => {
+    if (!selectedEmployeeForPay) return;
     setIsGenerating(true);
-    setTimeout(() => { setIsGenerating(false); setShowPayrollModal(false); alert('Fiches de paie générées et envoyées.'); }, 2000);
+
+    const { netSalary } = calculatePayroll();
+
+    try {
+        // 1. Enregistrement comptable automatique
+        const newId = `TRX-PAY-${Math.floor(Math.random() * 100000)}`;
+        const trx: Transaction = {
+            id: newId,
+            type: 'Dépense',
+            amount: netSalary,
+            category: 'Salaire',
+            description: `Paie ${payrollForm.period} - ${selectedEmployeeForPay.name}`,
+            site: selectedEmployeeForPay.site,
+            date: new Date().toISOString().split('T')[0]
+        };
+
+        const { error } = await supabase.from('accounting_transactions').insert([trx]);
+        if (error) throw error;
+
+        // 2. Génération HTML Impression
+        const printWindow = window.open('', '', 'width=800,height=900');
+        if (printWindow) {
+            const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Fiche de Paie - ${selectedEmployeeForPay.name}</title>
+                <style>
+                    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; }
+                    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 4px solid #f97316; padding-bottom: 20px; }
+                    .company-info h1 { margin: 0; color: #f97316; font-size: 24px; text-transform: uppercase; }
+                    .company-info p { margin: 2px 0; font-size: 12px; color: #666; }
+                    .doc-title { text-align: right; }
+                    .doc-title h2 { margin: 0; font-size: 28px; text-transform: uppercase; letter-spacing: 2px; }
+                    .doc-title p { margin: 5px 0 0; font-size: 14px; font-weight: bold; color: #f97316; }
+                    
+                    .employee-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-bottom: 30px; display: flex; justify-content: space-between; }
+                    .emp-col h3 { font-size: 10px; text-transform: uppercase; color: #94a3b8; margin: 0 0 5px 0; }
+                    .emp-col p { font-size: 16px; font-weight: bold; margin: 0; }
+
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                    th { text-align: left; padding: 12px; background: #1e293b; color: white; font-size: 12px; text-transform: uppercase; }
+                    td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+                    tr:last-child td { border-bottom: none; }
+                    .amount { text-align: right; font-family: 'Courier New', Courier, monospace; font-weight: bold; }
+                    .subtotal { background: #f1f5f9; font-weight: bold; }
+                    
+                    .total-box { display: flex; justify-content: flex-end; }
+                    .net-pay { background: #f97316; color: white; padding: 20px 40px; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+                    .net-pay span { display: block; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; opacity: 0.9; }
+                    .net-pay strong { font-size: 32px; letter-spacing: -1px; }
+
+                    .footer { margin-top: 60px; font-size: 10px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+                    .signatures { display: flex; justify-content: space-between; margin-top: 60px; page-break-inside: avoid; }
+                    .sig-box { width: 40%; border-top: 2px solid #e2e8f0; padding-top: 10px; text-align: center; font-size: 12px; font-weight: bold; color: #64748b; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div class="company-info">
+                        <h1>EBF Technical</h1>
+                        <p>Services Techniques & Quincaillerie</p>
+                        <p>Abidjan / Bouaké / Korhogo</p>
+                        <p>Tel: +225 XX XX XX XX</p>
+                    </div>
+                    <div class="doc-title">
+                        <h2>Bulletin de Paie</h2>
+                        <p>${payrollForm.period.toUpperCase()}</p>
+                    </div>
+                </div>
+
+                <div class="employee-box">
+                    <div class="emp-col">
+                        <h3>Employé</h3>
+                        <p>${selectedEmployeeForPay.name}</p>
+                    </div>
+                    <div class="emp-col">
+                        <h3>Fonction</h3>
+                        <p>${selectedEmployeeForPay.role}</p>
+                    </div>
+                    <div class="emp-col">
+                        <h3>Matricule</h3>
+                        <p>${selectedEmployeeForPay.id}</p>
+                    </div>
+                    <div class="emp-col">
+                        <h3>Site</h3>
+                        <p>${selectedEmployeeForPay.site}</p>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Désignation</th>
+                            <th style="text-align:right">Gains (+)</th>
+                            <th style="text-align:right">Retenues (-)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Salaire de Base</td>
+                            <td class="amount">${(payrollForm.baseSalary || 0).toLocaleString()}</td>
+                            <td class="amount"></td>
+                        </tr>
+                        ${payrollForm.transport > 0 ? `<tr><td>Prime Transport</td><td class="amount">${payrollForm.transport.toLocaleString()}</td><td></td></tr>` : ''}
+                        ${payrollForm.housing > 0 ? `<tr><td>Indemnité Logement</td><td class="amount">${payrollForm.housing.toLocaleString()}</td><td></td></tr>` : ''}
+                        ${payrollForm.overtime > 0 ? `<tr><td>Heures Supplémentaires</td><td class="amount">${payrollForm.overtime.toLocaleString()}</td><td></td></tr>` : ''}
+                        ${payrollForm.bonus > 0 ? `<tr><td>Primes & Bonus</td><td class="amount">${payrollForm.bonus.toLocaleString()}</td><td></td></tr>` : ''}
+                        ${payrollForm.advance > 0 ? `<tr><td>Acompte sur salaire</td><td></td><td class="amount">${payrollForm.advance.toLocaleString()}</td></tr>` : ''}
+                        ${payrollForm.cnps > 0 ? `<tr><td>Cotisation CNPS/CMU</td><td></td><td class="amount">${payrollForm.cnps.toLocaleString()}</td></tr>` : ''}
+                        ${payrollForm.tax > 0 ? `<tr><td>Impôt sur Salaire (IGR)</td><td></td><td class="amount">${payrollForm.tax.toLocaleString()}</td></tr>` : ''}
+                        <tr class="subtotal">
+                            <td>TOTAUX</td>
+                            <td class="amount">${calculatePayroll().grossSalary.toLocaleString()}</td>
+                            <td class="amount">${calculatePayroll().totalDeductions.toLocaleString()}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="total-box">
+                    <div class="net-pay">
+                        <span>Net à Payer</span>
+                        <strong>${calculatePayroll().netSalary.toLocaleString()} FCFA</strong>
+                    </div>
+                </div>
+
+                <div class="signatures">
+                    <div class="sig-box">Signature Employé</div>
+                    <div class="sig-box">Signature Direction</div>
+                </div>
+
+                <div class="footer">
+                    <p>Ce bulletin de paie est généré électroniquement par le système EBF Management Suite.</p>
+                    <p>Document confidentiel - ${new Date().toLocaleString()}</p>
+                </div>
+
+                <script>
+                    window.onload = function() { window.print(); }
+                </script>
+            </body>
+            </html>
+            `;
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+        }
+
+        // Reset
+        setShowPayrollModal(false);
+        setPayrollStep(1);
+        setSelectedEmployeeForPay(null);
+
+    } catch (err: any) {
+        alert("Erreur: " + err.message);
+    } finally {
+        setIsGenerating(false);
+    }
   };
 
   const handleExport = () => {
@@ -300,11 +482,11 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
             <Users size={20} className="text-blue-500"/> Ressources Humaines
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <button onClick={() => setShowPayrollModal(true)} className="p-6 border-2 border-gray-100 rounded-3xl flex items-center gap-4 hover:border-orange-200 hover:bg-orange-50 transition-all group">
+             <button onClick={() => { setShowPayrollModal(true); setPayrollStep(1); }} className="p-6 border-2 border-gray-100 rounded-3xl flex items-center gap-4 hover:border-orange-200 hover:bg-orange-50 transition-all group">
                 <div className="bg-orange-100 p-4 rounded-2xl text-orange-600 group-hover:scale-110 transition-transform"><FileText size={24} /></div>
                 <div className="text-left">
-                    <p className="font-black text-gray-900 text-lg">Fiches de Paie</p>
-                    <p className="text-xs text-gray-500 font-bold">Générer les bulletins mensuels</p>
+                    <p className="font-black text-gray-900 text-lg">Générer Paie</p>
+                    <p className="text-xs text-gray-500 font-bold">Bulletin, Calcul, Impression</p>
                 </div>
              </button>
              <button onClick={() => { setShowEmployeeModal(true); setIsAddingEmployee(false); }} className="p-6 border-2 border-gray-100 rounded-3xl flex items-center gap-4 hover:border-blue-200 hover:bg-blue-50 transition-all group">
@@ -523,23 +705,157 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
         </div>
       )}
 
-      {/* --- MODAL PAIE (Mobile optimized) --- */}
+      {/* --- MODAL PAIE COMPLETE (Calcul & Impression) --- */}
       {showPayrollModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-[2.5rem] shadow-xl w-full max-w-sm flex flex-col overflow-hidden animate-slide-up">
+          <div className="bg-white rounded-[2.5rem] shadow-xl w-full max-w-4xl flex flex-col overflow-hidden animate-slide-up max-h-[90vh]">
+            
+            {/* Header Modal */}
             <div className="p-8 bg-orange-50 border-b border-orange-100 flex justify-between items-center">
-                <h3 className="font-black text-gray-800 text-xl">Paie Mensuelle</h3>
-                <button onClick={() => setShowPayrollModal(false)} className="p-2 bg-white rounded-full text-gray-400"><X size={20}/></button>
+                <div>
+                    <h3 className="font-black text-gray-900 text-2xl uppercase tracking-tighter">Générateur de Paie</h3>
+                    <p className="text-xs text-orange-600 font-bold mt-1">Édition Bulletins & Enregistrement Comptable</p>
+                </div>
+                <button onClick={() => setShowPayrollModal(false)} className="p-3 bg-white rounded-full text-gray-400 hover:text-red-500 transition-colors"><X size={24}/></button>
             </div>
-            <div className="p-8 space-y-6">
-               <div className="bg-blue-50 p-6 rounded-2xl text-center">
-                   <FileText size={40} className="mx-auto text-blue-500 mb-2"/>
-                   <p className="text-blue-900 font-bold">Génération des bulletins</p>
-                   <p className="text-xs text-blue-600 mt-1">Période: Mois en cours</p>
-               </div>
-               <button onClick={handleGeneratePaie} disabled={isGenerating} className="w-full py-4 bg-gray-900 text-white font-black uppercase tracking-widest rounded-2xl flex justify-center gap-2 shadow-lg active:scale-95 transition-all">
-                   {isGenerating ? <Loader2 className="animate-spin"/> : 'Lancer Traitement'}
-               </button>
+
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+               {payrollStep === 1 ? (
+                   <div className="space-y-8">
+                       {/* 1. Sélection Employé & Période */}
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           <div>
+                               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Période Concernée</label>
+                               <input 
+                                 type="text" 
+                                 className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-gray-900 border-2 border-transparent focus:border-orange-500 outline-none"
+                                 value={payrollForm.period}
+                                 onChange={(e) => setPayrollForm({...payrollForm, period: e.target.value})}
+                               />
+                           </div>
+                           <div>
+                               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Employé</label>
+                               <select 
+                                 className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-gray-900 border-2 border-transparent focus:border-orange-500 outline-none cursor-pointer"
+                                 value={selectedEmployeeForPay?.id || ''}
+                                 onChange={(e) => setSelectedEmployeeForPay(employees.find(emp => emp.id === e.target.value) || null)}
+                               >
+                                   <option value="">Sélectionner un employé...</option>
+                                   {employees.filter(e => e.status === 'Actif').map(emp => (
+                                       <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                   ))}
+                               </select>
+                           </div>
+                       </div>
+
+                       {/* 2. Saisie Données Financières */}
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                           {/* GAINS */}
+                           <div className="bg-green-50 p-6 rounded-3xl border border-green-100">
+                               <h4 className="font-black text-green-800 text-sm uppercase tracking-wide mb-4 flex items-center gap-2">
+                                   <ArrowUpCircle size={16}/> Gains (Brut)
+                               </h4>
+                               <div className="space-y-3">
+                                   <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-green-100">
+                                       <span className="text-xs font-bold text-gray-500">Salaire Base</span>
+                                       <input type="number" className="w-32 text-right font-black outline-none text-gray-900" placeholder="0" value={payrollForm.baseSalary} onChange={(e) => setPayrollForm({...payrollForm, baseSalary: parseInt(e.target.value) || 0})} />
+                                   </div>
+                                   <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-green-100">
+                                       <span className="text-xs font-bold text-gray-500">Transports</span>
+                                       <input type="number" className="w-32 text-right font-black outline-none text-gray-900" placeholder="0" value={payrollForm.transport} onChange={(e) => setPayrollForm({...payrollForm, transport: parseInt(e.target.value) || 0})} />
+                                   </div>
+                                   <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-green-100">
+                                       <span className="text-xs font-bold text-gray-500">Logement</span>
+                                       <input type="number" className="w-32 text-right font-black outline-none text-gray-900" placeholder="0" value={payrollForm.housing} onChange={(e) => setPayrollForm({...payrollForm, housing: parseInt(e.target.value) || 0})} />
+                                   </div>
+                                   <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-green-100">
+                                       <span className="text-xs font-bold text-gray-500">Heures Sup</span>
+                                       <input type="number" className="w-32 text-right font-black outline-none text-gray-900" placeholder="0" value={payrollForm.overtime} onChange={(e) => setPayrollForm({...payrollForm, overtime: parseInt(e.target.value) || 0})} />
+                                   </div>
+                                   <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-green-100">
+                                       <span className="text-xs font-bold text-gray-500">Primes/Bonus</span>
+                                       <input type="number" className="w-32 text-right font-black outline-none text-gray-900" placeholder="0" value={payrollForm.bonus} onChange={(e) => setPayrollForm({...payrollForm, bonus: parseInt(e.target.value) || 0})} />
+                                   </div>
+                               </div>
+                           </div>
+
+                           {/* RETENUES */}
+                           <div className="bg-red-50 p-6 rounded-3xl border border-red-100">
+                               <h4 className="font-black text-red-800 text-sm uppercase tracking-wide mb-4 flex items-center gap-2">
+                                   <ArrowDownCircle size={16}/> Retenues
+                               </h4>
+                               <div className="space-y-3">
+                                   <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-red-100">
+                                       <span className="text-xs font-bold text-gray-500">Acomptes reçus</span>
+                                       <input type="number" className="w-32 text-right font-black outline-none text-gray-900" placeholder="0" value={payrollForm.advance} onChange={(e) => setPayrollForm({...payrollForm, advance: parseInt(e.target.value) || 0})} />
+                                   </div>
+                                   <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-red-100">
+                                       <span className="text-xs font-bold text-gray-500">CNPS / CMU</span>
+                                       <input type="number" className="w-32 text-right font-black outline-none text-gray-900" placeholder="0" value={payrollForm.cnps} onChange={(e) => setPayrollForm({...payrollForm, cnps: parseInt(e.target.value) || 0})} />
+                                   </div>
+                                   <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-red-100">
+                                       <span className="text-xs font-bold text-gray-500">Impôts (IGR)</span>
+                                       <input type="number" className="w-32 text-right font-black outline-none text-gray-900" placeholder="0" value={payrollForm.tax} onChange={(e) => setPayrollForm({...payrollForm, tax: parseInt(e.target.value) || 0})} />
+                                   </div>
+                               </div>
+                           </div>
+                       </div>
+                   </div>
+               ) : (
+                   <div className="flex flex-col items-center justify-center py-8">
+                       <CheckCircle2 size={64} className="text-green-500 mb-6" />
+                       <h3 className="text-2xl font-black text-gray-900 mb-2">Prêt à générer</h3>
+                       <p className="text-gray-500 text-center max-w-md mb-8">
+                           Vous allez générer le bulletin pour <strong>{selectedEmployeeForPay?.name}</strong>. 
+                           Cela enregistrera une dépense de <strong>{calculatePayroll().netSalary.toLocaleString()} FCFA</strong> dans la comptabilité.
+                       </p>
+                       
+                       <div className="bg-gray-50 p-6 rounded-3xl w-full max-w-md border border-gray-100">
+                           <div className="flex justify-between mb-2">
+                               <span className="text-gray-500 font-bold">Total Brut</span>
+                               <span className="font-black">{calculatePayroll().grossSalary.toLocaleString()}</span>
+                           </div>
+                           <div className="flex justify-between mb-4 pb-4 border-b border-gray-200">
+                               <span className="text-gray-500 font-bold">Total Retenues</span>
+                               <span className="font-black text-red-500">-{calculatePayroll().totalDeductions.toLocaleString()}</span>
+                           </div>
+                           <div className="flex justify-between items-center">
+                               <span className="text-gray-800 font-black uppercase text-lg">Net à Payer</span>
+                               <span className="font-black text-2xl text-orange-600">{calculatePayroll().netSalary.toLocaleString()} F</span>
+                           </div>
+                       </div>
+                   </div>
+               )}
+            </div>
+
+            <div className="p-8 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
+                {payrollStep === 2 && (
+                    <button onClick={() => setPayrollStep(1)} className="text-gray-500 font-bold uppercase text-xs hover:text-gray-800">Retour</button>
+                )}
+                {payrollStep === 1 ? (
+                    <div className="ml-auto">
+                         <div className="text-right mb-2">
+                             <span className="text-[10px] font-black uppercase text-gray-400 block tracking-widest">Net Estimé</span>
+                             <span className="text-2xl font-black text-gray-900">{calculatePayroll().netSalary.toLocaleString()} F</span>
+                         </div>
+                         <button 
+                            disabled={!selectedEmployeeForPay}
+                            onClick={() => setPayrollStep(2)} 
+                            className="bg-gray-900 text-white px-8 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                         >
+                             Suivant
+                         </button>
+                    </div>
+                ) : (
+                    <button 
+                        onClick={handleGenerateAndSavePayslip} 
+                        disabled={isGenerating}
+                        className="ml-auto bg-orange-600 text-white px-8 py-4 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-orange-700 transition-colors flex items-center gap-2"
+                    >
+                        {isGenerating ? <Loader2 className="animate-spin" /> : <Printer size={18}/>}
+                        {isGenerating ? 'Traitement...' : 'Imprimer & Enregistrer'}
+                    </button>
+                )}
             </div>
           </div>
         </div>
