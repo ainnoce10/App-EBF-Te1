@@ -6,9 +6,10 @@ import Technicians from './components/Technicians';
 import Accounting from './components/Accounting';
 import Secretariat from './components/Secretariat';
 import HardwareStore from './components/HardwareStore';
+import Achievements from './components/Achievements';
 import Settings from './components/Settings';
 import ShowcaseMode from './components/ShowcaseMode';
-import { Site, Period, StockItem, Intervention, Transaction, Employee, TickerMessage } from './types';
+import { Site, Period, StockItem, Intervention, Transaction, Employee, TickerMessage, Achievement } from './types';
 import { TICKER_MESSAGES } from './constants';
 
 // Supabase Imports
@@ -34,6 +35,7 @@ const App: React.FC = () => {
   const [accountingTransactions, setAccountingTransactions] = useState<Transaction[]>([]);
 
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   
   // Custom Branding & Media
   const [customLogo, setCustomLogo] = useState<string>('');
@@ -88,6 +90,9 @@ const App: React.FC = () => {
             } else if (table === 'employees') {
                  supabase.from('employees').select('*').order('name')
                  .then(({ data }) => data && setEmployees(data as Employee[]));
+            } else if (table === 'achievements') {
+                 supabase.from('achievements').select('*').order('date', { ascending: false })
+                 .then(({ data }) => data && setAchievements(data as Achievement[]));
             } else if (table === 'tv_settings') {
                  const newKey = (payload.new as any)?.key;
                  const newValue = (payload.new as any)?.value;
@@ -141,8 +146,12 @@ const App: React.FC = () => {
         // 5. Employés
         const { data: empData } = await supabase.from('employees').select('*').order('name');
         if (empData) setEmployees(empData as Employee[]);
+
+        // 6. Réalisations
+        const { data: achData } = await supabase.from('achievements').select('*').order('date', { ascending: false });
+        if (achData) setAchievements(achData as Achievement[]);
         
-        // 6. Settings
+        // 7. Settings
         const { data: settingsData } = await supabase.from('tv_settings').select('key, value').in('key', ['company_logo', 'background_music']);
         if (settingsData) {
              const logo = settingsData.find(s => s.key === 'company_logo');
@@ -168,6 +177,7 @@ const App: React.FC = () => {
         liveStock={stock}
         liveInterventions={interventions}
         liveMessages={tickerMessages}
+        liveAchievements={achievements}
         customLogo={customLogo}
         initialMusicUrl={backgroundMusic}
       />
@@ -203,6 +213,8 @@ const App: React.FC = () => {
               return <Secretariat liveInterventions={interventions} liveTransactions={secretariatTransactions} />;
             case 'hardware':
               return <HardwareStore initialData={stock} liveTransactions={hardwareTransactions} />;
+            case 'achievements':
+              return <Achievements initialData={achievements} />;
             case 'settings':
               return (
                 <Settings 
