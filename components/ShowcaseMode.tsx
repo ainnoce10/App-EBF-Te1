@@ -22,7 +22,8 @@ import {
   Trophy,
   Video,
   Image as ImageIcon,
-  User
+  User,
+  Briefcase
 } from 'lucide-react';
 import { Logo } from '../constants';
 
@@ -458,6 +459,17 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                     
                                     {/* Centered Content */}
                                     <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
+                                        
+                                        {/* Domaine d'activité (Ajout) */}
+                                        {inter.domain && (
+                                            <div className="flex items-center gap-3 bg-white/20 px-5 py-2 rounded-full border border-white/10 shadow-lg mb-2 backdrop-blur-sm">
+                                                <Briefcase size={20} className="text-orange-400" />
+                                                <span className="text-white font-black text-lg uppercase tracking-widest">
+                                                    {inter.domain} {inter.interventionType && <span className="text-white/60 mx-1">•</span>} {inter.interventionType}
+                                                </span>
+                                            </div>
+                                        )}
+
                                         <div>
                                             <h4 className="text-white text-5xl font-black uppercase leading-none tracking-tighter mb-3 drop-shadow-lg">{inter.client}</h4>
                                             {inter.clientPhone ? (

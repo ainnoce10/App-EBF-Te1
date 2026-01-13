@@ -8,7 +8,11 @@ import {
   ShieldAlert,
   Music,
   Image as ImageIcon,
-  ChevronDown
+  ChevronDown,
+  LayoutGrid,
+  ClipboardList,
+  Trophy,
+  ArrowRightCircle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { TickerMessage } from '../types';
@@ -16,9 +20,10 @@ import { TickerMessage } from '../types';
 interface SettingsProps {
   tickerMessages?: TickerMessage[];
   onUpdateMessages?: (messages: TickerMessage[]) => void;
+  onNavigate: (tab: string) => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ tickerMessages = [] }) => {
+const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) => {
   const [newMessage, setNewMessage] = useState('');
   const [newColor, setNewColor] = useState<'neutral' | 'green' | 'yellow' | 'red'>('neutral');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -260,6 +265,44 @@ create policy "Public" on public.achievements for all using (true) with check (t
         {(isUpdating || isUploading) && <Loader2 size={24} className="animate-spin text-orange-500" />}
       </div>
       <audio ref={audioTestRef} src={musicUrl} />
+
+      {/* RACCOURCIS DE GESTION DU CONTENU TV */}
+      <div className="mb-4">
+          <h3 className="font-black text-gray-800 uppercase text-xs tracking-widest mb-4 flex items-center gap-2">
+              <ArrowRightCircle size={14} className="text-orange-600"/> Raccourcis Gestion Contenu TV
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button 
+                onClick={() => onNavigate('hardware')}
+                className="bg-white p-6 rounded-2xl border-2 border-transparent hover:border-orange-500 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95"
+              >
+                  <div className="bg-orange-50 p-3 rounded-full text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+                      <LayoutGrid size={24} />
+                  </div>
+                  <span className="font-black uppercase text-sm text-gray-700 group-hover:text-orange-600">Éditer Nos Produits</span>
+              </button>
+
+              <button 
+                onClick={() => onNavigate('technicians')}
+                className="bg-white p-6 rounded-2xl border-2 border-transparent hover:border-blue-500 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95"
+              >
+                  <div className="bg-blue-50 p-3 rounded-full text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                      <ClipboardList size={24} />
+                  </div>
+                  <span className="font-black uppercase text-sm text-gray-700 group-hover:text-blue-600">Éditer Chantiers</span>
+              </button>
+
+              <button 
+                onClick={() => onNavigate('achievements')}
+                className="bg-white p-6 rounded-2xl border-2 border-transparent hover:border-purple-500 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95"
+              >
+                  <div className="bg-purple-50 p-3 rounded-full text-purple-600 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                      <Trophy size={24} />
+                  </div>
+                  <span className="font-black uppercase text-sm text-gray-700 group-hover:text-purple-600">Éditer Réalisations</span>
+              </button>
+          </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-blue-600 rounded-3xl p-6 text-white relative min-h-[180px] overflow-hidden">

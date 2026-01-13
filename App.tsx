@@ -270,6 +270,7 @@ const App: React.FC = () => {
                 <Settings 
                   tickerMessages={tickerMessages} 
                   onUpdateMessages={(msgs) => setTickerMessages(msgs)}
+                  onNavigate={setActiveTab}
                 />
               );
             default:
