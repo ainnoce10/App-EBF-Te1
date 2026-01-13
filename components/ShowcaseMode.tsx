@@ -15,6 +15,7 @@ import {
   VolumeX,
   Play,
   Maximize2,
+  Minimize2,
   Settings,
   Minus,
   Plus,
@@ -60,10 +61,11 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // TV Settings State (Overscan & Zoom)
+  // TV Settings State
   const [overscanPadding, setOverscanPadding] = useState(5); 
   const [zoomLevel, setZoomLevel] = useState(1); 
   const [showTvSettings, setShowTvSettings] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const products = liveStock.length > 0 ? liveStock : [];
   
@@ -75,7 +77,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const achievements = liveAchievements.length > 0 ? liveAchievements : [];
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
-  // 0. CHARGEMENT REGLAGES TV
+  // 0. CHARGEMENT REGLAGES TV & FULLSCREEN LISTENER
   useEffect(() => {
     const savedPadding = localStorage.getItem('ebf_tv_padding');
     if (savedPadding) setOverscanPadding(parseFloat(savedPadding));
@@ -84,6 +86,11 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     if (savedZoom) setZoomLevel(parseFloat(savedZoom));
     
     if (initialMusicUrl) setAudioSrc(initialMusicUrl);
+
+    // Listener pour mettre à jour l'état si l'utilisateur utilise Echap
+    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, [initialMusicUrl]);
 
   const updateOverscan = (delta: number) => {
@@ -100,6 +107,14 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           localStorage.setItem('ebf_tv_zoom', newVal.toString());
           return newVal;
       });
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(console.error);
+    } else {
+        if (document.exitFullscreen) document.exitFullscreen().catch(console.error);
+    }
   };
 
   // 1. Ecoute Realtime
@@ -344,6 +359,15 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               </div>
 
               <div className="flex items-center gap-4 md:gap-8 absolute top-4 right-4 md:static">
+                  {/* BOUTON FULLSCREEN */}
+                  <button 
+                      onClick={toggleFullscreen}
+                      className="hidden md:flex p-3 rounded-full border border-white/10 bg-white/5 text-white/50 hover:bg-white/10 hover:text-white transition-all"
+                      title="Plein écran"
+                  >
+                      {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+                  </button>
+
                   {/* BOUTON REGLAGE TV */}
                   <div className="relative">
                       <button 
