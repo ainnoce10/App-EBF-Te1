@@ -74,7 +74,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   );
 
   // Clé de stockage distincte pour ne pas mélanger les réglages PC et TV
-  const storageKey = isTvRoute ? 'ebf_tv_scale_v2' : 'ebf_desktop_scale_v2';
+  const storageKey = isTvRoute ? 'ebf_tv_scale_v3' : 'ebf_desktop_scale_v3';
 
   // Initialisation Dimensions & Settings
   useEffect(() => {
@@ -87,12 +87,12 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     if (savedScale) {
         setUserScaleModifier(parseFloat(savedScale));
     } else {
-        // DEFAUTS : 
-        // Sur TV (/tv) => 0.80 (80%) pour éviter l'effet "gros" et coupé
-        // Sur PC => 1.0 (100%) pour un affichage normal
         if (isTvRoute) {
-            setUserScaleModifier(0.80); 
+            // AJUSTEMENT SUR MESURE TV (95cm x 53cm)
+            // On force à 0.75 (75%) pour contrer le zoom natif du navigateur TV
+            setUserScaleModifier(0.75); 
         } else {
+            // PC : 100%
             setUserScaleModifier(1.0);
         }
     }
@@ -121,12 +121,15 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   // Calcul du Facteur d'Échelle (Scale)
   const scaleX = windowSize.w / BASE_WIDTH;
   const scaleY = windowSize.h / BASE_HEIGHT;
+  // FitScale standard
   const fitScale = Math.min(scaleX, scaleY);
   
+  // Application du modificateur utilisateur (ou du 0.75 par défaut sur TV)
   const finalScale = fitScale * userScaleModifier;
 
   const handleUserScaleChange = (delta: number) => {
       setUserScaleModifier(prev => {
+          // On permet de descendre jusqu'à 0.4 (40%) pour les très petits écrans/gros zooms
           const newVal = Math.max(0.4, Math.min(1.5, parseFloat((prev + delta).toFixed(2))));
           localStorage.setItem(storageKey, newVal.toString());
           return newVal;
