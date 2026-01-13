@@ -259,7 +259,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                       <LayoutGrid size={28} />
                       <div>
                           <p className="font-black uppercase text-sm tracking-wider">Catalogue</p>
-                          <p className="text-[10px] font-bold opacity-80 uppercase">Nos Produits</p>
+                          <p className={`text-[10px] font-bold uppercase ${activeMode === 'PUBLICITE' ? 'text-orange-100' : 'text-gray-300'}`}>Nos Produits</p>
                       </div>
                   </div>
 
@@ -267,7 +267,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                       <ClipboardList size={28} />
                       <div>
                           <p className="font-black uppercase text-sm tracking-wider">Planning</p>
-                          <p className="text-[10px] font-bold opacity-80 uppercase">Interventions</p>
+                          <p className={`text-[10px] font-bold uppercase ${activeMode === 'PLANNING' ? 'text-blue-100' : 'text-gray-300'}`}>Interventions</p>
                       </div>
                   </div>
 
@@ -275,7 +275,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                       <Trophy size={28} />
                       <div>
                           <p className="font-black uppercase text-sm tracking-wider">Réalisations</p>
-                          <p className="text-[10px] font-bold opacity-80 uppercase">Nos Succès</p>
+                          <p className={`text-[10px] font-bold uppercase ${activeMode === 'REALISATIONS' ? 'text-purple-100' : 'text-gray-300'}`}>Nos Succès</p>
                       </div>
                   </div>
               </div>
@@ -305,8 +305,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                      {isMuted ? <VolumeX size={20}/> : <Volume2 size={20}/>}
                  </button>
                  {onClose && (
-                    <button onClick={onClose} className="flex-1 py-3 bg-red-50 border border-red-100 rounded-xl text-red-500 hover:bg-red-100 flex items-center justify-center font-black text-xs uppercase">
-                        Fermer
+                    <button onClick={onClose} className="flex-1 py-3 bg-red-50 border border-red-100 rounded-xl text-red-500 hover:bg-red-100 flex items-center justify-center gap-2 font-black text-xs uppercase">
+                        <X size={16} /> Fermer
                     </button>
                  )}
               </div>
@@ -314,7 +314,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       </aside>
 
       {/* --- CONTENU PRINCIPAL (DROITE) --- */}
-      <main className="flex-1 flex flex-col min-w-0 bg-gray-900 relative overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 bg-gray-900 relative overflow-hidden h-full">
           
           {/* Header Zone (Titre Module) */}
           <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-8 shrink-0 relative z-10">
@@ -335,7 +335,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               {/* MODE 1: PUBLICITE */}
               {activeMode === 'PUBLICITE' && (
                   currentProduct ? (
-                      <div className="flex-1 flex animate-fade-in bg-white">
+                      <div className="flex-1 flex animate-fade-in bg-white h-full">
                           <div className="w-1/2 h-full p-8 flex items-center justify-center bg-gray-50 relative overflow-hidden">
                              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-gray-50 to-gray-200 opacity-50"></div>
                              <img 
@@ -377,8 +377,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
               {/* MODE 2: PLANNING */}
               {activeMode === 'PLANNING' && (
-                  <div className="flex-1 bg-[#0f172a] p-8 flex flex-col animate-slide-up">
-                      <div className="flex items-center justify-between mb-6 text-white/50">
+                  <div className="flex-1 bg-[#0f172a] p-8 flex flex-col animate-slide-up h-full">
+                      <div className="flex items-center justify-between mb-6 text-white/50 shrink-0">
                            <span className="text-lg font-bold uppercase tracking-widest">Suivi des Techniciens</span>
                            <span className="bg-white/10 px-4 py-1 rounded-full text-xs font-mono">Page {planningPage + 1}/{totalPlanningPages}</span>
                       </div>
@@ -415,7 +415,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               {/* MODE 3: REALISATIONS */}
               {activeMode === 'REALISATIONS' && (
                   currentAchievement ? (
-                      <div className="flex-1 relative bg-black flex items-center justify-center animate-fade-in">
+                      <div className="flex-1 relative bg-black flex items-center justify-center animate-fade-in h-full">
                           {currentAchievement.mediaType === 'video' ? (
                               <video 
                                 ref={videoRef}
