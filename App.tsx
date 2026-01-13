@@ -178,7 +178,7 @@ const App: React.FC = () => {
         liveInterventions={interventions}
         liveMessages={tickerMessages}
         liveAchievements={achievements}
-        liveEmployees={employees} // <-- Ajout ici
+        liveEmployees={employees}
         customLogo={customLogo}
         initialMusicUrl={backgroundMusic}
       />

@@ -15,8 +15,7 @@ import {
   TrendingUp,
   Wallet,
   Calendar,
-  Camera,
-  User
+  Camera
 } from 'lucide-react';
 
 interface AccountingProps {
