@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { StockItem, Intervention, TickerMessage, Achievement } from '../types';
 import { supabase } from '../lib/supabase';
@@ -93,6 +92,25 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, [initialMusicUrl]);
 
+  // TENTATIVE AUTOMATIQUE DE PLEIN ÉCRAN AU CHARGEMENT
+  useEffect(() => {
+    const attemptFullscreen = async () => {
+        try {
+            if (!document.fullscreenElement) {
+                await document.documentElement.requestFullscreen();
+            }
+        } catch (e) {
+            console.log("Plein écran auto bloqué par le navigateur (Attente interaction)", e);
+            // Si le plein écran auto échoue, on affiche le bouton "Lancer"
+            setAutoplayFailed(true);
+        }
+    };
+    
+    // Petit délai pour assurer que le rendu est prêt
+    const timer = setTimeout(attemptFullscreen, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const updateOverscan = (delta: number) => {
       setOverscanPadding(prev => {
           const newVal = Math.max(0, Math.min(15, prev + delta)); 
@@ -147,10 +165,11 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
              try {
                  if (!isMuted) {
                     await audioRef.current?.play();
-                    setAutoplayFailed(false);
+                    // Si la musique joue, on considère que l'autoplay a réussi (bouton caché)
+                    // SAUF si le plein écran a échoué (géré par le useEffect précédent)
                  }
              } catch (error) {
-                 console.log("Autoplay bloqué, attente interaction utilisateur.", error);
+                 console.log("Autoplay audio bloqué.", error);
                  setAutoplayFailed(true);
                  setIsMuted(true);
              } finally {
@@ -210,10 +229,10 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
   const getTitleSizeClass = (text: string) => {
     const len = text.length;
-    if (len < 20) return "text-3xl md:text-6xl lg:text-7xl xl:text-8xl"; 
-    if (len < 40) return "text-2xl md:text-5xl lg:text-6xl xl:text-7xl"; 
-    if (len < 80) return "text-xl md:text-4xl lg:text-5xl xl:text-6xl"; 
-    return "text-lg md:text-3xl lg:text-4xl xl:text-5xl"; 
+    if (len < 20) return "text-2xl md:text-5xl lg:text-6xl xl:text-7xl"; 
+    if (len < 40) return "text-xl md:text-4xl lg:text-5xl xl:text-6xl"; 
+    if (len < 80) return "text-lg md:text-3xl lg:text-4xl xl:text-5xl"; 
+    return "text-base md:text-2xl lg:text-3xl xl:text-4xl"; 
   };
 
   // --- CYCLES D'AFFICHAGE ---

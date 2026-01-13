@@ -57,7 +57,7 @@ const App: React.FC = () => {
     const isAndroidTV = /android/.test(ua) && !/mobile/.test(ua); // Android sans "Mobile" est souvent une TV/Tablette
 
     // Si URL explicite (/tv ou ?mode=tv) OU détection Smart TV => Mode Showcase
-    if (modeParam === 'tv' || pathName === '/tv' || isSmartTV || isAndroidTV) {
+    if (modeParam === 'tv' || pathName.startsWith('/tv') || isSmartTV || isAndroidTV) {
         setActiveTab('showcase');
     }
 
