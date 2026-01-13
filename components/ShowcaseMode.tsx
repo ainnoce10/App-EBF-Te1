@@ -94,7 +94,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     if (savedScale) {
         setUserScaleModifier(parseFloat(savedScale));
     } else {
-        // RESET DEFAULT
         setUserScaleModifier(1.0);
     }
 
@@ -124,15 +123,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const scaleX = windowSize.w / BASE_WIDTH;
   const scaleY = windowSize.h / BASE_HEIGHT;
   
-  // CORRECTION PAYSAGE : 
-  // Si on est en mode TV, on privilégie l'échelle X (Largeur) pour remplir les côtés.
-  // Cela évite l'effet "Portrait" (bandes noires sur les côtés) si la hauteur du navigateur est réduite par des barres.
+  // Priorité Paysage pour TV
   let baseScale = Math.min(scaleX, scaleY);
-  
   if (isTvRoute) {
-      // Sur TV, on force le remplissage de la largeur (Priorité Paysage)
-      // Si l'écran est plus large que 16:9, scaleX sera plus grand, on l'utilise pour remplir.
-      // Si l'écran a des barres en haut/bas, scaleY est petit, mais on veut quand même remplir la largeur.
       baseScale = scaleX; 
   }
   
@@ -287,7 +280,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
             height: `${BASE_HEIGHT}px`,
             left: '50%',
             top: '50%',
-            // Utilisation de translate pour centrer parfaitement le conteneur scalé
             transform: `translate(-50%, -50%) scale(${finalScale})`,
         }}
       >
@@ -306,8 +298,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               </div>
           )}
 
-          {/* === HEADER TV === */}
-          <div className="h-24 bg-gray-950 px-8 flex items-center justify-between border-b-8 border-orange-600 shadow-2xl z-50 relative shrink-0">
+          {/* === HEADER TV (Position Absolue Haut) === */}
+          <div className="absolute top-0 left-0 right-0 h-24 bg-gray-950 px-8 flex items-center justify-between border-b-8 border-orange-600 shadow-2xl z-50">
               <div className="flex items-center gap-10">
                   <div className="bg-white/10 px-5 py-2.5 rounded-2xl">
                     <Logo url={customLogo} size="lg" theme="dark" label="TV" />
@@ -375,25 +367,33 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               </div>
           </div>
 
-          {/* === CONTENU PRINCIPAL === */}
-          <div className={`flex-1 flex flex-col overflow-hidden relative transition-colors duration-1000 ease-in-out min-h-0 ${activeMode === 'PLANNING' ? 'bg-[#0f172a]' : 'bg-gray-900'}`}>
+          {/* === CONTENU PRINCIPAL (Position Absolue Milieu) === */}
+          <div 
+             className={`absolute top-24 bottom-20 left-0 right-0 flex flex-col overflow-hidden transition-colors duration-1000 ease-in-out ${activeMode === 'PLANNING' ? 'bg-[#0f172a]' : 'bg-gray-900'}`}
+          >
               
               {/* MODE PUBLICITE */}
               {activeMode === 'PUBLICITE' && (
                   currentProduct ? (
                     <div className="flex w-full h-full animate-fade-in">
-                        {/* Image */}
+                        {/* Image - Section Gauche */}
                         <div className="w-[45%] h-full relative flex items-center justify-center bg-gray-950 p-8 overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/10 to-transparent opacity-50"></div>
-                            <div key={currentProduct.id} className="relative w-full h-full flex items-center justify-center animate-scale-in">
-                                <div className="absolute w-[80%] h-[80%] bg-white/5 blur-[80px] rounded-full animate-pulse-slow"></div>
+                            
+                            {/* CONTENEUR CARRE 1:1 */}
+                            <div key={currentProduct.id} className="relative aspect-square h-[80%] bg-white rounded-[3rem] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.8)] border-[8px] border-white/10 animate-scale-in flex items-center justify-center">
                                 <img 
                                   src={currentProduct.imageUrls?.[0] || 'https://placehold.co/800x800/1a1a1a/ffffff?text=EBF'} 
-                                  className="relative z-10 max-w-full max-h-full object-contain rounded-[2.5rem] shadow-[0_30px_80px_rgba(0,0,0,0.8)] border-[8px] border-white/10 animate-float"
+                                  className="max-w-full max-h-full object-contain animate-float"
                                 />
+                                {/* Badge promo flottant */}
+                                <div className="absolute -top-6 -right-6 bg-red-600 text-white w-24 h-24 rounded-full flex items-center justify-center font-black text-xl rotate-12 shadow-lg border-4 border-gray-900 z-20">
+                                    PROMO
+                                </div>
                             </div>
                         </div>
-                        {/* Texte */}
+                        
+                        {/* Texte - Section Droite */}
                         <div className="w-[55%] h-full bg-white flex flex-col justify-center p-12 shadow-[-40px_0_120px_rgba(0,0,0,0.5)] relative z-10">
                             <span className="self-start px-6 py-2 bg-orange-600 text-white rounded-xl text-xl font-black uppercase mb-6 shadow-xl tracking-widest">{currentProduct.category}</span>
                             <h1 className={`${getTitleSizeClass(currentProduct.name)} font-black leading-none tracking-tighter mb-8 text-gray-950 uppercase italic`}>{currentProduct.name}</h1>
@@ -506,8 +506,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               )}
           </div>
 
-          {/* === FOOTER TICKER === */}
-          <div className="h-20 bg-black relative z-[200] border-t-8 border-orange-600 flex items-center shadow-2xl shrink-0">
+          {/* === FOOTER TICKER (Position Absolue Bas) === */}
+          <div className="absolute bottom-0 left-0 right-0 h-20 bg-black border-t-8 border-orange-600 flex items-center shadow-2xl z-[200]">
               <div className="bg-gray-950 h-full px-8 flex items-center justify-center z-20 border-r-8 border-orange-500 shadow-2xl">
                   <Megaphone size={36} className="text-orange-500 animate-bounce" />
               </div>
