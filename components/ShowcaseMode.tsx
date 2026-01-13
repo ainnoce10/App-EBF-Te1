@@ -23,8 +23,7 @@ import {
   Phone,
   Loader2,
   Tv,
-  Trophy,
-  Play
+  Trophy
 } from 'lucide-react';
 import { Logo } from '../constants';
 
@@ -707,6 +706,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                             autoPlay
                             muted={isMuted}
                             onEnded={handleVideoEnded}
+                            onError={handleVideoEnded} // Skip if error
                         />
                     ) : (
                         <img 
