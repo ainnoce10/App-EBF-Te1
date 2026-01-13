@@ -74,7 +74,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   );
 
   // Clé de stockage distincte pour ne pas mélanger les réglages PC et TV
-  const storageKey = isTvRoute ? 'ebf_tv_scale_v4' : 'ebf_desktop_scale_v4';
+  const storageKey = isTvRoute ? 'ebf_tv_scale_v5' : 'ebf_desktop_scale_v5';
 
   // Initialisation Dimensions & Settings
   useEffect(() => {
@@ -83,9 +83,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     };
     
     window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize); // Important pour certaines TV
+    window.addEventListener('orientationchange', handleResize);
     
-    // Appel initial pour être sûr
+    // Appel initial
     handleResize();
     
     // Charger réglage utilisateur
@@ -94,15 +94,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     if (savedScale) {
         setUserScaleModifier(parseFloat(savedScale));
     } else {
-        if (isTvRoute) {
-            // AJUSTEMENT SUR MESURE TV (95cm x 53cm)
-            // On remet à 1.0 (100%) pour REMPLIR l'écran. 
-            // 0.75 était trop petit.
-            setUserScaleModifier(1.0); 
-        } else {
-            // PC : 100%
-            setUserScaleModifier(1.0);
-        }
+        // RESET DEFAULT
+        setUserScaleModifier(1.0);
     }
 
     // Listener plein écran
@@ -130,15 +123,23 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   // Calcul du Facteur d'Échelle (Scale)
   const scaleX = windowSize.w / BASE_WIDTH;
   const scaleY = windowSize.h / BASE_HEIGHT;
-  // FitScale standard (Math.min pour s'assurer que tout rentre)
-  const fitScale = Math.min(scaleX, scaleY);
   
-  // Application du modificateur utilisateur (1.0 par défaut = Rempli l'écran selon le plus petit côté)
-  const finalScale = fitScale * userScaleModifier;
+  // CORRECTION PAYSAGE : 
+  // Si on est en mode TV, on privilégie l'échelle X (Largeur) pour remplir les côtés.
+  // Cela évite l'effet "Portrait" (bandes noires sur les côtés) si la hauteur du navigateur est réduite par des barres.
+  let baseScale = Math.min(scaleX, scaleY);
+  
+  if (isTvRoute) {
+      // Sur TV, on force le remplissage de la largeur (Priorité Paysage)
+      // Si l'écran est plus large que 16:9, scaleX sera plus grand, on l'utilise pour remplir.
+      // Si l'écran a des barres en haut/bas, scaleY est petit, mais on veut quand même remplir la largeur.
+      baseScale = scaleX; 
+  }
+  
+  const finalScale = baseScale * userScaleModifier;
 
   const handleUserScaleChange = (delta: number) => {
       setUserScaleModifier(prev => {
-          // Plage plus large pour permettre ajustement fin
           const newVal = Math.max(0.4, Math.min(2.0, parseFloat((prev + delta).toFixed(2))));
           localStorage.setItem(storageKey, newVal.toString());
           return newVal;
@@ -265,7 +266,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     }
   };
 
-  // Rétablissement des tailles pour le mode PC (car le zoom gérera la TV)
   const getTitleSizeClass = (text: string) => {
       const len = text.length;
       if (len < 20) return "text-7xl";
@@ -275,17 +275,20 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
   return (
     <div 
-        className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center z-[9999]"
-        style={{ width: '100vw', height: '100vh' }} // Force la taille du viewport
+        className="fixed inset-0 bg-black overflow-hidden z-[9999]"
+        style={{ width: '100vw', height: '100vh' }}
     >
       
-      {/* Container de Base 1920x1080 mis à l'échelle */}
+      {/* Container de Base 1920x1080 centré et mis à l'échelle */}
       <div 
-        className="relative bg-gray-900 overflow-hidden shadow-2xl origin-center"
+        className="absolute bg-gray-900 overflow-hidden shadow-2xl origin-center"
         style={{
             width: `${BASE_WIDTH}px`,
             height: `${BASE_HEIGHT}px`,
-            transform: `scale(${finalScale})`,
+            left: '50%',
+            top: '50%',
+            // Utilisation de translate pour centrer parfaitement le conteneur scalé
+            transform: `translate(-50%, -50%) scale(${finalScale})`,
         }}
       >
           {audioSrc && (
