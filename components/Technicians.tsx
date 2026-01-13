@@ -19,7 +19,8 @@ import {
   ChevronDown,
   User,
   RotateCcw,
-  SendHorizontal
+  SendHorizontal,
+  Save
 } from 'lucide-react';
 
 interface TechniciansProps {
@@ -234,12 +235,16 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         const { error } = await supabase
             .from('interventions')
             .update({
-                status: editIntervention.status,
+                client: editIntervention.client,
+                clientPhone: editIntervention.clientPhone,
+                domain: editIntervention.domain,
+                interventionType: editIntervention.interventionType,
                 description: editIntervention.description,
+                location: editIntervention.location,
+                site: editIntervention.site,
                 technician: editIntervention.technician,
                 date: editIntervention.date,
-                location: editIntervention.location,
-                clientPhone: editIntervention.clientPhone
+                status: editIntervention.status
             })
             .eq('id', editIntervention.id);
 
@@ -660,22 +665,116 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
           </div>
       )}
 
-      {/* Édition Statut */}
+      {/* Édition Complète */}
       {editIntervention && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 p-4 animate-fade-in">
-           <div className="bg-white w-full max-w-md rounded-[3rem] p-8 shadow-2xl animate-scale-in">
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 p-4 animate-fade-in backdrop-blur-sm">
+           <div className="bg-white w-full max-w-2xl rounded-[3rem] p-6 md:p-10 shadow-2xl animate-scale-in max-h-[92vh] overflow-y-auto">
                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-lg font-black uppercase italic tracking-tighter text-gray-950">Statut</h3>
-                  <button onClick={() => setEditIntervention(null)} className="p-2 bg-gray-50 rounded-full"><X size={18}/></button>
+                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-gray-950">Modifier Mission</h3>
+                  <button onClick={() => setEditIntervention(null)} className="p-3 bg-gray-100 rounded-full hover:bg-gray-200"><X size={20}/></button>
                </div>
+               
                <div className="space-y-4">
-                   <div className="grid grid-cols-1 gap-2">
-                       {['En attente', 'En cours', 'Terminé'].map((s) => (
-                           <button key={s} onClick={() => setEditIntervention({...editIntervention, status: s as any})} className={`w-full p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest border-2 transition-all ${editIntervention.status === s ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-100 text-gray-400'}`}>{s}</button>
-                       ))}
+                   {/* Statut - Mis en avant */}
+                   <div className="bg-gray-900 p-4 rounded-2xl flex justify-between items-center">
+                       <label className="text-white font-black uppercase text-xs tracking-widest">Statut Actuel</label>
+                       <select 
+                         value={editIntervention.status}
+                         onChange={e => setEditIntervention({...editIntervention, status: e.target.value as any})}
+                         className="bg-white text-gray-900 font-bold text-sm px-4 py-2 rounded-xl outline-none border-4 border-transparent focus:border-orange-500"
+                       >
+                           <option value="En attente">⏳ En Attente</option>
+                           <option value="En cours">🛠️ En Cours</option>
+                           <option value="Terminé">✅ Terminé</option>
+                       </select>
                    </div>
-                   <button onClick={handleUpdateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-950 text-white rounded-[1.5rem] font-black uppercase text-[10px] tracking-widest mt-4 shadow-xl">
-                     {isSaving ? <Loader2 className="animate-spin mx-auto" size={18} /> : 'Appliquer'}
+
+                   {/* Ligne 1 : Client & Tel */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Client</label>
+                        <input type="text" className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.client} onChange={e => setEditIntervention({...editIntervention, client: e.target.value})}/>
+                      </div>
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Téléphone</label>
+                        <input type="text" className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.clientPhone || ''} onChange={e => setEditIntervention({...editIntervention, clientPhone: e.target.value})}/>
+                      </div>
+                   </div>
+
+                   {/* Ligne 2 : Technicien & Date */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-1 block">Technicien</label>
+                        <select className="w-full bg-transparent font-black text-sm outline-none" value={editIntervention.technician} onChange={e => setEditIntervention({...editIntervention, technician: e.target.value})}>
+                            <option value="">Choisir...</option>
+                            {techniciansList.map(t => (
+                              <option key={t.id} value={t.assignedName || t.name}>
+                                {t.assignedName || t.name}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Date</label>
+                        <input type="date" className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.date} onChange={e => setEditIntervention({...editIntervention, date: e.target.value})}/>
+                      </div>
+                   </div>
+
+                   {/* Ligne 3 : Domaine & Type */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Domaine</label>
+                        <select className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.domain || 'Électricité'} onChange={e => setEditIntervention({...editIntervention, domain: e.target.value as any})}>
+                            <option value="Électricité">Électricité</option>
+                            <option value="Plomberie">Plomberie</option>
+                            <option value="Froid">Froid</option>
+                            <option value="Bâtiment">Bâtiment</option>
+                        </select>
+                      </div>
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Type</label>
+                        <select className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.interventionType || 'Dépannage'} onChange={e => setEditIntervention({...editIntervention, interventionType: e.target.value as any})}>
+                            <option value="Dépannage">Dépannage</option>
+                            <option value="Installation">Installation</option>
+                            <option value="Désinstallation">Désinstallation</option>
+                            <option value="Entretien">Entretien</option>
+                            <option value="Maintenance">Maintenance</option>
+                            <option value="Tuyauterie">Tuyauterie</option>
+                            <option value="Appareillage">Appareillage</option>
+                            <option value="Fillerie">Fillerie</option>
+                            <option value="Rénovation">Rénovation</option>
+                            <option value="Réhabilitation">Réhabilitation</option>
+                            <option value="Expertise">Expertise</option>
+                            <option value="Devis">Devis</option>
+                        </select>
+                      </div>
+                   </div>
+
+                   {/* Ligne 4 : Site & Lieu */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Site</label>
+                        <select className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.site} onChange={e => setEditIntervention({...editIntervention, site: e.target.value as any})}>
+                            <option value="Abidjan">Abidjan</option>
+                            <option value="Bouaké">Bouaké</option>
+                            <option value="Korhogo">Korhogo</option>
+                        </select>
+                      </div>
+                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Lieu précis</label>
+                        <input type="text" className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.location || ''} onChange={e => setEditIntervention({...editIntervention, location: e.target.value})}/>
+                      </div>
+                   </div>
+
+                   {/* Description */}
+                   <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Description</label>
+                        <textarea className="w-full bg-transparent font-bold text-sm h-24 outline-none resize-none" value={editIntervention.description} onChange={e => setEditIntervention({...editIntervention, description: e.target.value})}/>
+                   </div>
+
+                   <button onClick={handleUpdateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-950 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-widest mt-4 shadow-xl flex items-center justify-center gap-2">
+                     {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18}/>}
+                     {isSaving ? 'ENREGISTREMENT...' : 'SAUVEGARDER LES MODIFICATIONS'}
                    </button>
                </div>
            </div>
