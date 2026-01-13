@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_EMPLOYEES } from '../constants';
 import { Transaction, Employee, Site } from '../types';
 import { supabase } from '../lib/supabase';
@@ -15,7 +14,9 @@ import {
   Briefcase,
   TrendingUp,
   Wallet,
-  Calendar
+  Calendar,
+  Camera,
+  User
 } from 'lucide-react';
 
 interface AccountingProps {
@@ -35,7 +36,10 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [newEmployeeData, setNewEmployeeData] = useState({ name: '', role: '', site: 'Abidjan', entryDate: new Date().toISOString().split('T')[0] });
-  
+  const [newEmployeePhoto, setNewEmployeePhoto] = useState<File | null>(null);
+  const [newEmployeePhotoPreview, setNewEmployeePhotoPreview] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
   // Transaction Form State
   const [transactionType, setTransactionType] = useState<'Recette' | 'Dépense'>('Recette');
   const [newTransaction, setNewTransaction] = useState({
@@ -98,6 +102,14 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
 
   // --- ACTIONS RH ---
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        setNewEmployeePhoto(file);
+        setNewEmployeePhotoPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleToggleStatus = async (empId: string) => {
     const emp = employees.find(e => e.id === empId);
     if (!emp) return;
@@ -113,14 +125,48 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
 
   const handleSaveEmployee = async () => {
     if (!newEmployeeData.name) return;
+    setIsSaving(true);
+    
     const newId = `EMP-${Math.floor(Math.random() * 10000)}`;
-    const newEmp: Employee = { id: newId, name: newEmployeeData.name, role: newEmployeeData.role, site: newEmployeeData.site, status: 'Actif', entryDate: newEmployeeData.entryDate };
+    let photoUrl = '';
+
     try {
+        // 1. Upload Photo if exists
+        if (newEmployeePhoto) {
+            const fileExt = newEmployeePhoto.name.split('.').pop();
+            const fileName = `emp_${newId}.${fileExt}`;
+            const { error: uploadError } = await supabase.storage.from('assets').upload(fileName, newEmployeePhoto);
+            
+            if (uploadError) throw uploadError;
+            
+            const { data: { publicUrl } } = supabase.storage.from('assets').getPublicUrl(fileName);
+            photoUrl = publicUrl;
+        }
+
+        // 2. Save Employee Record
+        const newEmp: Employee = { 
+            id: newId, 
+            name: newEmployeeData.name, 
+            role: newEmployeeData.role, 
+            site: newEmployeeData.site, 
+            status: 'Actif', 
+            entryDate: newEmployeeData.entryDate,
+            photoUrl 
+        };
+
         const { error } = await supabase.from('employees').insert([newEmp]);
         if (error) throw error;
+
         setIsAddingEmployee(false);
         setNewEmployeeData({ name: '', role: '', site: 'Abidjan', entryDate: new Date().toISOString().split('T')[0] });
-    } catch (error) { console.error(error); }
+        setNewEmployeePhoto(null);
+        setNewEmployeePhotoPreview(null);
+
+    } catch (error: any) { 
+        alert("Erreur création employé: " + error.message);
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   const handleGeneratePaie = () => {
@@ -437,8 +483,8 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                          {employees.map(emp => (
                              <div key={emp.id} className="p-4 border-2 border-gray-100 rounded-2xl flex justify-between items-center bg-white hover:border-gray-200 transition-colors">
                                  <div className="flex items-center gap-4">
-                                     <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-black text-xs border border-gray-200">
-                                         {emp.name.substring(0,2).toUpperCase()}
+                                     <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-black text-xs border border-gray-200 overflow-hidden shrink-0">
+                                         {emp.photoUrl ? <img src={emp.photoUrl} className="w-full h-full object-cover"/> : emp.name.substring(0,2).toUpperCase()}
                                      </div>
                                      <div>
                                         <p className="font-bold text-gray-900">{emp.name}</p>
@@ -457,6 +503,20 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                    </>
                  ) : (
                    <div className="space-y-6">
+                      
+                      {/* Photo Upload */}
+                      <div className="flex flex-col items-center gap-4">
+                           <div onClick={() => photoInputRef.current?.click()} className="w-24 h-24 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-200 overflow-hidden relative">
+                               {newEmployeePhotoPreview ? (
+                                   <img src={newEmployeePhotoPreview} className="w-full h-full object-cover" />
+                               ) : (
+                                   <Camera size={32} className="text-gray-400"/>
+                               )}
+                               <input type="file" ref={photoInputRef} className="hidden" accept="image/*" onChange={handlePhotoSelect} />
+                           </div>
+                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Photo de profil</p>
+                      </div>
+
                       <div className="space-y-2">
                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nom Complet</label>
                           <input type="text" placeholder="Ex: Kouassi Jean" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all" value={newEmployeeData.name} onChange={e => setNewEmployeeData({...newEmployeeData, name: e.target.value})}/>
@@ -478,8 +538,10 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                       </div>
 
                       <div className="flex gap-4 pt-4">
-                         <button onClick={() => setIsAddingEmployee(false)} className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-500 font-black uppercase text-xs tracking-widest rounded-2xl transition-colors">Annuler</button>
-                         <button onClick={handleSaveEmployee} className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-xs tracking-widest rounded-2xl shadow-lg transition-colors">Enregistrer</button>
+                         <button onClick={() => setIsAddingEmployee(false)} disabled={isSaving} className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-500 font-black uppercase text-xs tracking-widest rounded-2xl transition-colors">Annuler</button>
+                         <button onClick={handleSaveEmployee} disabled={isSaving} className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-xs tracking-widest rounded-2xl shadow-lg transition-colors flex items-center justify-center gap-2">
+                            {isSaving && <Loader2 className="animate-spin" size={16} />} Enregistrer
+                         </button>
                       </div>
                    </div>
                  )}

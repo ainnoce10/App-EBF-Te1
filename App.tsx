@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -179,6 +178,7 @@ const App: React.FC = () => {
         liveInterventions={interventions}
         liveMessages={tickerMessages}
         liveAchievements={achievements}
+        liveEmployees={employees} // <-- Ajout ici
         customLogo={customLogo}
         initialMusicUrl={backgroundMusic}
       />

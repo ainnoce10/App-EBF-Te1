@@ -62,6 +62,7 @@ export interface Employee {
   site: Site | string;
   status: 'Actif' | 'Congés' | 'Inactif';
   entryDate: string;
+  photoUrl?: string;
 }
 
 export interface Achievement {

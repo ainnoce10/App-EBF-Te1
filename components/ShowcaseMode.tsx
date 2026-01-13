@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StockItem, Intervention, TickerMessage, Achievement } from '../types';
+import { StockItem, Intervention, TickerMessage, Achievement, Employee } from '../types';
 import { supabase } from '../lib/supabase';
 import { 
   X, 
@@ -22,7 +22,8 @@ import {
   Loader2,
   Trophy,
   Video,
-  Image as ImageIcon
+  Image as ImageIcon,
+  User
 } from 'lucide-react';
 import { Logo } from '../constants';
 
@@ -32,6 +33,7 @@ interface ShowcaseModeProps {
   liveInterventions?: Intervention[];
   liveMessages?: TickerMessage[];
   liveAchievements?: Achievement[];
+  liveEmployees?: Employee[];
   customLogo?: string;
   initialMusicUrl?: string;
 }
@@ -42,6 +44,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   liveInterventions = [], 
   liveMessages = [],
   liveAchievements = [],
+  liveEmployees = [],
   customLogo,
   initialMusicUrl
 }) => {
@@ -266,6 +269,12 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       return "text-5xl";
   };
 
+  // Recherche de la photo de l'employé
+  const getTechnicianPhoto = (techName: string) => {
+      const emp = liveEmployees.find(e => e.name === techName);
+      return emp?.photoUrl;
+  };
+
   return (
     <div 
         className="fixed inset-0 bg-black overflow-hidden z-[9999]"
@@ -381,10 +390,10 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                             <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/10 to-transparent opacity-50"></div>
                             
                             {/* CONTENEUR CARRE 1:1 */}
-                            <div key={currentProduct.id} className="relative aspect-square h-[80%] bg-white rounded-[3rem] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.8)] border-[8px] border-white/10 animate-scale-in flex items-center justify-center">
+                            <div key={currentProduct.id} className="relative aspect-square h-[80%] bg-white rounded-[3rem] shadow-[0_30px_80px_rgba(0,0,0,0.8)] border-[8px] border-white/10 animate-scale-in flex items-center justify-center">
                                 <img 
                                   src={currentProduct.imageUrls?.[0] || 'https://placehold.co/800x800/1a1a1a/ffffff?text=EBF'} 
-                                  className="max-w-full max-h-full object-contain animate-float"
+                                  className="w-[90%] h-[90%] object-contain animate-float"
                                 />
                                 {/* Badge promo flottant */}
                                 <div className="absolute -top-6 -right-6 bg-red-600 text-white w-24 h-24 rounded-full flex items-center justify-center font-black text-xl rotate-12 shadow-lg border-4 border-gray-900 z-20">
@@ -433,51 +442,64 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                     </div>
                     
                     <div className="grid grid-cols-3 gap-8 flex-1 min-h-0">
-                        {currentPlanningSlice.map((inter) => (
-                            <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-[2.5rem] flex flex-col shadow-2xl relative overflow-hidden animate-slide-up">
-                                
-                                {/* Status & Tech Header */}
-                                <div className="flex justify-between items-start mb-6">
-                                    <span className={`px-5 py-2 rounded-xl font-black text-xl uppercase tracking-widest shadow-lg ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
-                                      {inter.status}
-                                    </span>
-                                    <div className="text-right">
-                                         <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Technicien</p>
-                                         <p className="text-orange-400 font-black text-xl uppercase">{inter.technician}</p>
+                        {currentPlanningSlice.map((inter) => {
+                            const techPhoto = getTechnicianPhoto(inter.technician);
+                            
+                            return (
+                                <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-[2.5rem] flex flex-col shadow-2xl relative overflow-hidden animate-slide-up">
+                                    
+                                    {/* Status & Tech Header */}
+                                    <div className="flex justify-between items-start mb-6">
+                                        <span className={`px-5 py-2 rounded-xl font-black text-xl uppercase tracking-widest shadow-lg h-fit ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
+                                        {inter.status}
+                                        </span>
+                                        <div className="flex flex-col items-end">
+                                            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Technicien</p>
+                                            <div className="flex items-center gap-3">
+                                                {techPhoto ? (
+                                                    <img src={techPhoto} className="w-16 h-16 rounded-full object-cover border-2 border-orange-400 shadow-md" alt={inter.technician}/>
+                                                ) : (
+                                                    <div className="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center text-white border-2 border-orange-400 shadow-md">
+                                                        <User size={24}/>
+                                                    </div>
+                                                )}
+                                                <p className="text-orange-400 font-black text-xl uppercase">{inter.technician}</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                                
-                                {/* Centered Content */}
-                                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
-                                    <div>
-                                        <h4 className="text-white text-5xl font-black uppercase leading-none tracking-tighter mb-3 drop-shadow-lg">{inter.client}</h4>
-                                        {inter.clientPhone ? (
-                                            <span className="text-blue-300 text-2xl font-bold tracking-widest block bg-blue-900/30 px-4 py-1 rounded-lg border border-blue-500/30 mx-auto w-fit">{inter.clientPhone}</span>
-                                        ) : (
-                                             <span className="text-gray-500 text-xl font-bold tracking-widest block italic">Numéro masqué</span>
-                                        )}
-                                    </div>
+                                    
+                                    {/* Centered Content */}
+                                    <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
+                                        <div>
+                                            <h4 className="text-white text-5xl font-black uppercase leading-none tracking-tighter mb-3 drop-shadow-lg">{inter.client}</h4>
+                                            {inter.clientPhone ? (
+                                                <span className="text-blue-300 text-2xl font-bold tracking-widest block bg-blue-900/30 px-4 py-1 rounded-lg border border-blue-500/30 mx-auto w-fit">{inter.clientPhone}</span>
+                                            ) : (
+                                                <span className="text-gray-500 text-xl font-bold tracking-widest block italic">Numéro masqué</span>
+                                            )}
+                                        </div>
 
-                                    {inter.location && (
-                                        <div className="flex items-center justify-center gap-2 text-gray-200 text-2xl font-bold uppercase tracking-wide">
-                                            <MapPin size={28} className="text-red-500"/> {inter.location}
+                                        {inter.location && (
+                                            <div className="flex items-center justify-center gap-2 text-gray-200 text-2xl font-bold uppercase tracking-wide">
+                                                <MapPin size={28} className="text-red-500"/> {inter.location}
+                                            </div>
+                                        )}
+                                        
+                                        {/* Description Box Centered */}
+                                        <div className="w-full bg-black/40 p-6 rounded-3xl border border-white/10 backdrop-blur-sm flex items-center justify-center min-h-[120px]">
+                                            <p className="text-white text-3xl font-bold leading-tight">{inter.description}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Site Badge Bottom */}
+                                    {inter.site && (
+                                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 opacity-30">
+                                            <span className="text-4xl font-black text-white uppercase tracking-[0.5em]">{inter.site}</span>
                                         </div>
                                     )}
-                                    
-                                    {/* Description Box Centered */}
-                                    <div className="w-full bg-black/40 p-6 rounded-3xl border border-white/10 backdrop-blur-sm flex items-center justify-center min-h-[120px]">
-                                        <p className="text-white text-3xl font-bold leading-tight">{inter.description}</p>
-                                    </div>
                                 </div>
-                                
-                                 {/* Site Badge Bottom */}
-                                 {inter.site && (
-                                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 opacity-30">
-                                        <span className="text-4xl font-black text-white uppercase tracking-[0.5em]">{inter.site}</span>
-                                    </div>
-                                 )}
-                            </div>
-                        ))}
+                            );
+                        })}
                          {Array.from({ length: Math.max(0, 3 - currentPlanningSlice.length) }).map((_, i) => (
                             <div key={`empty-${i}`} className="border-4 border-dashed border-white/5 rounded-[2.5rem] flex items-center justify-center opacity-10">
                                 <span className="text-white font-black text-5xl uppercase">Libre</span>
@@ -490,31 +512,58 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               {/* MODE REALISATIONS */}
               {activeMode === 'REALISATIONS' && (
                   currentAchievement ? (
-                      <div className="w-full h-full relative bg-black flex items-center justify-center animate-fade-in">
-                          {currentAchievement.mediaType === 'video' ? (
-                              <video 
-                                ref={videoRef}
-                                src={currentAchievement.mediaUrl}
-                                className="w-full h-full object-contain"
-                                autoPlay
-                                muted={isMuted}
-                                onEnded={handleVideoEnded}
-                                onError={handleVideoEnded}
-                              />
-                          ) : (
-                              <img src={currentAchievement.mediaUrl} className="w-full h-full object-contain animate-scale-in" />
-                          )}
-                          
-                          <div className="absolute bottom-12 left-0 right-0 flex justify-center z-20">
-                              <div className="bg-black/70 backdrop-blur-xl px-12 py-8 rounded-[2.5rem] border border-white/10 text-center max-w-3xl shadow-2xl animate-slide-up">
-                                  <div className="flex justify-center mb-3">
-                                      <span className="bg-purple-600 text-white px-5 py-1.5 rounded-xl text-lg font-black uppercase tracking-widest flex items-center gap-2">
-                                         {currentAchievement.mediaType === 'video' ? <Video size={20}/> : <ImageIcon size={20}/>} Réalisation
-                                      </span>
-                                  </div>
-                                  <h2 className="text-5xl font-black text-white uppercase tracking-tight mb-3 leading-none">{currentAchievement.title}</h2>
-                                  {currentAchievement.description && <p className="text-2xl text-gray-300 font-medium">{currentAchievement.description}</p>}
+                      <div className="w-full h-full flex animate-fade-in">
+                          {/* Partie Gauche : Texte & Description */}
+                          <div className="w-[40%] h-full bg-white flex flex-col justify-center p-16 shadow-[40px_0_100px_rgba(0,0,0,0.5)] z-20 relative">
+                              <div className="self-start mb-12">
+                                   <span className="bg-purple-600 text-white px-6 py-3 rounded-2xl text-xl font-black uppercase tracking-widest flex items-center gap-3 shadow-lg">
+                                      {currentAchievement.mediaType === 'video' ? <Video size={28}/> : <ImageIcon size={28}/>} 
+                                      Réalisation
+                                   </span>
                               </div>
+                              
+                              <h2 className="text-7xl font-black text-gray-950 uppercase tracking-tighter mb-8 leading-[0.9]">
+                                  {currentAchievement.title}
+                              </h2>
+                              
+                              <div className="w-24 h-4 bg-orange-600 mb-8 rounded-full"></div>
+
+                              {currentAchievement.description && (
+                                  <p className="text-4xl text-gray-500 font-bold leading-snug">
+                                      {currentAchievement.description}
+                                  </p>
+                              )}
+                              
+                              <div className="mt-12 text-gray-400 font-black text-2xl uppercase tracking-[0.2em] flex items-center gap-2">
+                                  <Calendar size={24} className="text-orange-500"/>
+                                  {new Date(currentAchievement.date).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                              </div>
+                          </div>
+
+                          {/* Partie Droite : Média (Image/Vidéo) */}
+                          <div className="w-[60%] h-full bg-black relative flex items-center justify-center overflow-hidden">
+                               {/* Fond flouté pour l'ambiance */}
+                               <div 
+                                  className="absolute inset-0 opacity-30 bg-cover bg-center blur-3xl scale-110"
+                                  style={{ backgroundImage: `url(${currentAchievement.mediaUrl})` }}
+                               ></div>
+
+                              {currentAchievement.mediaType === 'video' ? (
+                                  <video 
+                                      ref={videoRef}
+                                      src={currentAchievement.mediaUrl}
+                                      className="w-full h-full object-contain relative z-10 shadow-2xl"
+                                      autoPlay
+                                      muted={isMuted}
+                                      onEnded={handleVideoEnded}
+                                      onError={handleVideoEnded}
+                                  />
+                              ) : (
+                                  <img 
+                                      src={currentAchievement.mediaUrl} 
+                                      className="w-full h-full object-contain relative z-10 animate-scale-in shadow-2xl" 
+                                  />
+                              )}
                           </div>
                       </div>
                   ) : <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-white" size={80}/></div>
