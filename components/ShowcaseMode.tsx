@@ -56,7 +56,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   // Audio state
   const [isMuted, setIsMuted] = useState(false);
   const [audioSrc, setAudioSrc] = useState(initialMusicUrl || '');
-  const [autoplayFailed, setAutoplayFailed] = useState(false);
   const [audioLoading, setAudioLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -109,7 +108,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
         const attemptFullscreen = async () => {
             try {
                 if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
-            } catch (e) { console.log("Fullscreen auto bloqué", e); setAutoplayFailed(true); }
+            } catch (e) { console.log("Fullscreen auto bloqué", e); }
         };
         const timer = setTimeout(attemptFullscreen, 1500);
         return () => clearTimeout(timer);
@@ -170,16 +169,15 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   // Gestion Audio Principale (Background Music)
   useEffect(() => {
     if (audioRef.current && audioSrc) {
-        // Logique simplifiée : si pas muet et pas d'erreur, on joue TOUT LE TEMPS
-        // On ne coupe plus quand la vidéo se lance.
-        if (!isMuted && !autoplayFailed) {
+        // Logique simplifiée : si pas muet, on tente de jouer
+        if (!isMuted) {
             if (audioRef.current.paused) {
                 setAudioLoading(true);
                 audioRef.current.volume = 0.5;
                 audioRef.current.play()
-                    .catch(() => {
-                        setAutoplayFailed(true);
-                        setIsMuted(true);
+                    .catch((e) => {
+                        console.log("Autoplay audio bloqué par le navigateur", e);
+                        setIsMuted(true); // On mute silencieusement si ça bloque
                     })
                     .finally(() => setAudioLoading(false));
             }
@@ -187,24 +185,15 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
             audioRef.current.pause();
         }
     }
-  }, [audioSrc, isMuted, autoplayFailed, activeMode]); // activeMode ajouté pour revérifier si besoin, mais sans condition de coupure
+  }, [audioSrc, isMuted, activeMode]);
 
   const toggleMute = () => {
       if (isMuted) {
           setIsMuted(false);
-          // Le useEffect se chargera de relancer
-          setAutoplayFailed(false);
       } else {
           setIsMuted(true);
           audioRef.current?.pause();
       }
-  };
-
-  const handleStartShow = async () => {
-    setIsMuted(false);
-    setAutoplayFailed(false);
-    if(audioRef.current) { audioRef.current.currentTime = 0; audioRef.current.play().catch(() => {}); }
-    try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); } catch (e) {}
   };
 
   // --- CYCLES ---
@@ -292,18 +281,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
         }}
       >
           {audioSrc && (
-              <audio ref={audioRef} loop src={audioSrc} preload="auto" onPlay={() => setAutoplayFailed(false)} onError={(e) => console.error("Audio err", e)} />
-          )}
-
-          {autoplayFailed && (
-              <div className="absolute inset-0 z-[600] bg-black/60 backdrop-blur-sm flex items-center justify-center animate-fade-in">
-                 <div className="text-center animate-bounce">
-                    <button onClick={handleStartShow} className="bg-green-600 text-white px-10 py-6 rounded-[2rem] font-black text-3xl shadow-2xl flex items-center gap-5 hover:scale-110 transition-transform">
-                        <Play size={40} fill="currentColor" /> LANCER LA TV
-                    </button>
-                    <p className="text-white/80 font-bold uppercase mt-6 text-xl tracking-widest">Cliquez pour activer le son</p>
-                 </div>
-              </div>
+              <audio ref={audioRef} loop src={audioSrc} preload="auto" onError={(e) => console.error("Audio err", e)} />
           )}
 
           {/* === HEADER TV (Position Absolue Haut) === */}
