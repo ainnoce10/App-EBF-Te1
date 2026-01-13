@@ -269,10 +269,12 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       return "text-5xl";
   };
 
-  // Recherche de la photo de l'employé
-  const getTechnicianPhoto = (techName: string) => {
-      const emp = liveEmployees.find(e => e.name === techName);
-      return emp?.photoUrl;
+  // Recherche de l'objet employé (avec correspondance sur nom assigné)
+  const getTechnician = (techName: string) => {
+      return liveEmployees.find(e => 
+        (e.assignedName && e.assignedName === techName) || 
+        e.name === techName
+      );
   };
 
   return (
@@ -443,7 +445,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                     
                     <div className="grid grid-cols-3 gap-8 flex-1 min-h-0">
                         {currentPlanningSlice.map((inter) => {
-                            const techPhoto = getTechnicianPhoto(inter.technician);
+                            const technician = getTechnician(inter.technician);
                             
                             return (
                                 <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-[2.5rem] flex flex-col shadow-2xl relative overflow-hidden animate-slide-up">
@@ -456,8 +458,13 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                         <div className="flex flex-col items-end">
                                             <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Technicien</p>
                                             <div className="flex items-center gap-3">
-                                                {techPhoto ? (
-                                                    <img src={techPhoto} className="w-16 h-16 rounded-full object-cover border-2 border-orange-400 shadow-md" alt={inter.technician}/>
+                                                {technician?.photoUrl ? (
+                                                    <img 
+                                                      src={technician.photoUrl} 
+                                                      className="w-16 h-16 rounded-full object-cover border-2 border-orange-400 shadow-md" 
+                                                      alt={inter.technician}
+                                                      style={{ objectPosition: technician.photoPosition || '50% 50%' }}
+                                                    />
                                                 ) : (
                                                     <div className="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center text-white border-2 border-orange-400 shadow-md">
                                                         <User size={24}/>
