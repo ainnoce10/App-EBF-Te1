@@ -1,4 +1,5 @@
-import { LayoutDashboard, Wrench, Wallet, CalendarDays, ShoppingCart, Settings, MonitorPlay } from 'lucide-react';
+
+import { LayoutDashboard, Wrench, Wallet, CalendarDays, ShoppingCart, Settings, MonitorPlay, Trophy } from 'lucide-react';
 import { DashboardData, Intervention, StockItem, Transaction, Employee, TickerMessage } from './types';
 
 // EBF Brand Colors references
@@ -135,6 +136,7 @@ export const NAV_ITEMS = [
   { id: 'accounting', label: 'Comptabilité & RH', icon: <Wallet size={20} /> },
   { id: 'secretariat', label: 'Secrétariat', icon: <CalendarDays size={20} /> },
   { id: 'hardware', label: 'Quincaillerie', icon: <ShoppingCart size={20} /> },
+  { id: 'achievements', label: 'Nos Réalisations', icon: <Trophy size={20} /> },
   { id: 'showcase', label: 'Diffusion TV', icon: <MonitorPlay size={20} /> },
   { id: 'settings', label: 'Paramètres', icon: <Settings size={20} /> },
 ];

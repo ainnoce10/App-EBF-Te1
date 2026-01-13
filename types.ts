@@ -63,3 +63,12 @@ export interface Employee {
   status: 'Actif' | 'Congés' | 'Inactif';
   entryDate: string;
 }
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description?: string;
+  mediaUrl: string;
+  mediaType: 'image' | 'video';
+  date: string;
+}

@@ -178,6 +178,9 @@ create table if not exists public.hardware_transactions ( id text primary key, t
 create table if not exists public.secretariat_transactions ( id text primary key, type text, category text, amount numeric default 0, date date, description text, site text, created_at timestamp with time zone default now() );
 create table if not exists public.accounting_transactions ( id text primary key, type text, category text, amount numeric default 0, date date, description text, site text, created_at timestamp with time zone default now() );
 
+-- 3.1 NOUVELLE TABLE ACHIEVEMENTS (Réalisations)
+create table if not exists public.achievements ( id text primary key, title text not null, description text, "mediaUrl" text not null, "mediaType" text default 'image', date timestamp with time zone default now(), created_at timestamp with time zone default now() );
+
 -- 4. === [NOUVEAU] === MISE A JOUR DE SCHEMA POUR LE VOCAL
 -- Ce bloc ajoute la colonne 'has_report' si elle n'existe pas déjà.
 do $$ 
@@ -223,6 +226,10 @@ create policy "Public" on public.secretariat_transactions for all using (true) w
 alter table public.accounting_transactions enable row level security;
 drop policy if exists "Public" on public.accounting_transactions;
 create policy "Public" on public.accounting_transactions for all using (true) with check (true);
+
+alter table public.achievements enable row level security;
+drop policy if exists "Public" on public.achievements;
+create policy "Public" on public.achievements for all using (true) with check (true);
 `;
 
   return (
@@ -240,7 +247,7 @@ create policy "Public" on public.accounting_transactions for all using (true) wi
           <div className="bg-blue-600 rounded-3xl p-6 text-white relative min-h-[180px] overflow-hidden">
               <Database size={80} className="absolute -right-4 -top-4 opacity-10" />
               <h4 className="font-black text-xl mb-2 flex items-center gap-2"><ShieldAlert size={20}/> Mise à jour SQL</h4>
-              <p className="text-xs opacity-80 mb-6">Ajoute les nouvelles fonctionnalités (Vocal) sans effacer vos données.</p>
+              <p className="text-xs opacity-80 mb-6">Ajoute les nouvelles fonctionnalités (Vocal, Réalisations) sans effacer vos données.</p>
               <button onClick={() => setShowSql(true)} className="w-full py-3 bg-white text-blue-700 rounded-xl font-black text-xs uppercase">Voir le script</button>
           </div>
 
@@ -336,7 +343,7 @@ create policy "Public" on public.accounting_transactions for all using (true) wi
               <div className="p-8 overflow-y-auto">
                   <p className="text-xs text-blue-600 font-bold mb-4 uppercase tracking-widest leading-relaxed">
                       Ce script est une <strong>MISE À JOUR CUMULATIVE</strong>. <br/>
-                      Il contient tout le nécessaire (anciennes tables + nouveautés vocal/logo). <br/>
+                      Il contient tout le nécessaire (anciennes tables + nouveautés vocal/logo/réalisations). <br/>
                       Vous pouvez copier et exécuter tout le bloc ci-dessous dans l'éditeur SQL de Supabase : <br/>
                       <span className="text-orange-600">vos données existantes ne seront pas effacées</span>, il ajoutera seulement ce qui manque.
                   </p>

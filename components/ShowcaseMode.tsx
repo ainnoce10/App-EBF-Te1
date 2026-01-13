@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { StockItem, Intervention, TickerMessage } from '../types';
+import { StockItem, Intervention, TickerMessage, Achievement } from '../types';
 import { supabase } from '../lib/supabase';
 import { 
   X, 
@@ -22,7 +22,9 @@ import {
   Scan,
   Phone,
   Loader2,
-  Tv
+  Tv,
+  Trophy,
+  Play
 } from 'lucide-react';
 import { Logo } from '../constants';
 
@@ -31,6 +33,7 @@ interface ShowcaseModeProps {
   liveStock?: StockItem[];
   liveInterventions?: Intervention[];
   liveMessages?: TickerMessage[];
+  liveAchievements?: Achievement[];
   customLogo?: string;
   initialMusicUrl?: string;
 }
@@ -40,12 +43,14 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   liveStock = [], 
   liveInterventions = [], 
   liveMessages = [],
+  liveAchievements = [],
   customLogo,
   initialMusicUrl
 }) => {
-  const [activeMode, setActiveMode] = useState<'PUBLICITE' | 'PLANNING'>('PUBLICITE');
+  const [activeMode, setActiveMode] = useState<'PUBLICITE' | 'PLANNING' | 'REALISATIONS'>('PUBLICITE');
   const [productIdx, setProductIdx] = useState(0);
   const [planningPage, setPlanningPage] = useState(0);
+  const [achievementIdx, setAchievementIdx] = useState(0);
   
   // Audio state
   const [isMuted, setIsMuted] = useState(false);
@@ -54,6 +59,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const [autoplayFailed, setAutoplayFailed] = useState(false);
   const [audioLoading, setAudioLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  
+  // Video Player Ref (pour Réalisations)
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // TV UX State
   const [osdMessage, setOsdMessage] = useState<{icon: React.ReactNode, text: string} | null>(null);
@@ -72,6 +80,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const planning = liveInterventions.length > 0 
     ? liveInterventions.filter(i => i.status === 'En cours' || i.status === 'En attente') 
     : [];
+    
+  const achievements = liveAchievements.length > 0 ? liveAchievements : [];
 
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
@@ -106,12 +116,18 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
         switch(e.key) {
             case 'ArrowRight': // Mode Suivant
-                setActiveMode('PLANNING');
-                showOSD(<ClipboardList size={24}/>, "MODE: CHANTIERS");
+                setActiveMode(prev => {
+                    if (prev === 'PUBLICITE') { showOSD(<ClipboardList size={24}/>, "MODE: CHANTIERS"); return 'PLANNING'; }
+                    if (prev === 'PLANNING') { showOSD(<Trophy size={24}/>, "MODE: RÉALISATIONS"); return 'REALISATIONS'; }
+                    showOSD(<LayoutGrid size={24}/>, "MODE: PRODUITS"); return 'PUBLICITE';
+                });
                 break;
             case 'ArrowLeft': // Mode Précédent
-                setActiveMode('PUBLICITE');
-                showOSD(<LayoutGrid size={24}/>, "MODE: PRODUITS");
+                setActiveMode(prev => {
+                    if (prev === 'PUBLICITE') { showOSD(<Trophy size={24}/>, "MODE: RÉALISATIONS"); return 'REALISATIONS'; }
+                    if (prev === 'REALISATIONS') { showOSD(<ClipboardList size={24}/>, "MODE: CHANTIERS"); return 'PLANNING'; }
+                    showOSD(<LayoutGrid size={24}/>, "MODE: PRODUITS"); return 'PUBLICITE';
+                });
                 break;
             case 'ArrowUp': // Volume +
                 changeVolume(0.1);
@@ -232,6 +248,20 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     }
   }, [audioSrc]);
 
+  // Si on est en mode REALISATIONS et qu'une vidéo joue, on coupe la musique de fond
+  useEffect(() => {
+      const currentAch = achievements[achievementIdx];
+      const isVideoPlaying = activeMode === 'REALISATIONS' && currentAch?.mediaType === 'video';
+      
+      if (audioRef.current) {
+          if (isVideoPlaying) {
+              audioRef.current.pause();
+          } else if (!isMuted && !autoplayFailed) {
+              audioRef.current.play().catch(() => {});
+          }
+      }
+  }, [activeMode, achievementIdx, achievements, isMuted, autoplayFailed]);
+
   const handleStartShow = async () => {
     setIsMuted(false);
     setAutoplayFailed(false);
@@ -281,11 +311,16 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   // --- CYCLES D'AFFICHAGE ---
   useEffect(() => {
     const modeInterval = setInterval(() => {
-      setActiveMode((prev) => (prev === 'PUBLICITE' ? 'PLANNING' : 'PUBLICITE'));
+      setActiveMode((prev) => {
+          if (prev === 'PUBLICITE') return 'PLANNING';
+          if (prev === 'PLANNING') return 'REALISATIONS';
+          return 'PUBLICITE';
+      });
     }, 60000); 
     return () => clearInterval(modeInterval);
   }, []);
 
+  // Cycle Produits
   useEffect(() => {
     if (activeMode !== 'PUBLICITE' || products.length === 0) return;
     const interval = setInterval(() => {
@@ -294,9 +329,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return () => clearInterval(interval);
   }, [activeMode, products.length]);
 
+  // Cycle Planning
   const itemsPerPage = 3;
   const totalPlanningPages = Math.ceil(planning.length / itemsPerPage) || 1;
-
   useEffect(() => {
     if (activeMode !== 'PLANNING' || planning.length === 0) {
         setPlanningPage(0); 
@@ -308,8 +343,34 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return () => clearInterval(interval);
   }, [activeMode, planning.length, totalPlanningPages]);
 
+  // Cycle Réalisations (Gestion Mixte Image/Vidéo)
+  useEffect(() => {
+      if (activeMode !== 'REALISATIONS' || achievements.length === 0) {
+          setAchievementIdx(0);
+          return;
+      }
+      
+      const currentItem = achievements[achievementIdx];
+      let timer: number;
+
+      if (currentItem.mediaType === 'image') {
+          // Si image, on attend 10s
+          timer = window.setTimeout(() => {
+              setAchievementIdx(prev => (prev + 1) % achievements.length);
+          }, 10000);
+      }
+      // Si c'est une vidéo, c'est le onEnded de la balise video qui changera l'index
+
+      return () => clearTimeout(timer);
+  }, [activeMode, achievements.length, achievementIdx]);
+
+  const handleVideoEnded = () => {
+      setAchievementIdx(prev => (prev + 1) % achievements.length);
+  };
+
   const currentProduct = products[productIdx];
   const currentPlanningSlice = planning.slice(planningPage * itemsPerPage, (planningPage + 1) * itemsPerPage);
+  const currentAchievement = achievements[achievementIdx];
 
   // Styles dynamiques
   const outerStyle = { padding: `${overscanPadding}vmin` };
@@ -399,6 +460,13 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                         <ClipboardList size={16} className="md:w-6 md:h-6" />
                         Chantiers
                       </button>
+                      <button 
+                        onClick={() => setActiveMode('REALISATIONS')}
+                        className={`flex items-center justify-center gap-2 md:gap-4 px-4 py-2 md:px-8 md:py-3 rounded-xl md:rounded-2xl font-black text-xs md:text-xl uppercase transition-all flex-1 md:flex-none ${activeMode === 'REALISATIONS' ? 'bg-purple-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
+                      >
+                        <Trophy size={16} className="md:w-6 md:h-6" />
+                        Réalisations
+                      </button>
                   </div>
               </div>
 
@@ -480,7 +548,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           </div>
 
           {/* CONTENU PRINCIPAL - FLEX-1 POUR PRENDRE JUSTE L'ESPACE RESTANT */}
-          <div className={`flex-1 flex flex-col overflow-hidden relative transition-colors duration-1000 ease-in-out min-h-0 ${activeMode === 'PLANNING' ? 'bg-[#0f172a]' : 'bg-gray-900'}`}>
+          <div className={`flex-1 flex flex-col overflow-hidden relative transition-colors duration-1000 ease-in-out min-h-0 ${activeMode === 'PLANNING' ? 'bg-[#0f172a]' : activeMode === 'REALISATIONS' ? 'bg-black' : 'bg-gray-900'}`}>
               
               {activeMode === 'PUBLICITE' && currentProduct ? (
                 <div className="flex flex-col lg:flex-row w-full animate-fade-in h-full min-h-0">
@@ -627,12 +695,48 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                 </div>
                             </div>
                         ))}
-                        
-                        {Array.from({ length: Math.max(0, 3 - currentPlanningSlice.length) }).map((_, i) => (
-                            <div key={`empty-${i}`} className="border-2 border-dashed border-white/5 rounded-3xl flex items-center justify-center opacity-10 h-full">
-                                <span className="text-white font-black text-4xl uppercase">EBF</span>
+                    </div>
+                </div>
+              ) : activeMode === 'REALISATIONS' && currentAchievement ? (
+                <div className="flex w-full h-full relative animate-fade-in bg-black">
+                    {currentAchievement.mediaType === 'video' ? (
+                        <video 
+                            ref={videoRef}
+                            src={currentAchievement.mediaUrl}
+                            className="w-full h-full object-contain"
+                            autoPlay
+                            muted={isMuted}
+                            onEnded={handleVideoEnded}
+                        />
+                    ) : (
+                        <img 
+                            src={currentAchievement.mediaUrl}
+                            alt={currentAchievement.title}
+                            className="w-full h-full object-contain animate-scale-in"
+                        />
+                    )}
+                    
+                    {/* OVERLAY TITRE REALISATION */}
+                    <div className="absolute bottom-10 left-10 right-10 flex justify-center">
+                        <div className="bg-black/70 backdrop-blur-md px-10 py-6 rounded-[3rem] border border-white/20 text-center max-w-4xl shadow-2xl animate-slide-up">
+                            <h2 className="text-3xl md:text-5xl font-black uppercase text-white tracking-tighter mb-2">
+                                {currentAchievement.title}
+                            </h2>
+                            {currentAchievement.description && (
+                                <p className="text-lg md:text-2xl text-gray-300 font-medium">
+                                    {currentAchievement.description}
+                                </p>
+                            )}
+                            <div className="flex justify-center items-center gap-2 mt-4">
+                                <span className="bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest">
+                                    Réalisation EBF
+                                </span>
+                                <span className="text-gray-500 text-sm font-bold">•</span>
+                                <span className="text-gray-400 text-sm font-bold uppercase tracking-widest">
+                                    {new Date(currentAchievement.date).toLocaleDateString()}
+                                </span>
                             </div>
-                        ))}
+                        </div>
                     </div>
                 </div>
               ) : (
