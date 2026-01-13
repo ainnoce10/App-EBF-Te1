@@ -441,7 +441,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                 <div className="w-full h-full p-12 flex flex-col animate-fade-in">
                     <div className="flex justify-between items-end mb-8 border-b border-white/10 pb-6">
                         <div>
-                           <h2 className="text-5xl font-black text-white uppercase italic tracking-tighter mb-2">Chantiers EBF</h2>
+                           <h2 className="text-5xl font-black text-white uppercase italic tracking-tighter mb-2">programmes des interventions en cours...</h2>
                            <span className="text-orange-500 font-black text-3xl uppercase tracking-widest">{todayDate}</span>
                         </div>
                         <div className="flex items-center gap-4 bg-white/5 px-6 py-3 rounded-2xl border border-white/10">
