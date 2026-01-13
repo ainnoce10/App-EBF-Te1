@@ -12,7 +12,6 @@ import {
   MapPin,
   Volume2,
   VolumeX,
-  Play,
   Maximize2,
   Minimize2,
   Settings,
@@ -177,7 +176,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                 audioRef.current.play()
                     .catch((e) => {
                         console.log("Autoplay audio bloqué par le navigateur", e);
-                        setIsMuted(true); // On mute silencieusement si ça bloque
+                        setIsMuted(true); // On mute silencieusement si ça bloque pour garantir le lancement auto visuel
                     })
                     .finally(() => setAudioLoading(false));
             }
