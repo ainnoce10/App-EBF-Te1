@@ -437,46 +437,47 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               </div>
           )}
 
-          {/* HEADER TV */}
-          <div className="bg-gray-950 px-4 py-4 md:px-10 md:h-28 flex flex-col md:flex-row items-center justify-between border-b-4 md:border-b-[8px] border-orange-600 shadow-2xl z-50 gap-4 md:gap-0 shrink-0 transition-colors duration-500">
-              <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 w-full md:w-auto">
-                  <div className="bg-white/10 px-4 py-2 md:px-6 md:py-4 rounded-xl md:rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-                    <Logo url={customLogo} size="lg" theme="dark" label="TV" />
+          {/* HEADER TV - OPTIMISÉ POUR SMART TV (43" et moins) */}
+          <div className="bg-gray-950 px-2 py-2 md:px-4 md:h-24 flex flex-col md:flex-row items-center justify-between border-b-4 md:border-b-[6px] border-orange-600 shadow-2xl z-50 gap-2 md:gap-0 shrink-0 transition-colors duration-500">
+              <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 w-full md:w-auto">
+                  <div className="bg-white/10 px-3 py-1.5 md:px-4 md:py-2 rounded-xl md:rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                    {/* Logo réduit à 'md' pour sauver de l'espace horizontal sur TV */}
+                    <Logo url={customLogo} size="md" theme="dark" label="TV" />
                   </div>
                   
-                  <div className="flex gap-2 md:gap-4 bg-white/5 p-1.5 md:p-2 rounded-2xl md:rounded-3xl border border-white/10 w-full md:w-auto justify-center">
+                  <div className="flex gap-1 md:gap-2 bg-white/5 p-1 md:p-1.5 rounded-xl md:rounded-2xl border border-white/10 w-full md:w-auto justify-center">
                       <button 
                         onClick={() => setActiveMode('PUBLICITE')}
-                        className={`flex items-center justify-center gap-2 md:gap-4 px-4 py-2 md:px-8 md:py-3 rounded-xl md:rounded-2xl font-black text-xs md:text-xl uppercase transition-all flex-1 md:flex-none ${activeMode === 'PUBLICITE' ? 'bg-orange-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
+                        className={`flex items-center justify-center gap-1.5 px-2 py-2 md:px-4 md:py-2 rounded-lg md:rounded-xl font-black text-[10px] md:text-xs lg:text-sm uppercase transition-all flex-1 md:flex-none whitespace-nowrap ${activeMode === 'PUBLICITE' ? 'bg-orange-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
                       >
-                        <LayoutGrid size={16} className="md:w-6 md:h-6" />
-                        <span className="hidden md:inline">Nos</span> Produits
+                        <LayoutGrid size={14} className="md:w-4 md:h-4" />
+                        <span className="hidden sm:inline">Nos</span> Produits
                       </button>
                       <button 
                         onClick={() => setActiveMode('PLANNING')}
-                        className={`flex items-center justify-center gap-2 md:gap-4 px-4 py-2 md:px-8 md:py-3 rounded-xl md:rounded-2xl font-black text-xs md:text-xl uppercase transition-all flex-1 md:flex-none ${activeMode === 'PLANNING' ? 'bg-blue-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
+                        className={`flex items-center justify-center gap-1.5 px-2 py-2 md:px-4 md:py-2 rounded-lg md:rounded-xl font-black text-[10px] md:text-xs lg:text-sm uppercase transition-all flex-1 md:flex-none whitespace-nowrap ${activeMode === 'PLANNING' ? 'bg-blue-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
                       >
-                        <ClipboardList size={16} className="md:w-6 md:h-6" />
+                        <ClipboardList size={14} className="md:w-4 md:h-4" />
                         Chantiers
                       </button>
                       <button 
                         onClick={() => setActiveMode('REALISATIONS')}
-                        className={`flex items-center justify-center gap-2 md:gap-4 px-4 py-2 md:px-8 md:py-3 rounded-xl md:rounded-2xl font-black text-xs md:text-xl uppercase transition-all flex-1 md:flex-none ${activeMode === 'REALISATIONS' ? 'bg-purple-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
+                        className={`flex items-center justify-center gap-1.5 px-2 py-2 md:px-4 md:py-2 rounded-lg md:rounded-xl font-black text-[10px] md:text-xs lg:text-sm uppercase transition-all flex-1 md:flex-none whitespace-nowrap ${activeMode === 'REALISATIONS' ? 'bg-purple-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
                       >
-                        <Trophy size={16} className="md:w-6 md:h-6" />
+                        <Trophy size={14} className="md:w-4 md:h-4" />
                         Réalisations
                       </button>
                   </div>
               </div>
 
-              <div className="flex items-center gap-4 md:gap-8 absolute top-4 right-4 md:static transition-opacity duration-500" style={{ opacity: cursorVisible ? 1 : 0 }}>
+              <div className="flex items-center gap-2 md:gap-3 absolute top-2 right-2 md:static transition-opacity duration-500" style={{ opacity: cursorVisible ? 1 : 0 }}>
                   {/* BOUTON REGLAGE TV */}
                   <div className="relative">
                       <button 
                         onClick={() => setShowTvSettings(!showTvSettings)}
-                        className={`p-3 rounded-full border transition-all ${showTvSettings ? 'bg-orange-600 text-white border-orange-500' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white'}`}
+                        className={`p-2 md:p-2.5 rounded-full border transition-all ${showTvSettings ? 'bg-orange-600 text-white border-orange-500' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white'}`}
                       >
-                          <Settings size={20} className={showTvSettings ? "animate-spin-slow" : ""} />
+                          <Settings size={16} className={`md:w-5 md:h-5 ${showTvSettings ? "animate-spin-slow" : ""}`} />
                       </button>
 
                       {/* POPUP DE REGLAGE */}
@@ -525,22 +526,22 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
                   <button 
                     onClick={toggleMute}
-                    className={`p-3 rounded-full border transition-all ${isMuted ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-green-500/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'}`}
+                    className={`p-2 md:p-2.5 rounded-full border transition-all ${isMuted ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-green-500/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'}`}
                   >
-                      {audioLoading ? <Loader2 size={20} className="animate-spin" /> : (isMuted ? <VolumeX size={20} /> : <Volume1 size={20} />)}
+                      {audioLoading ? <Loader2 size={16} className="md:w-5 md:h-5 animate-spin" /> : (isMuted ? <VolumeX size={16} className="md:w-5 md:h-5" /> : <Volume1 size={16} className="md:w-5 md:h-5" />)}
                   </button>
                   
-                  <button onClick={() => document.documentElement.requestFullscreen().catch(console.error)} className="hidden md:block p-3 rounded-full border bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10">
+                  <button onClick={() => document.documentElement.requestFullscreen().catch(console.error)} className="hidden md:block p-2.5 rounded-full border bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10">
                     <Maximize2 size={20}/>
                   </button>
 
-                  <div className="hidden md:flex bg-green-600/10 px-4 py-2 rounded-full border border-green-500/30 items-center gap-3">
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.8)]"></div>
-                    <span className="text-green-500 font-black text-lg uppercase tracking-widest">En Direct</span>
+                  <div className="hidden md:flex bg-green-600/10 px-3 py-1.5 rounded-full border border-green-500/30 items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.8)]"></div>
+                    <span className="text-green-500 font-black text-xs uppercase tracking-widest">En Direct</span>
                   </div>
                   {onClose && (
-                    <button onClick={onClose} className="p-2 md:p-4 bg-red-600/10 hover:bg-red-600 text-red-600 hover:text-white rounded-full transition-all border border-red-500/20">
-                      <X size={20} className="md:w-8 md:h-8" />
+                    <button onClick={onClose} className="p-2 md:p-3 bg-red-600/10 hover:bg-red-600 text-red-600 hover:text-white rounded-full transition-all border border-red-500/20">
+                      <X size={16} className="md:w-6 md:h-6" />
                     </button>
                   )}
               </div>
