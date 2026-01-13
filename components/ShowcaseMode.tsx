@@ -78,11 +78,26 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
   // 0. CHARGEMENT REGLAGES TV & FULLSCREEN LISTENER
   useEffect(() => {
-    const savedPadding = localStorage.getItem('ebf_tv_padding');
-    if (savedPadding) setOverscanPadding(parseFloat(savedPadding));
+    // Détection spécifique de la route /tv pour appliquer des réglages "Safe Zone" par défaut
+    const isTvRoute = window.location.pathname.includes('/tv') || window.location.search.includes('mode=tv');
 
+    // Marge (Overscan)
+    const savedPadding = localStorage.getItem('ebf_tv_padding');
+    if (savedPadding) {
+        setOverscanPadding(parseFloat(savedPadding));
+    } else if (isTvRoute) {
+        // SUR /TV : Marge par défaut plus grande (6%) pour éviter les coupures de bordure TV
+        setOverscanPadding(6);
+    }
+
+    // Zoom
     const savedZoom = localStorage.getItem('ebf_tv_zoom');
-    if (savedZoom) setZoomLevel(parseFloat(savedZoom));
+    if (savedZoom) {
+        setZoomLevel(parseFloat(savedZoom));
+    } else if (isTvRoute) {
+        // SUR /TV : Zoom réduit (0.85) pour tout faire rentrer sur un 43" sans débordement
+        setZoomLevel(0.85);
+    }
     
     if (initialMusicUrl) setAudioSrc(initialMusicUrl);
 
