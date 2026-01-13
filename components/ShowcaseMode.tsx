@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { StockItem, Intervention, TickerMessage } from '../types';
+import { StockItem, Intervention, TickerMessage, Achievement } from '../types';
 import { supabase } from '../lib/supabase';
 import { 
   X, 
@@ -21,7 +21,10 @@ import {
   Monitor,
   Scan,
   Phone,
-  Loader2
+  Loader2,
+  Trophy,
+  Video,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Logo } from '../constants';
 
@@ -30,6 +33,7 @@ interface ShowcaseModeProps {
   liveStock?: StockItem[];
   liveInterventions?: Intervention[];
   liveMessages?: TickerMessage[];
+  liveAchievements?: Achievement[];
   customLogo?: string;
   initialMusicUrl?: string;
 }
@@ -39,12 +43,14 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   liveStock = [], 
   liveInterventions = [], 
   liveMessages = [],
+  liveAchievements = [],
   customLogo,
   initialMusicUrl
 }) => {
-  const [activeMode, setActiveMode] = useState<'PUBLICITE' | 'PLANNING'>('PUBLICITE');
+  const [activeMode, setActiveMode] = useState<'PUBLICITE' | 'PLANNING' | 'REALISATIONS'>('PUBLICITE');
   const [productIdx, setProductIdx] = useState(0);
   const [planningPage, setPlanningPage] = useState(0);
+  const [achievementIdx, setAchievementIdx] = useState(0);
   
   // Audio state
   const [isMuted, setIsMuted] = useState(false);
@@ -52,20 +58,21 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const [autoplayFailed, setAutoplayFailed] = useState(false);
   const [audioLoading, setAudioLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // TV Settings State (Overscan & Zoom)
-  // Augmentation de la marge par défaut à 5% pour être plus sûr sur les vieilles TV
   const [overscanPadding, setOverscanPadding] = useState(5); 
-  const [zoomLevel, setZoomLevel] = useState(1); // Echelle (1 = 100%)
+  const [zoomLevel, setZoomLevel] = useState(1); 
   const [showTvSettings, setShowTvSettings] = useState(false);
 
   const products = liveStock.length > 0 ? liveStock : [];
   
-  // Filtrage des interventions : Uniquement 'En cours' ou 'En attente'
+  // Filtrage des interventions
   const planning = liveInterventions.length > 0 
     ? liveInterventions.filter(i => i.status === 'En cours' || i.status === 'En attente') 
     : [];
 
+  const achievements = liveAchievements.length > 0 ? liveAchievements : [];
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
   // 0. CHARGEMENT REGLAGES TV
@@ -76,7 +83,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     const savedZoom = localStorage.getItem('ebf_tv_zoom');
     if (savedZoom) setZoomLevel(parseFloat(savedZoom));
     
-    // Si la musique change via les props (depuis App.tsx)
     if (initialMusicUrl) setAudioSrc(initialMusicUrl);
   }, [initialMusicUrl]);
 
@@ -96,7 +102,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       });
   };
 
-  // 1. Ecoute Realtime pour la musique (Si change sans rechargement)
+  // 1. Ecoute Realtime
   useEffect(() => {
     const channel = supabase.channel('tv-music-showcase')
         .on(
@@ -116,7 +122,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     };
   }, []);
 
-  // 2. Gestion Playback Robuste
+  // 2. Gestion Playback Audio Robuste
   useEffect(() => {
     if (audioRef.current && audioSrc) {
         setAudioLoading(true);
@@ -139,6 +145,20 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
         tryPlay();
     }
   }, [audioSrc]);
+
+  // Pause audio quand une VIDÉO de réalisation est jouée
+  useEffect(() => {
+      const currentAch = achievements[achievementIdx];
+      const isVideoPlaying = activeMode === 'REALISATIONS' && currentAch?.mediaType === 'video';
+      
+      if (audioRef.current) {
+          if (isVideoPlaying) {
+              audioRef.current.pause();
+          } else if (!isMuted && !autoplayFailed) {
+              audioRef.current.play().catch(() => {});
+          }
+      }
+  }, [activeMode, achievementIdx, achievements, isMuted, autoplayFailed]);
 
   const handleStartShow = async () => {
     setIsMuted(false);
@@ -181,13 +201,21 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return "text-lg md:text-3xl lg:text-4xl xl:text-5xl"; 
   };
 
+  // --- CYCLES D'AFFICHAGE ---
+
+  // 1. Changement de mode global (60s)
   useEffect(() => {
     const modeInterval = setInterval(() => {
-      setActiveMode((prev) => (prev === 'PUBLICITE' ? 'PLANNING' : 'PUBLICITE'));
+      setActiveMode((prev) => {
+          if (prev === 'PUBLICITE') return 'PLANNING';
+          if (prev === 'PLANNING') return 'REALISATIONS';
+          return 'PUBLICITE';
+      });
     }, 60000); 
     return () => clearInterval(modeInterval);
   }, []);
 
+  // 2. Cycle Produits (10s)
   useEffect(() => {
     if (activeMode !== 'PUBLICITE' || products.length === 0) return;
     const interval = setInterval(() => {
@@ -196,6 +224,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return () => clearInterval(interval);
   }, [activeMode, products.length]);
 
+  // 3. Cycle Planning (20s)
   const itemsPerPage = 3;
   const totalPlanningPages = Math.ceil(planning.length / itemsPerPage) || 1;
 
@@ -210,8 +239,30 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return () => clearInterval(interval);
   }, [activeMode, planning.length, totalPlanningPages]);
 
+  // 4. Cycle Réalisations
+  useEffect(() => {
+      if (activeMode !== 'REALISATIONS' || achievements.length === 0) {
+          setAchievementIdx(0);
+          return;
+      }
+      const currentItem = achievements[achievementIdx];
+      // Si image : délai fixe. Si vidéo : attend fin de lecture (géré par onEnded)
+      if (currentItem.mediaType === 'image') {
+          const timer = window.setTimeout(() => {
+              setAchievementIdx(prev => (prev + 1) % achievements.length);
+          }, 10000);
+          return () => clearTimeout(timer);
+      }
+  }, [activeMode, achievements, achievementIdx]);
+
+  const handleVideoEnded = () => {
+      setAchievementIdx(prev => (prev + 1) % achievements.length);
+  };
+
+  // --- DATA ---
   const currentProduct = products[productIdx];
   const currentPlanningSlice = planning.slice(planningPage * itemsPerPage, (planningPage + 1) * itemsPerPage);
+  const currentAchievement = achievements[achievementIdx];
 
   const outerStyle = {
       padding: `${overscanPadding}vmin`
@@ -266,20 +317,28 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                     <Logo url={customLogo} size="lg" theme="dark" label="TV" />
                   </div>
                   
+                  {/* NAVIGATION MODES */}
                   <div className="flex gap-2 md:gap-4 bg-white/5 p-1.5 md:p-2 rounded-2xl md:rounded-3xl border border-white/10 w-full md:w-auto justify-center">
                       <button 
                         onClick={() => setActiveMode('PUBLICITE')}
-                        className={`flex items-center justify-center gap-2 md:gap-4 px-4 py-2 md:px-8 md:py-3 rounded-xl md:rounded-2xl font-black text-xs md:text-xl uppercase transition-all flex-1 md:flex-none ${activeMode === 'PUBLICITE' ? 'bg-orange-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
+                        className={`flex items-center justify-center gap-2 md:gap-4 px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl font-black text-xs md:text-xl uppercase transition-all flex-1 md:flex-none ${activeMode === 'PUBLICITE' ? 'bg-orange-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
                       >
                         <LayoutGrid size={16} className="md:w-6 md:h-6" />
                         <span className="hidden md:inline">Nos</span> Produits
                       </button>
                       <button 
                         onClick={() => setActiveMode('PLANNING')}
-                        className={`flex items-center justify-center gap-2 md:gap-4 px-4 py-2 md:px-8 md:py-3 rounded-xl md:rounded-2xl font-black text-xs md:text-xl uppercase transition-all flex-1 md:flex-none ${activeMode === 'PLANNING' ? 'bg-blue-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
+                        className={`flex items-center justify-center gap-2 md:gap-4 px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl font-black text-xs md:text-xl uppercase transition-all flex-1 md:flex-none ${activeMode === 'PLANNING' ? 'bg-blue-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
                       >
                         <ClipboardList size={16} className="md:w-6 md:h-6" />
                         Chantiers
+                      </button>
+                      <button 
+                        onClick={() => setActiveMode('REALISATIONS')}
+                        className={`flex items-center justify-center gap-2 md:gap-4 px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl font-black text-xs md:text-xl uppercase transition-all flex-1 md:flex-none ${activeMode === 'REALISATIONS' ? 'bg-purple-600 text-white shadow-xl scale-105' : 'text-white/20 hover:text-white/50'}`}
+                      >
+                        <Trophy size={16} className="md:w-6 md:h-6" />
+                        Réalisations
                       </button>
                   </div>
               </div>
@@ -326,7 +385,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                       <div className="flex items-center gap-3">
                                           <button onClick={() => updateZoom(-0.05)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Scan size={16}/></button>
                                           <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
-                                              {/* 0.5 to 1.5 range mapping */}
                                               <div className="h-full bg-blue-500 transition-all" style={{ width: `${((zoomLevel - 0.5) / 1) * 100}%` }}></div>
                                           </div>
                                           <button onClick={() => updateZoom(0.05)} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-white"><Maximize2 size={16}/></button>
@@ -345,10 +403,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                       {audioLoading ? <Loader2 size={20} className="animate-spin" /> : (isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />)}
                   </button>
                   
-                  <button onClick={() => document.documentElement.requestFullscreen().catch(console.error)} className="hidden md:block p-3 rounded-full border bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10">
-                    <Maximize2 size={20}/>
-                  </button>
-
                   <div className="hidden md:flex bg-green-600/10 px-4 py-2 rounded-full border border-green-500/30 items-center gap-3">
                     <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.8)]"></div>
                     <span className="text-green-500 font-black text-lg uppercase tracking-widest">En Direct</span>
@@ -361,54 +415,60 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               </div>
           </div>
 
-          {/* CONTENU PRINCIPAL - FLEX-1 POUR PRENDRE JUSTE L'ESPACE RESTANT */}
+          {/* CONTENU PRINCIPAL */}
           <div className={`flex-1 flex flex-col overflow-hidden relative transition-colors duration-1000 ease-in-out min-h-0 ${activeMode === 'PLANNING' ? 'bg-[#0f172a]' : 'bg-gray-900'}`}>
               
-              {activeMode === 'PUBLICITE' && currentProduct ? (
-                <div className="flex flex-col lg:flex-row w-full animate-fade-in h-full min-h-0">
-                    {/* ZONE IMAGE */}
-                    <div className="w-full lg:w-[45%] h-[45%] lg:h-full relative flex items-center justify-center p-4 md:p-8 bg-gray-950 overflow-hidden shrink-0">
-                        <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/10 to-transparent opacity-50"></div>
-                        <div key={currentProduct.id} className="relative w-full h-full flex items-center justify-center animate-scale-in">
-                            <div className="absolute w-[90%] h-[90%] bg-white/5 blur-[60px] rounded-full animate-pulse-slow"></div>
-                            <img 
-                              src={currentProduct.imageUrls?.[0] || 'https://placehold.co/800x800/1a1a1a/ffffff?text=EBF+Ivoire'} 
-                              alt={currentProduct.name}
-                              className="relative z-10 w-full h-full object-cover rounded-3xl md:rounded-[2.5rem] shadow-[0_30px_80px_rgba(0,0,0,0.9)] border-4 md:border-[8px] border-white/20 bg-gray-800 animate-float"
-                            />
+              {/* MODE PUBLICITE (PRODUITS) */}
+              {activeMode === 'PUBLICITE' && (
+                  currentProduct ? (
+                    <div className="flex flex-col lg:flex-row w-full animate-fade-in h-full min-h-0">
+                        {/* ZONE IMAGE */}
+                        <div className="w-full lg:w-[45%] h-[45%] lg:h-full relative flex items-center justify-center p-4 md:p-8 bg-gray-950 overflow-hidden shrink-0">
+                            <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/10 to-transparent opacity-50"></div>
+                            <div key={currentProduct.id} className="relative w-full h-full flex items-center justify-center animate-scale-in">
+                                <div className="absolute w-[90%] h-[90%] bg-white/5 blur-[60px] rounded-full animate-pulse-slow"></div>
+                                <img 
+                                  src={currentProduct.imageUrls?.[0] || 'https://placehold.co/800x800/1a1a1a/ffffff?text=EBF+Ivoire'} 
+                                  alt={currentProduct.name}
+                                  className="relative z-10 w-full h-full object-cover rounded-3xl md:rounded-[2.5rem] shadow-[0_30px_80px_rgba(0,0,0,0.9)] border-4 md:border-[8px] border-white/20 bg-gray-800 animate-float"
+                                />
+                            </div>
                         </div>
-                    </div>
-                    
-                    {/* ZONE TEXTE */}
-                    <div className="w-full lg:w-[55%] h-[55%] lg:h-full bg-white text-gray-950 flex flex-col p-6 md:p-16 justify-center shadow-[-20px_0_100px_rgba(0,0,0,0.4)] relative overflow-hidden">
-                        <div className="flex flex-col h-full justify-between space-y-4 md:space-y-8 animate-slide-up relative z-10 max-h-full">
-                            <div className="flex-1 min-h-0 flex flex-col justify-center">
-                                <div className="w-full">
-                                    <span className="px-4 py-1.5 md:px-8 md:py-3 bg-orange-600 text-white rounded-lg md:rounded-xl text-xs md:text-2xl font-black uppercase mb-2 md:mb-6 inline-block shadow-lg tracking-widest shrink-0">
-                                    {currentProduct.category}
-                                    </span>
-                                    <h1 className={`${getTitleSizeClass(currentProduct.name)} font-black leading-tight md:leading-[0.95] tracking-tighter mb-4 md:mb-8 text-gray-950 uppercase italic line-clamp-4`}>
-                                    {currentProduct.name}
-                                    </h1>
-                                    <div className="flex flex-wrap items-center gap-4 md:gap-10 text-gray-400 font-black text-xs md:text-2xl uppercase tracking-widest shrink-0 pb-2">
-                                        <div className="flex items-center gap-2 md:gap-3"><Zap size={16} className="md:w-8 md:h-8 text-orange-600" /> {currentProduct.supplier}</div>
-                                        <div className="flex items-center gap-2 md:gap-3"><ShieldCheck size={16} className="md:w-8 md:h-8 text-green-600" /> Certifié EBF</div>
+                        
+                        {/* ZONE TEXTE */}
+                        <div className="w-full lg:w-[55%] h-[55%] lg:h-full bg-white text-gray-950 flex flex-col p-6 md:p-16 justify-center shadow-[-20px_0_100px_rgba(0,0,0,0.4)] relative overflow-hidden">
+                            <div className="flex flex-col h-full justify-between space-y-4 md:space-y-8 animate-slide-up relative z-10 max-h-full">
+                                <div className="flex-1 min-h-0 flex flex-col justify-center">
+                                    <div className="w-full">
+                                        <span className="px-4 py-1.5 md:px-8 md:py-3 bg-orange-600 text-white rounded-lg md:rounded-xl text-xs md:text-2xl font-black uppercase mb-2 md:mb-6 inline-block shadow-lg tracking-widest shrink-0">
+                                        {currentProduct.category}
+                                        </span>
+                                        <h1 className={`${getTitleSizeClass(currentProduct.name)} font-black leading-tight md:leading-[0.95] tracking-tighter mb-4 md:mb-8 text-gray-950 uppercase italic line-clamp-4`}>
+                                        {currentProduct.name}
+                                        </h1>
+                                        <div className="flex flex-wrap items-center gap-4 md:gap-10 text-gray-400 font-black text-xs md:text-2xl uppercase tracking-widest shrink-0 pb-2">
+                                            <div className="flex items-center gap-2 md:gap-3"><Zap size={16} className="md:w-8 md:h-8 text-orange-600" /> {currentProduct.supplier}</div>
+                                            <div className="flex items-center gap-2 md:gap-3"><ShieldCheck size={16} className="md:w-8 md:h-8 text-green-600" /> Certifié EBF</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="shrink-0 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-10 pt-2 md:pt-4 border-t border-gray-100/50">
+                                    <div className="bg-gray-950 p-6 md:p-10 rounded-2xl md:rounded-[3rem] text-white w-full md:flex-1 border-b-[8px] md:border-b-[20px] border-orange-600 shadow-xl">
+                                        <p className="text-sm md:text-2xl font-black uppercase text-orange-500 mb-2 md:mb-4 tracking-widest">Prix Exceptionnel</p>
+                                        <p className="text-4xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-none text-white whitespace-nowrap">
+                                          {currentProduct.unitPrice.toLocaleString()} <span className="text-xl md:text-4xl text-gray-600 font-bold ml-1">F</span>
+                                        </p>
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="shrink-0 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-10 pt-2 md:pt-4 border-t border-gray-100/50">
-                                <div className="bg-gray-950 p-6 md:p-10 rounded-2xl md:rounded-[3rem] text-white w-full md:flex-1 border-b-[8px] md:border-b-[20px] border-orange-600 shadow-xl">
-                                    <p className="text-sm md:text-2xl font-black uppercase text-orange-500 mb-2 md:mb-4 tracking-widest">Prix Exceptionnel</p>
-                                    <p className="text-4xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-none text-white whitespace-nowrap">
-                                      {currentProduct.unitPrice.toLocaleString()} <span className="text-xl md:text-4xl text-gray-600 font-bold ml-1">F</span>
-                                    </p>
-                                </div>
-                            </div>
                         </div>
                     </div>
-                </div>
-              ) : activeMode === 'PLANNING' ? (
+                  ) : <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-white" size={64}/></div>
+              )}
+
+              {/* MODE PLANNING */}
+              {activeMode === 'PLANNING' && (
                 <div className="flex w-full p-6 md:p-16 animate-fade-in flex-col h-full min-h-0 overflow-hidden">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 md:mb-8 shrink-0 border-b border-white/10 pb-4 md:pb-6 gap-4">
                         <div className="flex flex-col md:flex-row md:items-baseline gap-4 md:gap-8">
@@ -426,16 +486,14 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                         </div>
                     </div>
                     
-                    {/* GRILLE ELASTIQUE QUI NE DEBORDE PAS VERTICALEMENT */}
+                    {/* GRILLE */}
                     <div 
                         key={planningPage} 
                         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 min-h-0 animate-slide-up"
                     >
                         {currentPlanningSlice.map((inter) => (
                             <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-6 md:p-8 rounded-3xl flex flex-col gap-4 shadow-2xl h-full relative overflow-hidden group">
-                                {/* NOUVEAU HEADER: STATUS & SITE */}
                                 <div className="flex justify-between items-start mb-4">
-                                     {/* STATUT - AUGMENTE */}
                                      <span className={`px-4 py-1.5 md:px-5 md:py-2 rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest inline-block text-center shadow-lg
                                       ${inter.status === 'Terminé' ? 'bg-green-500 text-white' : 
                                         inter.status === 'En cours' ? 'bg-orange-500 text-white' : 
@@ -444,7 +502,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                       {inter.status}
                                     </span>
                                     
-                                    {/* SITE - AUGMENTE */}
                                     {inter.site && (
                                         <div className="flex items-center gap-2 md:gap-3 bg-white/10 px-4 py-1.5 md:px-5 md:py-2 rounded-xl border border-white/10 backdrop-blur-md animate-pulse-soft">
                                             <MapPin className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />
@@ -455,10 +512,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                     )}
                                 </div>
 
-                                {/* Body Information - REORDONNÉ */}
                                 <div className="flex-1 flex flex-col justify-start min-h-0 space-y-4">
-                                    
-                                    {/* 1. NATURE & DOMAINE (Inversé & Diminué) */}
                                     <div className="flex flex-wrap items-center gap-3 mb-1">
                                          {inter.interventionType && (
                                             <span className="px-3 py-1 bg-gray-700/50 border border-gray-600 text-gray-200 rounded-lg text-sm md:text-xl font-black uppercase">
@@ -472,7 +526,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                         )}
                                     </div>
 
-                                    {/* 2. CLIENT */}
                                     <div>
                                         <span className="text-gray-400 text-[10px] uppercase font-bold tracking-widest block mb-1">Client</span>
                                         <h4 className="text-white text-xl md:text-3xl font-black tracking-tight leading-none uppercase truncate">
@@ -480,7 +533,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                         </h4>
                                     </div>
 
-                                    {/* 3. LIEU */}
                                     {inter.location && (
                                         <div className="flex items-center gap-2 text-gray-300">
                                             <MapPin size={24} className="text-orange-500 shrink-0" />
@@ -490,7 +542,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                         </div>
                                     )}
 
-                                    {/* 4. TEL (VERT) */}
                                     {inter.clientPhone && (
                                         <div className="flex items-center gap-2 text-green-400">
                                             <Phone size={24} className="text-green-500 shrink-0" />
@@ -500,7 +551,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                         </div>
                                     )}
 
-                                    {/* 5. DETAILS (Description) */}
                                     <div className="mt-auto bg-black/40 p-3 md:p-4 rounded-xl border-t border-white/5 flex-1 min-h-0 overflow-hidden relative">
                                         <p className="text-gray-100 text-lg md:text-2xl lg:text-3xl font-bold leading-tight line-clamp-3 md:line-clamp-4">
                                             {inter.description}
@@ -517,14 +567,53 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                         ))}
                     </div>
                 </div>
-              ) : (
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center space-y-6 animate-pulse p-4">
-                      <Megaphone size={60} className="md:w-[120px] md:h-[120px] text-white/10 mx-auto" />
-                      <p className="text-xl md:text-4xl text-white/20 font-black uppercase tracking-[0.5rem]">Mise à jour du contenu...</p>
-                    </div>
-                </div>
               )}
+
+              {/* MODE REALISATIONS */}
+              {activeMode === 'REALISATIONS' && (
+                  currentAchievement ? (
+                      <div className="flex w-full h-full relative bg-black flex items-center justify-center animate-fade-in">
+                          {currentAchievement.mediaType === 'video' ? (
+                              <video 
+                                ref={videoRef}
+                                src={currentAchievement.mediaUrl}
+                                className="w-full h-full object-contain"
+                                autoPlay
+                                muted={isMuted}
+                                onEnded={handleVideoEnded}
+                                onError={handleVideoEnded}
+                              />
+                          ) : (
+                              <img 
+                                src={currentAchievement.mediaUrl}
+                                className="w-full h-full object-contain animate-scale-in"
+                                alt={currentAchievement.title}
+                              />
+                          )}
+                          
+                          {/* Overlay Description Réalisation */}
+                          <div className="absolute bottom-12 left-0 right-0 flex justify-center px-8 z-20">
+                              <div className="bg-black/70 backdrop-blur-xl px-8 py-6 md:px-12 md:py-8 rounded-[2rem] border border-white/10 text-center max-w-5xl shadow-2xl animate-slide-up">
+                                  <div className="flex justify-center mb-2">
+                                      <span className="bg-purple-600 text-white px-3 py-1 rounded-lg text-xs md:text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                                         {currentAchievement.mediaType === 'video' ? <Video size={14}/> : <ImageIcon size={14}/>} 
+                                         Réalisation
+                                      </span>
+                                  </div>
+                                  <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tight mb-2 leading-none">
+                                      {currentAchievement.title}
+                                  </h2>
+                                  {currentAchievement.description && (
+                                      <p className="text-lg md:text-2xl text-gray-300 font-medium line-clamp-2">
+                                          {currentAchievement.description}
+                                      </p>
+                                  )}
+                              </div>
+                          </div>
+                      </div>
+                  ) : <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-white" size={64}/></div>
+              )}
+
           </div>
 
           {/* FLASH INFO - FOND NOIR */}
