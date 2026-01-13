@@ -167,36 +167,33 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return () => { supabase.removeChannel(channel); };
   }, [initialMusicUrl]);
 
+  // Gestion Audio Principale (Background Music)
   useEffect(() => {
     if (audioRef.current && audioSrc) {
-        setAudioLoading(true);
-        audioRef.current.volume = 0.5;
-        const tryPlay = async () => {
-             try {
-                 if (!isMuted) await audioRef.current?.play();
-             } catch (error) {
-                 setAutoplayFailed(true);
-                 setIsMuted(true);
-             } finally { setAudioLoading(false); }
-        };
-        tryPlay();
+        // Logique simplifiée : si pas muet et pas d'erreur, on joue TOUT LE TEMPS
+        // On ne coupe plus quand la vidéo se lance.
+        if (!isMuted && !autoplayFailed) {
+            if (audioRef.current.paused) {
+                setAudioLoading(true);
+                audioRef.current.volume = 0.5;
+                audioRef.current.play()
+                    .catch(() => {
+                        setAutoplayFailed(true);
+                        setIsMuted(true);
+                    })
+                    .finally(() => setAudioLoading(false));
+            }
+        } else {
+            audioRef.current.pause();
+        }
     }
-  }, [audioSrc]);
-
-  // Pause audio quand vidéo joue
-  useEffect(() => {
-      const currentAch = achievements[achievementIdx];
-      const isVideoPlaying = activeMode === 'REALISATIONS' && currentAch?.mediaType === 'video';
-      if (audioRef.current) {
-          if (isVideoPlaying) audioRef.current.pause();
-          else if (!isMuted && !autoplayFailed) audioRef.current.play().catch(() => {});
-      }
-  }, [activeMode, achievementIdx, achievements, isMuted, autoplayFailed]);
+  }, [audioSrc, isMuted, autoplayFailed, activeMode]); // activeMode ajouté pour revérifier si besoin, mais sans condition de coupure
 
   const toggleMute = () => {
       if (isMuted) {
           setIsMuted(false);
-          audioRef.current?.play().catch(() => setAutoplayFailed(true));
+          // Le useEffect se chargera de relancer
+          setAutoplayFailed(false);
       } else {
           setIsMuted(true);
           audioRef.current?.pause();
@@ -526,7 +523,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               {/* MODE REALISATIONS */}
               {activeMode === 'REALISATIONS' && (
                   currentAchievement ? (
-                      <div key={currentAchievement.id} className="w-full h-full flex animate-fade-in">
+                      <div key={currentAchievement.id} className="w-full h-full flex animate-fade-slow">
                           {/* Partie Gauche : Texte & Description */}
                           <div className="w-[40%] h-full bg-white flex flex-col justify-center p-16 shadow-[40px_0_100px_rgba(0,0,0,0.5)] z-20 relative">
                               <div className="self-start mb-12">
@@ -568,9 +565,12 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                       src={currentAchievement.mediaUrl}
                                       className="w-full h-full object-contain relative z-10 shadow-2xl"
                                       autoPlay
-                                      muted={isMuted}
+                                      muted // IMPORTANT: Vidéo muette pour ne pas clasher avec la musique de fond
+                                      playsInline // Empêche le plein écran natif forcé sur certains navigateurs
+                                      loop={false}
                                       onEnded={handleVideoEnded}
                                       onError={handleVideoEnded}
+                                      style={{ pointerEvents: 'none' }} // Désactive toutes les interactions souris (overlays, boutons)
                                   />
                               ) : (
                                   <img 
@@ -608,6 +608,17 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
         .animate-tv-ticker { animation: tv-ticker 40s linear infinite; }
         @keyframes scale-in { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .animate-scale-in { animation: scale-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        
+        /* Nouvelle animation de fondu lent pour les réalisations */
+        @keyframes fadeInSlow { 
+            0% { opacity: 0; } 
+            100% { opacity: 1; } 
+        }
+        .animate-fade-slow { animation: fadeInSlow 1.5s ease-in-out forwards; }
+
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-30px); } }
         .animate-float { animation: float 6s ease-in-out infinite; }
         .animate-spin-slow { animation: spin 4s linear infinite; }
