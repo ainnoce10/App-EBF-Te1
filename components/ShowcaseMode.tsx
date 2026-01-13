@@ -435,32 +435,47 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                     <div className="grid grid-cols-3 gap-8 flex-1 min-h-0">
                         {currentPlanningSlice.map((inter) => (
                             <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-[2.5rem] flex flex-col shadow-2xl relative overflow-hidden animate-slide-up">
-                                <div className="flex justify-between items-start mb-4">
-                                    <span className={`px-4 py-1.5 rounded-xl font-black text-lg uppercase tracking-widest shadow-lg ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
+                                
+                                {/* Status & Tech Header */}
+                                <div className="flex justify-between items-start mb-6">
+                                    <span className={`px-5 py-2 rounded-xl font-black text-xl uppercase tracking-widest shadow-lg ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
                                       {inter.status}
                                     </span>
-                                    {inter.site && (
-                                        <div className="flex items-center gap-2 bg-black/20 px-4 py-1.5 rounded-xl">
-                                            <MapPin className="text-orange-500" size={20} />
-                                            <span className="text-lg font-black text-orange-500 uppercase">{inter.site}</span>
-                                        </div>
-                                    )}
+                                    <div className="text-right">
+                                         <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Technicien</p>
+                                         <p className="text-orange-400 font-black text-xl uppercase">{inter.technician}</p>
+                                    </div>
                                 </div>
                                 
-                                <div className="space-y-4 flex-1 flex flex-col">
+                                {/* Centered Content */}
+                                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
                                     <div>
-                                        <span className="text-gray-400 text-xs uppercase font-bold tracking-widest block mb-1">Client</span>
-                                        <h4 className="text-white text-3xl font-black uppercase leading-none truncate">{inter.client}</h4>
+                                        <h4 className="text-white text-5xl font-black uppercase leading-none tracking-tighter mb-3 drop-shadow-lg">{inter.client}</h4>
+                                        {inter.clientPhone ? (
+                                            <span className="text-blue-300 text-2xl font-bold tracking-widest block bg-blue-900/30 px-4 py-1 rounded-lg border border-blue-500/30 mx-auto w-fit">{inter.clientPhone}</span>
+                                        ) : (
+                                             <span className="text-gray-500 text-xl font-bold tracking-widest block italic">Numéro masqué</span>
+                                        )}
                                     </div>
+
                                     {inter.location && (
-                                        <div className="flex items-center gap-3 text-gray-300 text-xl font-bold">
-                                            <MapPin size={24} className="text-orange-500 shrink-0"/> {inter.location}
+                                        <div className="flex items-center justify-center gap-2 text-gray-200 text-2xl font-bold uppercase tracking-wide">
+                                            <MapPin size={28} className="text-red-500"/> {inter.location}
                                         </div>
                                     )}
-                                    <div className="bg-black/30 p-4 rounded-2xl border border-white/5 flex-1 min-h-0">
-                                        <p className="text-gray-200 text-2xl font-bold leading-tight line-clamp-4">{inter.description}</p>
+                                    
+                                    {/* Description Box Centered */}
+                                    <div className="w-full bg-black/40 p-6 rounded-3xl border border-white/10 backdrop-blur-sm flex items-center justify-center min-h-[120px]">
+                                        <p className="text-white text-3xl font-bold leading-tight">{inter.description}</p>
                                     </div>
                                 </div>
+                                
+                                 {/* Site Badge Bottom */}
+                                 {inter.site && (
+                                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 opacity-30">
+                                        <span className="text-4xl font-black text-white uppercase tracking-[0.5em]">{inter.site}</span>
+                                    </div>
+                                 )}
                             </div>
                         ))}
                          {Array.from({ length: Math.max(0, 3 - currentPlanningSlice.length) }).map((_, i) => (
@@ -514,7 +529,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               <div className="flex-1 overflow-hidden whitespace-nowrap">
                   <div className="inline-block animate-tv-ticker">
                       {flashes.concat(flashes).concat(flashes).map((msg, i) => (
-                          <span key={i} className={`${getMessageColorClass(msg.color)} text-4xl font-black px-16 uppercase italic tracking-tight`}>
+                          <span key={i} className={`${getMessageColorClass(msg.color)} text-6xl font-black px-24 uppercase italic tracking-tight`}>
                               {msg.content} <span className="text-white/20 mx-8">///</span>
                           </span>
                       ))}
