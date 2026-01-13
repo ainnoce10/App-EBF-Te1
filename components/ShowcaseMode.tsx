@@ -369,7 +369,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
           {/* === CONTENU PRINCIPAL (Position Absolue Milieu) === */}
           <div 
-             className={`absolute top-24 bottom-20 left-0 right-0 flex flex-col overflow-hidden transition-colors duration-1000 ease-in-out ${activeMode === 'PLANNING' ? 'bg-[#0f172a]' : 'bg-gray-900'}`}
+             className={`absolute top-24 bottom-32 left-0 right-0 flex flex-col overflow-hidden transition-colors duration-1000 ease-in-out ${activeMode === 'PLANNING' ? 'bg-[#0f172a]' : 'bg-gray-900'}`}
           >
               
               {/* MODE PUBLICITE */}
@@ -522,9 +522,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           </div>
 
           {/* === FOOTER TICKER (Position Absolue Bas) === */}
-          <div className="absolute bottom-0 left-0 right-0 h-20 bg-black border-t-8 border-orange-600 flex items-center shadow-2xl z-[200]">
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-black border-t-8 border-orange-600 flex items-center shadow-2xl z-[200]">
               <div className="bg-gray-950 h-full px-8 flex items-center justify-center z-20 border-r-8 border-orange-500 shadow-2xl">
-                  <Megaphone size={36} className="text-orange-500 animate-bounce" />
+                  <Megaphone size={48} className="text-orange-500 animate-bounce" />
               </div>
               <div className="flex-1 overflow-hidden whitespace-nowrap">
                   <div className="inline-block animate-tv-ticker">
