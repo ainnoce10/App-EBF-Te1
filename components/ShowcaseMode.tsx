@@ -74,12 +74,19 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   );
 
   // Clé de stockage distincte pour ne pas mélanger les réglages PC et TV
-  const storageKey = isTvRoute ? 'ebf_tv_scale_v3' : 'ebf_desktop_scale_v3';
+  const storageKey = isTvRoute ? 'ebf_tv_scale_v4' : 'ebf_desktop_scale_v4';
 
   // Initialisation Dimensions & Settings
   useEffect(() => {
-    const handleResize = () => setWindowSize({ w: window.innerWidth, h: window.innerHeight });
+    const handleResize = () => {
+        setWindowSize({ w: window.innerWidth, h: window.innerHeight });
+    };
+    
     window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize); // Important pour certaines TV
+    
+    // Appel initial pour être sûr
+    handleResize();
     
     // Charger réglage utilisateur
     const savedScale = localStorage.getItem(storageKey);
@@ -89,8 +96,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     } else {
         if (isTvRoute) {
             // AJUSTEMENT SUR MESURE TV (95cm x 53cm)
-            // On force à 0.75 (75%) pour contrer le zoom natif du navigateur TV
-            setUserScaleModifier(0.75); 
+            // On remet à 1.0 (100%) pour REMPLIR l'écran. 
+            // 0.75 était trop petit.
+            setUserScaleModifier(1.0); 
         } else {
             // PC : 100%
             setUserScaleModifier(1.0);
@@ -114,6 +122,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
     return () => {
         window.removeEventListener('resize', handleResize);
+        window.removeEventListener('orientationchange', handleResize);
         document.removeEventListener('fullscreenchange', handleFsChange);
     };
   }, [isTvRoute, storageKey]);
@@ -121,16 +130,16 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   // Calcul du Facteur d'Échelle (Scale)
   const scaleX = windowSize.w / BASE_WIDTH;
   const scaleY = windowSize.h / BASE_HEIGHT;
-  // FitScale standard
+  // FitScale standard (Math.min pour s'assurer que tout rentre)
   const fitScale = Math.min(scaleX, scaleY);
   
-  // Application du modificateur utilisateur (ou du 0.75 par défaut sur TV)
+  // Application du modificateur utilisateur (1.0 par défaut = Rempli l'écran selon le plus petit côté)
   const finalScale = fitScale * userScaleModifier;
 
   const handleUserScaleChange = (delta: number) => {
       setUserScaleModifier(prev => {
-          // On permet de descendre jusqu'à 0.4 (40%) pour les très petits écrans/gros zooms
-          const newVal = Math.max(0.4, Math.min(1.5, parseFloat((prev + delta).toFixed(2))));
+          // Plage plus large pour permettre ajustement fin
+          const newVal = Math.max(0.4, Math.min(2.0, parseFloat((prev + delta).toFixed(2))));
           localStorage.setItem(storageKey, newVal.toString());
           return newVal;
       });
@@ -265,7 +274,10 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center z-[9999]">
+    <div 
+        className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center z-[9999]"
+        style={{ width: '100vw', height: '100vh' }} // Force la taille du viewport
+    >
       
       {/* Container de Base 1920x1080 mis à l'échelle */}
       <div 
@@ -336,7 +348,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                       <div className="flex items-center gap-3">
                                           <button onClick={() => handleUserScaleChange(-0.01)} className="p-2 bg-gray-800 rounded-xl hover:bg-gray-700 text-white"><Minus size={16}/></button>
                                           <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
-                                              <div className="h-full bg-blue-500 transition-all" style={{ width: `${((userScaleModifier - 0.4) / 1.1) * 100}%` }}></div>
+                                              <div className="h-full bg-blue-500 transition-all" style={{ width: `${((userScaleModifier - 0.4) / 1.6) * 100}%` }}></div>
                                           </div>
                                           <button onClick={() => handleUserScaleChange(0.01)} className="p-2 bg-gray-800 rounded-xl hover:bg-gray-700 text-white"><Plus size={16}/></button>
                                       </div>
