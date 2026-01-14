@@ -15,6 +15,11 @@ import { TICKER_MESSAGES } from './constants';
 // Supabase Imports
 import { supabase } from './lib/supabase';
 
+interface TvSetting {
+  key: string;
+  value: string;
+}
+
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   
@@ -140,7 +145,6 @@ const App: React.FC = () => {
 
             switch(table) {
                 case 'ticker_messages':
-                    // Pour les messages, on recharge car la structure est légère et l'ordre important
                     fetchTickerMessages();
                     break;
                 case 'stock':
@@ -165,9 +169,8 @@ const App: React.FC = () => {
                     handleListUpdate(setAchievements, (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
                     break;
                 case 'tv_settings':
-                    // Settings : mise à jour directe des états simples
-                    if (newRecord && newRecord.key === 'company_logo') setCustomLogo(newRecord.value);
-                    if (newRecord && newRecord.key === 'background_music') setBackgroundMusic(newRecord.value);
+                    if (newRecord && (newRecord as TvSetting).key === 'company_logo') setCustomLogo((newRecord as TvSetting).value);
+                    if (newRecord && (newRecord as TvSetting).key === 'background_music') setBackgroundMusic((newRecord as TvSetting).value);
                     break;
             }
         })
@@ -178,13 +181,11 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Fonction spécifique légère pour recharger les messages
   const fetchTickerMessages = async () => {
       const { data } = await supabase.from('ticker_messages').select('id, content, color').order('created_at', { ascending: false });
       if (data) setTickerMessages(data.map(t => ({ id: t.id, content: t.content, color: t.color || 'neutral' })));
   };
 
-  // Chargement initial PARALLÈLE (Promise.all) pour réduire le temps d'attente
   const fetchData = async () => {
     try {
         const promises = [
@@ -203,12 +204,10 @@ const App: React.FC = () => {
             tickerRes, stockRes, intervRes, hardTrxRes, secTrxRes, accTrxRes, empRes, achRes, settingsRes
         ] = await Promise.all(promises);
 
-        // 1. Messages
         if (tickerRes.data) {
             setTickerMessages(tickerRes.data.map(t => ({ id: t.id, content: t.content, color: t.color || 'neutral' })));
         }
 
-        // 2. Data Lists
         if (stockRes.data) setStock(stockRes.data as StockItem[]);
         if (intervRes.data) setInterventions(intervRes.data as Intervention[]);
         if (hardTrxRes.data) setHardwareTransactions(hardTrxRes.data as Transaction[]);
@@ -217,10 +216,10 @@ const App: React.FC = () => {
         if (empRes.data) setEmployees(empRes.data as Employee[]);
         if (achRes.data) setAchievements(achRes.data as Achievement[]);
         
-        // 3. Settings
         if (settingsRes.data) {
-             const logo = settingsRes.data.find(s => s.key === 'company_logo');
-             const music = settingsRes.data.find(s => s.key === 'background_music');
+             const settings = settingsRes.data as TvSetting[];
+             const logo = settings.find(s => s.key === 'company_logo');
+             const music = settings.find(s => s.key === 'background_music');
              if (logo?.value) setCustomLogo(logo.value);
              if (music?.value) setBackgroundMusic(music.value);
         }
@@ -232,7 +231,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Pour le Dashboard, on combine tout
   const allTransactions = useMemo(() => {
       return [...hardwareTransactions, ...secretariatTransactions, ...accountingTransactions];
   }, [hardwareTransactions, secretariatTransactions, accountingTransactions]);
