@@ -36,7 +36,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
   const [isSavingMusic, setIsSavingMusic] = useState(false);
   const [isSavingLogo, setIsSavingLogo] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [showSql, setShowSql] = useState(false);
+  const [showSqlModal, setShowSqlModal] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   
   const [musicUrl, setMusicUrl] = useState('');
@@ -49,16 +49,19 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
 
   // État pour l'installation PWA
   const [isAlreadyInstalled, setIsAlreadyInstalled] = useState(false);
-  const [isPromptReady, setIsPromptReady] = useState(!!(window as any).deferredPrompt);
+  const [isPromptAvailable, setIsPromptAvailable] = useState(!!(window as any).deferredPrompt);
 
   useEffect(() => {
-    // Vérifier si l'app est déjà installée
+    // Vérifier si l'app est déjà lancée en mode "app installée"
     if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
         setIsAlreadyInstalled(true);
     }
 
-    const handlePrompt = () => setIsPromptReady(true);
-    window.addEventListener('pwa-installable', handlePrompt);
+    const handlePwaReady = () => {
+      setIsPromptAvailable(true);
+    };
+
+    window.addEventListener('ebf-pwa-ready', handlePwaReady);
 
     const loadSettings = async () => {
         try {
@@ -98,7 +101,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
     loadSettings();
     loadAudioLibrary();
 
-    return () => window.removeEventListener('pwa-installable', handlePrompt);
+    return () => window.removeEventListener('ebf-pwa-ready', handlePwaReady);
   }, []);
 
   const handleInstallClick = async () => {
@@ -109,7 +112,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
       const { outcome } = await promptEvent.userChoice;
       if (outcome === 'accepted') {
         (window as any).deferredPrompt = null;
-        setIsPromptReady(false);
+        setIsPromptAvailable(false);
       }
     } else {
       setShowInstallGuide(true);
@@ -186,120 +189,125 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
       }
   };
 
-  const sqlScript = "-- Script SQL EBF... Tables: employees, stock, interventions, ticker_messages, tv_settings.";
+  const sqlScript = "-- Script de structure EBF Management Suite (Supabase)";
 
   return (
     <div className="space-y-6 pb-10">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center px-1">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Paramètres</h2>
-          <p className="text-gray-500 text-sm">Système & Base de données</p>
+          <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Paramètres</h2>
+          <p className="text-gray-500 text-xs font-bold uppercase">Configuration Système</p>
         </div>
         {(isUpdating || isUploading) && <Loader2 size={24} className="animate-spin text-orange-500" />}
       </div>
+      
       <audio ref={audioTestRef} src={musicUrl} />
 
-      {/* BOUTON INSTALLATION PERMANENT */}
+      {/* SECTION INSTALLATION ANDROID / IOS */}
       {!isAlreadyInstalled && (
         <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-orange-200 animate-scale-in relative overflow-hidden group">
-            <Smartphone size={120} className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-700" />
+            <Smartphone size={150} className="absolute -right-6 -bottom-10 opacity-10 group-hover:scale-110 transition-transform duration-700" />
             <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
-                <div className="bg-white/20 p-5 rounded-3xl backdrop-blur-sm">
+                <div className="bg-white/20 p-5 rounded-3xl backdrop-blur-md">
                     <DownloadCloud size={48} className="text-white" />
                 </div>
                 <div className="flex-1 text-center md:text-left">
-                    <h3 className="text-2xl font-black uppercase tracking-tighter mb-2 italic">
-                        {isPromptReady ? "Installer EBF" : "Configuration Mobile"}
-                    </h3>
-                    <p className="text-sm font-bold opacity-90 max-w-md">Utilisez l'application en plein écran comme une application native.</p>
+                    <h3 className="text-2xl font-black uppercase tracking-tighter mb-1 italic">Installer l'Application Android</h3>
+                    <p className="text-sm font-bold opacity-90 max-w-sm">
+                        Installez l'application native pour une utilisation plein écran et un accès rapide depuis votre tiroir d'applications.
+                    </p>
                 </div>
                 <button 
                     onClick={handleInstallClick}
-                    className="bg-white text-orange-600 px-8 py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-2xl active:scale-95 transition-all whitespace-nowrap"
+                    className="bg-white text-orange-600 px-8 py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-2xl active:scale-95 transition-all whitespace-nowrap hover:bg-orange-50"
                 >
-                    {isPromptReady ? "Installer maintenant" : "Guide d'installation"}
+                    {isPromptAvailable ? "Installer maintenant" : "Guide d'installation"}
                 </button>
             </div>
         </div>
       )}
 
-      {/* GUIDE INSTALLATION MANUELLE */}
+      {/* GUIDE POUR INSTALLATION MANUELLE */}
       {showInstallGuide && (
         <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
           <div className="bg-white w-full max-w-sm rounded-[3rem] p-8 shadow-2xl relative overflow-hidden">
              <div className="absolute top-0 left-0 w-full h-2 bg-orange-500"></div>
-             <button onClick={() => setShowInstallGuide(false)} className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full"><X size={20}/></button>
+             <button onClick={() => setShowInstallGuide(false)} className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all"><X size={20}/></button>
              
              <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Info size={32}/>
                 </div>
-                <h3 className="text-xl font-black uppercase italic text-gray-900">Installation Manuelle</h3>
-                <p className="text-xs text-gray-500 font-bold mt-2">Le navigateur n'a pas encore proposé l'installation.</p>
+                <h3 className="text-xl font-black uppercase italic text-gray-900">Installation Android</h3>
+                <p className="text-[10px] text-gray-400 font-bold uppercase mt-2 tracking-widest">Suivez ces étapes simples</p>
              </div>
 
              <div className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-full bg-gray-950 text-white flex items-center justify-center font-black shrink-0">1</div>
-                  <p className="text-sm font-bold text-gray-700">Appuyez sur le menu <MoreVertical className="inline text-orange-500" size={16}/> (3 points) de Chrome.</p>
+                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-2xl">
+                  <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-black shrink-0 shadow-lg shadow-orange-100">1</div>
+                  <p className="text-sm font-bold text-gray-700">Appuyez sur les 3 points <MoreVertical className="inline text-orange-500" size={16}/> en haut à droite de Chrome.</p>
                 </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-full bg-gray-950 text-white flex items-center justify-center font-black shrink-0">2</div>
-                  <p className="text-sm font-bold text-gray-700">Sélectionnez <span className="text-orange-600">"Installer l'application"</span> ou <span className="text-orange-600">"Écran d'accueil"</span>.</p>
+                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-2xl">
+                  <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-black shrink-0 shadow-lg shadow-orange-100">2</div>
+                  <p className="text-sm font-bold text-gray-700">Sélectionnez <span className="text-orange-600 font-black">"Installer l'application"</span> (et non pas "Ajouter à l'écran d'accueil").</p>
                 </div>
-                <button onClick={() => setShowInstallGuide(false)} className="w-full py-4 bg-gray-950 text-white rounded-2xl font-black uppercase text-xs tracking-widest mt-4">J'ai compris</button>
+                <button onClick={() => setShowInstallGuide(false)} className="w-full py-5 bg-gray-950 text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] mt-2 shadow-xl active:scale-95 transition-all">J'ai compris</button>
              </div>
           </div>
         </div>
       )}
 
-      {/* RACCOURCIS DE GESTION */}
+      {/* RACCOURCIS RAPIDES */}
       <div className="mb-4">
-          <h3 className="font-black text-gray-800 uppercase text-xs tracking-widest mb-4 flex items-center gap-2">
-              <ArrowRightCircle size={14} className="text-orange-600"/> Raccourcis Gestion Contenu TV
+          <h3 className="font-black text-gray-400 uppercase text-[10px] tracking-[0.2em] mb-4 flex items-center gap-2 px-1">
+              <ArrowRightCircle size={14} className="text-orange-600"/> Navigation rapide
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button onClick={() => onNavigate('hardware')} className="bg-white p-6 rounded-2xl border-2 border-transparent hover:border-orange-500 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95">
-                  <div className="bg-orange-50 p-3 rounded-full text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-colors"><LayoutGrid size={24} /></div>
-                  <span className="font-black uppercase text-sm text-gray-700 group-hover:text-orange-600">Éditer Nos Produits</span>
+              <button onClick={() => onNavigate('hardware')} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95">
+                  <div className="bg-orange-50 p-4 rounded-2xl text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-all shadow-sm"><LayoutGrid size={24} /></div>
+                  <span className="font-black uppercase text-[10px] tracking-widest text-gray-700">Gestion Stock</span>
               </button>
-              <button onClick={() => onNavigate('technicians')} className="bg-white p-6 rounded-2xl border-2 border-transparent hover:border-blue-500 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95">
-                  <div className="bg-blue-50 p-3 rounded-full text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors"><ClipboardList size={24} /></div>
-                  <span className="font-black uppercase text-sm text-gray-700 group-hover:text-blue-600">Éditer Chantiers</span>
+              <button onClick={() => onNavigate('technicians')} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95">
+                  <div className="bg-blue-50 p-4 rounded-2xl text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-all shadow-sm"><ClipboardList size={24} /></div>
+                  <span className="font-black uppercase text-[10px] tracking-widest text-gray-700">Planning Missions</span>
               </button>
-              <button onClick={() => onNavigate('achievements')} className="bg-white p-6 rounded-2xl border-2 border-transparent hover:border-purple-500 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95">
-                  <div className="bg-purple-50 p-3 rounded-full text-purple-600 group-hover:bg-purple-500 group-hover:text-white transition-colors"><Trophy size={24} /></div>
-                  <span className="font-black uppercase text-sm text-gray-700 group-hover:text-purple-600">Éditer Réalisations</span>
+              <button onClick={() => onNavigate('achievements')} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95">
+                  <div className="bg-purple-50 p-4 rounded-2xl text-purple-600 group-hover:bg-purple-500 group-hover:text-white transition-all shadow-sm"><Trophy size={24} /></div>
+                  <span className="font-black uppercase text-[10px] tracking-widest text-gray-700">Réalisations TV</span>
               </button>
           </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-blue-600 rounded-3xl p-6 text-white relative min-h-[180px] overflow-hidden">
-              <Database size={80} className="absolute -right-4 -top-4 opacity-10" />
-              <h4 className="font-black text-xl mb-2 flex items-center gap-2"><ShieldAlert size={20}/> Mise à jour SQL</h4>
-              <p className="text-xs opacity-80 mb-6">Optimisation des tables et relations.</p>
-              <button onClick={() => setShowSql(true)} className="w-full py-3 bg-white text-blue-700 rounded-xl font-black text-xs uppercase">Script SQL</button>
+          <div className="bg-blue-600 rounded-[2.5rem] p-8 text-white relative min-h-[180px] overflow-hidden shadow-xl shadow-blue-100">
+              <Database size={100} className="absolute -right-6 -top-6 opacity-10" />
+              <h4 className="font-black text-xl mb-2 flex items-center gap-2 uppercase tracking-tighter italic"><ShieldAlert size={20}/> Base SQL</h4>
+              <p className="text-xs font-bold opacity-80 mb-6">Mise à jour de la structure des tables Supabase.</p>
+              <button onClick={() => setShowSqlModal(true)} className="w-full py-4 bg-white text-blue-700 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">Consulter le script</button>
           </div>
-          <div className="bg-purple-700 rounded-3xl p-6 text-white min-h-[180px]">
-              <h4 className="font-black text-xl mb-4 flex items-center gap-2"><Music size={20}/> Musique TV</h4>
-              <select value={musicUrl} onChange={(e) => setMusicUrl(e.target.value)} className="w-full bg-purple-800 p-3 rounded-xl mb-4 text-xs">
-                  <option value="">Choisir un titre...</option>
+
+          <div className="bg-purple-700 rounded-[2.5rem] p-8 text-white min-h-[180px] shadow-xl shadow-purple-100">
+              <h4 className="font-black text-xl mb-4 flex items-center gap-2 uppercase tracking-tighter italic"><Music size={20}/> Musique TV</h4>
+              <select value={musicUrl} onChange={(e) => setMusicUrl(e.target.value)} className="w-full bg-purple-800 p-4 rounded-2xl mb-4 text-xs font-bold border-none outline-none">
+                  <option value="">Sélectionner un titre...</option>
                   {audioLibrary.map((t, i) => <option key={i} value={t.url}>{t.name}</option>)}
               </select>
               <div className="flex gap-2">
-                  <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-3 bg-purple-600 rounded-xl text-xs font-bold uppercase">Upload</button>
-                  <button onClick={handleSaveMusic} disabled={isSavingMusic} className="flex-1 py-3 bg-white text-purple-700 rounded-xl text-xs font-black uppercase">Sauver</button>
+                  <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-3 bg-purple-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-purple-500/50">Upload</button>
+                  <button onClick={handleSaveMusic} disabled={isSavingMusic} className="flex-1 py-3 bg-white text-purple-700 rounded-xl text-[10px] font-black uppercase tracking-widest">Sauver</button>
               </div>
               <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'music')} />
           </div>
-          <div className="bg-orange-600 rounded-3xl p-6 text-white min-h-[180px]">
-              <h4 className="font-black text-xl mb-4 flex items-center gap-2"><ImageIcon size={20}/> Logo</h4>
+
+          <div className="bg-orange-600 rounded-[2.5rem] p-8 text-white min-h-[180px] shadow-xl shadow-orange-100">
+              <h4 className="font-black text-xl mb-4 flex items-center gap-2 uppercase tracking-tighter italic"><ImageIcon size={20}/> Logo</h4>
               <div className="flex gap-4">
-                  <div className="w-16 h-16 bg-white rounded-xl overflow-hidden">{logoUrl && <img src={logoUrl} className="w-full h-full object-contain" alt="Logo" />}</div>
+                  <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center p-2 shadow-inner overflow-hidden">
+                      {logoUrl ? <img src={logoUrl} className="w-full h-full object-contain" alt="Logo" /> : <ImageIcon className="text-gray-200" size={32}/>}
+                  </div>
                   <div className="flex-1 flex flex-col gap-2">
-                      <button onClick={() => logoInputRef.current?.click()} className="py-2 bg-orange-500 rounded-lg text-xs font-bold">Choisir</button>
-                      <button onClick={handleSaveLogo} disabled={isSavingLogo} className="py-2 bg-white text-orange-700 rounded-lg text-[10px] font-black uppercase">Sauver</button>
+                      <button onClick={() => logoInputRef.current?.click()} className="py-3 bg-orange-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-orange-400">Changer</button>
+                      <button onClick={handleSaveLogo} disabled={isSavingLogo} className="py-3 bg-white text-orange-700 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">Sauver</button>
                   </div>
               </div>
               <input type="file" ref={logoInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'logo')} />
@@ -307,60 +315,62 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
       </div>
 
       {/* SQL MODAL */}
-      {showSql && (
-          <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/80 p-4">
-              <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 animate-scale-in">
+      {showSqlModal && (
+          <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
+              <div className="bg-white w-full max-w-lg rounded-[3rem] p-10 animate-scale-in shadow-2xl relative">
                   <div className="flex justify-between items-center mb-6">
-                      <h3 className="font-black uppercase italic">Structure SQL</h3>
-                      <button onClick={() => setShowSql(false)}><X/></button>
+                      <h3 className="font-black uppercase italic text-gray-900 tracking-tighter text-xl">Script SQL Supabase</h3>
+                      <button onClick={() => setShowSqlModal(false)} className="p-2 bg-gray-100 rounded-full"><X/></button>
                   </div>
-                  <pre className="bg-gray-900 text-green-400 p-4 rounded-xl text-[10px] overflow-x-auto mb-6">
+                  <pre className="bg-gray-950 text-green-400 p-6 rounded-3xl text-[10px] overflow-x-auto mb-6 max-h-60 border-t-8 border-blue-500 font-mono">
                       {sqlScript}
                   </pre>
                   <button 
-                    onClick={() => { navigator.clipboard.writeText(sqlScript); alert("Copié !"); }}
-                    className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2"
+                    onClick={() => { navigator.clipboard.writeText(sqlScript); alert("Script SQL copié dans le presse-papier !"); }}
+                    className="w-full py-5 bg-orange-600 text-white rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all tracking-[0.2em]"
                   >
-                      <Copy size={16}/> Copier le script
+                      <Copy size={18}/> Copier pour SQL Editor
                   </button>
               </div>
           </div>
       )}
 
+      {/* FLASH INFO EDIT */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8">
-           <h3 className="font-black text-xl mb-6 flex items-center gap-2 uppercase italic"><Megaphone size={24} className="text-orange-500"/> Flash Info TV</h3>
-           <div className="flex flex-col md:flex-row gap-3 mb-6">
+           <h3 className="font-black text-xl mb-6 flex items-center gap-3 uppercase italic tracking-tighter text-gray-800"><Megaphone size={24} className="text-orange-500"/> Flash Info TV</h3>
+           <div className="flex flex-col md:flex-row gap-3 mb-8">
                 <div className="flex-1 flex gap-3">
-                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Texte à diffuser..." className="flex-1 p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-orange-500 transition-colors" />
-                    <select value={newColor} onChange={(e) => setNewColor(e.target.value as any)} className="p-4 bg-gray-50 rounded-2xl font-bold outline-none uppercase text-xs border-r-8 border-transparent cursor-pointer">
+                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Texte à diffuser sur la TV..." className="flex-1 p-5 bg-gray-50 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-orange-500 transition-colors" />
+                    <select value={newColor} onChange={(e) => setNewColor(e.target.value as any)} className="p-5 bg-gray-50 rounded-2xl font-black uppercase text-[10px] border-none cursor-pointer outline-none">
                         <option value="neutral">⚪ Standard</option>
-                        <option value="green">🟢 Info</option>
+                        <option value="green">🟢 Succès</option>
                         <option value="yellow">🟡 Important</option>
                         <option value="red">🔴 Urgent</option>
                     </select>
                 </div>
-                <button onClick={handleAddMessage} disabled={isUpdating} className="px-8 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase text-xs hover:bg-orange-600 transition-colors shadow-lg active:scale-95">
-                    {isUpdating ? <Loader2 className="animate-spin" /> : 'Ajouter'}
+                <button onClick={handleAddMessage} disabled={isUpdating} className="px-10 py-5 bg-gray-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-orange-600 transition-colors shadow-xl active:scale-95">
+                    {isUpdating ? <Loader2 className="animate-spin" /> : 'Diffuser'}
                 </button>
            </div>
-           <div className="space-y-2">
+           <div className="space-y-3">
                {tickerMessages.map((m, i) => (
-                   <div key={m.id || i} className={`p-4 rounded-xl flex justify-between items-center border ${getColorClass(m.color)}`}>
-                       <span className="font-bold mr-4 flex-1">{m.content}</span>
-                       <div className="flex items-center gap-2">
-                           <div className="relative group">
-                                <select value={m.color} onChange={(e) => handleUpdateMessageColor(m, e.target.value as any)} className="appearance-none bg-white/50 pl-2 pr-6 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border border-transparent hover:border-black/10 cursor-pointer outline-none transition-all hover:bg-white">
+                   <div key={m.id || i} className={`p-5 rounded-[1.5rem] flex justify-between items-center border transition-all ${getColorClass(m.color)}`}>
+                       <span className="font-bold text-sm mr-4 flex-1">{m.content}</span>
+                       <div className="flex items-center gap-3">
+                           <div className="relative">
+                                <select value={m.color} onChange={(e) => handleUpdateMessageColor(m, e.target.value as any)} className="appearance-none bg-white/50 pl-3 pr-8 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider border-none outline-none cursor-pointer">
                                     <option value="neutral">Std</option>
                                     <option value="green">Info</option>
                                     <option value="yellow">Imp</option>
                                     <option value="red">Urg</option>
                                 </select>
-                                <ChevronDown size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-50"/>
+                                <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50"/>
                            </div>
-                           <button onClick={() => handleDeleteMessage(m)} className="p-2 bg-white rounded-full text-red-500 shadow-sm hover:scale-110 transition-transform"><Trash2 size={16}/></button>
+                           <button onClick={() => handleDeleteMessage(m)} className="p-3 bg-white/50 rounded-full text-red-500 shadow-sm hover:bg-red-50 hover:scale-110 transition-all"><Trash2 size={16}/></button>
                        </div>
                    </div>
                ))}
+               {tickerMessages.length === 0 && <p className="text-center py-10 text-gray-300 font-bold uppercase text-[10px] tracking-widest">Aucun message actif</p>}
            </div>
       </div>
     </div>
