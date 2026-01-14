@@ -440,12 +440,21 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                     
                                     {/* Status & Tech Header */}
                                     <div className="flex justify-between items-start mb-6">
-                                        <span className={`px-5 py-2 rounded-xl font-black text-xl uppercase tracking-widest shadow-lg h-fit ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
-                                        {inter.status}
-                                        </span>
+                                        <div className="flex flex-col gap-3">
+                                            <span className={`px-5 py-2 rounded-xl font-black text-xl uppercase tracking-widest shadow-lg h-fit w-fit ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
+                                            {inter.status}
+                                            </span>
+                                            {/* DATE AJOUTÉE ICI */}
+                                            <div className="flex items-center gap-2 text-white/50 font-black text-lg uppercase tracking-wider bg-black/20 px-4 py-1 rounded-lg w-fit">
+                                                <Calendar size={20} />
+                                                {new Date(inter.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+                                            </div>
+                                        </div>
+
                                         <div className="flex flex-col items-end">
-                                            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Technicien</p>
-                                            <div className="flex items-center gap-3">
+                                            {/* ESPACE AUGMENTÉ (mb-4) */}
+                                            <p className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-4">Technicien</p>
+                                            <div className="flex items-center gap-4">
                                                 {technician?.photoUrl ? (
                                                     <img 
                                                       src={technician.photoUrl} 
@@ -458,7 +467,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                                         <User size={36}/>
                                                     </div>
                                                 )}
-                                                <p className="text-orange-400 font-black text-xl uppercase">{inter.technician}</p>
+                                                <p className="text-orange-400 font-black text-2xl uppercase">{inter.technician}</p>
                                             </div>
                                         </div>
                                     </div>
