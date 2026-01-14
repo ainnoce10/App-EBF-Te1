@@ -4,12 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#f97316" />
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>EBF Management</title>
-    <link rel="manifest" href="/manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script type="importmap">
 {
@@ -32,32 +27,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
-    <script>
-      // Stockage global de l'événement d'installation
-      window.deferredPrompt = null;
-
-      window.addEventListener('beforeinstallprompt', (e) => {
-        // Empêche la bannière automatique pour laisser le contrôle au bouton dans les paramètres
-        e.preventDefault();
-        window.deferredPrompt = e;
-        console.log('✅ PWA prête à être installée');
-        // Notifier les composants React
-        window.dispatchEvent(new CustomEvent('ebf-pwa-ready'));
-      });
-
-      window.addEventListener('appinstalled', () => {
-        window.deferredPrompt = null;
-        console.log('🚀 Application installée !');
-      });
-
-      // Enregistrement forcé du Service Worker
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js', { scope: '/' })
-            .then(reg => console.log('SW enregistré:', reg.scope))
-            .catch(err => console.error('Erreur SW:', err));
-        });
-      }
-    </script>
   </body>
 </html>
