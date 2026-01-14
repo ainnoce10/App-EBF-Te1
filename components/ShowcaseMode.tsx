@@ -1,6 +1,6 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { StockItem, Intervention, TickerMessage, Achievement, Employee } from '../types';
-import { supabase } from '../lib/supabase';
 import { 
   X, 
   Zap, 
@@ -155,15 +155,12 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
   // --- AUDIO & DATA SYNC ---
+  // Synchronisation immédiate quand App.tsx met à jour initialMusicUrl
   useEffect(() => {
-    if (initialMusicUrl) setAudioSrc(initialMusicUrl);
-    
-    const channel = supabase.channel('tv-music-showcase')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tv_settings' }, (payload) => {
-            if ((payload.new as any)?.key === 'background_music') setAudioSrc((payload.new as any).value);
-        })
-        .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    if (initialMusicUrl && initialMusicUrl !== audioSrc) {
+        console.log("Mise à jour musique détectée:", initialMusicUrl);
+        setAudioSrc(initialMusicUrl);
+    }
   }, [initialMusicUrl]);
 
   // Gestion Audio Principale (Background Music)
@@ -171,18 +168,21 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     if (audioRef.current && audioSrc) {
         // Logique simplifiée : si pas muet, on tente de jouer
         if (!isMuted) {
-            if (audioRef.current.paused) {
-                setAudioLoading(true);
-                audioRef.current.volume = 0.5;
-                audioRef.current.play()
-                    .catch((e) => {
-                        console.log("Autoplay audio bloqué par le navigateur", e);
-                        setIsMuted(true); // On mute silencieusement si ça bloque pour garantir le lancement auto visuel
-                    })
-                    .finally(() => setAudioLoading(false));
+            setAudioLoading(true);
+            audioRef.current.volume = 0.5;
+            const playPromise = audioRef.current.play();
+            
+            if (playPromise !== undefined) {
+                playPromise
+                .catch((e) => {
+                    console.log("Autoplay audio bloqué par le navigateur", e);
+                    setIsMuted(true); // On mute silencieusement si ça bloque pour garantir le lancement auto visuel
+                })
+                .finally(() => setAudioLoading(false));
             }
         } else {
             audioRef.current.pause();
+            setAudioLoading(false);
         }
     }
   }, [audioSrc, isMuted, activeMode]);
@@ -281,7 +281,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
         }}
       >
           {audioSrc && (
-              <audio ref={audioRef} loop src={audioSrc} preload="auto" onError={(e) => console.error("Audio err", e)} />
+              // Clé unique pour forcer le rechargement si l'URL change radicalement
+              <audio key={audioSrc} ref={audioRef} loop src={audioSrc} preload="auto" onError={(e) => console.error("Audio err", e)} />
           )}
 
           {/* === HEADER TV (Position Absolue Haut) === */}
@@ -581,6 +582,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               </div>
               <div className="flex-1 overflow-hidden whitespace-nowrap">
                   <div className="inline-block animate-tv-ticker">
+                      {/* Multiplication pour assurer une boucle fluide */}
                       {flashes.concat(flashes).concat(flashes).map((msg, i) => (
                           <span key={i} className={`${getMessageColorClass(msg.color)} text-6xl font-black px-24 uppercase italic tracking-tight`}>
                               {msg.content} <span className="text-white/20 mx-8">///</span>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -113,36 +114,47 @@ const App: React.FC = () => {
     fetchData();
 
     // Configuration Realtime (Écoute globale des changements sur toutes les tables)
-    const channel = supabase.channel('global-changes')
-        .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
-            console.log('Change received!', payload);
+    // IMPORTANT: Nous écoutons '*' pour capturer INSERT, UPDATE et DELETE.
+    // La stratégie "fetch on event" est utilisée pour garantir que la TV a toujours les données complètes et à jour.
+    const channel = supabase.channel('global-app-updates')
+        .on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
+            console.log('Update reçu:', payload.table, payload.eventType);
             const table = payload.table;
 
             if (table === 'ticker_messages') {
-                 supabase.from('ticker_messages').select('id, content, color').order('created_at', { ascending: false })
-                 .then(({ data }) => data && setTickerMessages(data.map(t => ({ id: t.id, content: t.content, color: t.color || 'neutral' }))));
+                 const { data } = await supabase.from('ticker_messages').select('id, content, color').order('created_at', { ascending: false });
+                 if (data) setTickerMessages(data.map(t => ({ id: t.id, content: t.content, color: t.color || 'neutral' })));
+            
             } else if (table === 'stock') {
-                 supabase.from('stock').select('*').order('name')
-                 .then(({ data }) => data && setStock(data as StockItem[]));
+                 const { data } = await supabase.from('stock').select('*').order('name');
+                 if (data) setStock(data as StockItem[]);
+            
             } else if (table === 'interventions') {
-                 supabase.from('interventions').select('*').order('date', { ascending: false })
-                 .then(({ data }) => data && setInterventions(data as Intervention[]));
+                 const { data } = await supabase.from('interventions').select('*').order('date', { ascending: false });
+                 if (data) setInterventions(data as Intervention[]);
+            
             } else if (table === 'hardware_transactions') {
-                 supabase.from('hardware_transactions').select('*').order('date', { ascending: false })
-                 .then(({ data }) => data && setHardwareTransactions(data as Transaction[]));
+                 const { data } = await supabase.from('hardware_transactions').select('*').order('date', { ascending: false });
+                 if (data) setHardwareTransactions(data as Transaction[]);
+            
             } else if (table === 'secretariat_transactions') {
-                 supabase.from('secretariat_transactions').select('*').order('date', { ascending: false })
-                 .then(({ data }) => data && setSecretariatTransactions(data as Transaction[]));
+                 const { data } = await supabase.from('secretariat_transactions').select('*').order('date', { ascending: false });
+                 if (data) setSecretariatTransactions(data as Transaction[]);
+            
             } else if (table === 'accounting_transactions') {
-                 supabase.from('accounting_transactions').select('*').order('date', { ascending: false })
-                 .then(({ data }) => data && setAccountingTransactions(data as Transaction[]));
+                 const { data } = await supabase.from('accounting_transactions').select('*').order('date', { ascending: false });
+                 if (data) setAccountingTransactions(data as Transaction[]);
+            
             } else if (table === 'employees') {
-                 supabase.from('employees').select('*').order('name')
-                 .then(({ data }) => data && setEmployees(data as Employee[]));
+                 const { data } = await supabase.from('employees').select('*').order('name');
+                 if (data) setEmployees(data as Employee[]);
+            
             } else if (table === 'achievements') {
-                 supabase.from('achievements').select('*').order('date', { ascending: false })
-                 .then(({ data }) => data && setAchievements(data as Achievement[]));
+                 const { data } = await supabase.from('achievements').select('*').order('date', { ascending: false });
+                 if (data) setAchievements(data as Achievement[]);
+            
             } else if (table === 'tv_settings') {
+                 // Pour les settings, on peut utiliser le payload directement car c'est du clé/valeur
                  const newKey = (payload.new as any)?.key;
                  const newValue = (payload.new as any)?.value;
                  if (newKey === 'company_logo') setCustomLogo(newValue);
@@ -156,7 +168,7 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Fonction générique pour charger les données
+  // Fonction générique pour charger les données au démarrage
   const fetchData = async () => {
     try {
         // 1. Messages
