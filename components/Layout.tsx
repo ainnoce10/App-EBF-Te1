@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { NAV_ITEMS, Logo } from '../constants';
 import ScrollingTicker from './ScrollingTicker';
@@ -43,377 +44,146 @@ const Layout: React.FC<LayoutProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  
-  // Audio Player State
-  const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
-    if (audioRef.current) {
-        if (isPlaying) {
-            audioRef.current.play().catch(e => {
-                console.warn("Lecture auto bloquée par le navigateur (Action requise)", e);
-                setIsPlaying(false);
-            });
-        } else {
-            audioRef.current.pause();
-        }
+    if (audioRef.current && musicUrl) {
+      if (isPlaying) audioRef.current.play().catch(() => setIsPlaying(false));
+      else audioRef.current.pause();
     }
   }, [isPlaying, musicUrl]);
 
-  // Fermer les notifs si on clique ailleurs
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (showNotifications && !(event.target as Element).closest('.notification-container')) {
-        setShowNotifications(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showNotifications]);
-
-  const getNotificationIcon = (type: string) => {
-      switch(type) {
-          case 'stock': return <Package size={16} className="text-red-500"/>;
-          case 'intervention': return <Calendar size={16} className="text-orange-500"/>;
-          case 'message': return <AlertTriangle size={16} className="text-yellow-500"/>;
-          default: return <Bell size={16}/>;
-      }
-  };
-
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans" style={{ paddingLeft: 'var(--sal)', paddingRight: 'var(--sar)', paddingBottom: 'var(--sab)' }}>
-      {/* Sidebar Desktop */}
-      <aside className="hidden md:flex flex-col w-72 bg-white border-r border-gray-200 shadow-sm z-20">
-        <div className="p-8 flex justify-center border-b border-gray-100" style={{ paddingTop: 'calc(2rem + var(--sat))' }}>
+    <div className="flex h-screen bg-[#f8f9fa] overflow-hidden font-sans">
+      {/* Sidebar Desktop (Hidden on mobile) */}
+      <aside className="hidden lg:flex flex-col w-72 bg-white border-r border-gray-100 z-20">
+        <div className="p-8 flex justify-center border-b border-gray-50">
           <Logo url={customLogo} size="lg" />
         </div>
-        
-        <nav className="flex-1 p-6 space-y-2 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`w-full flex items-center gap-4 px-5 py-4 text-sm font-bold rounded-2xl transition-all duration-200 group relative overflow-hidden
-                ${activeTab === item.id 
-                  ? 'bg-orange-50 text-orange-600 shadow-sm border border-orange-100' 
-                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}
+              className={`w-full flex items-center gap-4 px-5 py-4 text-sm font-bold rounded-2xl transition-all
+                ${activeTab === item.id ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'text-gray-500 hover:bg-gray-50'}`}
             >
-              <div className={`transition-transform duration-300 ${activeTab === item.id ? 'scale-110' : 'group-hover:scale-110'}`}>
-                 {item.icon}
-              </div>
+              {item.icon}
               {item.label}
-              {activeTab === item.id && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-orange-500 rounded-l-full"></div>}
             </button>
           ))}
         </nav>
-
-        <div className="p-6 border-t border-gray-100 bg-gray-50/50 space-y-4">
-          
-          {/* Lecteur Radio EBF */}
-          {musicUrl && (
-              <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-3">
-                  <audio ref={audioRef} src={musicUrl} loop />
-                  <button 
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    className={`p-3 rounded-xl transition-all ${isPlaying ? 'bg-orange-500 text-white shadow-md' : 'bg-gray-100 text-gray-400 hover:text-orange-500'}`}
-                  >
-                      {isPlaying ? <Pause size={16} className="animate-pulse" /> : <Play size={16} />}
-                  </button>
-                  <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-gray-800 uppercase tracking-widest truncate">Radio EBF</p>
-                      <p className="text-[10px] text-gray-400 font-bold truncate">{isPlaying ? 'Lecture en cours...' : 'En pause'}</p>
-                  </div>
-                  {isPlaying && (
-                      <div className="flex gap-0.5 h-3 items-end">
-                          <div className="w-1 bg-orange-500 animate-[bounce_1s_infinite] h-full"></div>
-                          <div className="w-1 bg-orange-500 animate-[bounce_1.2s_infinite] h-2/3"></div>
-                          <div className="w-1 bg-orange-500 animate-[bounce_0.8s_infinite] h-1/2"></div>
-                      </div>
-                  )}
-              </div>
-          )}
-
-          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-gray-200 shadow-sm">
-            <div className="bg-green-100 p-2 rounded-full text-green-700">
-                <User size={18} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-black text-gray-800 truncate">Admin EBF</p>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Directeur</p>
-            </div>
-          </div>
-          <button className="w-full flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-red-500 py-2 transition-colors">
-            <LogOut size={16} /> Déconnexion
-          </button>
-        </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 relative h-full">
-        {/* Mobile Header Sticky */}
-        <div className="sticky top-0 z-30 w-full shadow-sm">
-             <ScrollingTicker messages={tickerMessages} />
-             
-             <header className="bg-white/90 backdrop-blur-md border-b border-gray-200 px-4 py-3 md:px-8 md:py-5 flex items-center justify-between gap-4" style={{ paddingTop: 'max(1.25rem, var(--sat))' }}>
-                <div className="flex items-center gap-3">
-                    <button 
-                      className="md:hidden p-2 -ml-2 text-gray-600 active:scale-95 transition-transform"
-                      onClick={() => setMobileMenuOpen(true)}
-                    >
-                      <Menu size={28} />
-                    </button>
-                    
-                    <div className="flex flex-col">
-                        <h1 className="text-lg md:text-2xl font-black text-gray-800 tracking-tight leading-none">
-                            {NAV_ITEMS.find(n => n.id === activeTab)?.label}
-                        </h1>
-                        <div className="flex items-center gap-2 mt-1">
-                            {isLive ? (
-                                <span className="flex items-center gap-1 text-[10px] font-black uppercase text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
-                                <Wifi size={10} strokeWidth={3} /> En Ligne
-                                </span>
-                            ) : (
-                                <span className="flex items-center gap-1 text-[10px] font-black uppercase text-red-500 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
-                                <WifiOff size={10} strokeWidth={3} /> Hors Ligne
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Filters & Actions (Compact on Mobile) */}
-                <div className="flex items-center gap-2 md:gap-4">
-                    <div className="hidden md:flex items-center gap-2">
-                        {/* Custom Date Inputs */}
-                        {period === 'Personnalisé' && onCustomStartDateChange && onCustomEndDateChange && (
-                            <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-100">
-                                <div className="relative">
-                                    <input 
-                                        type="date"
-                                        value={customStartDate}
-                                        onChange={(e) => onCustomStartDateChange(e.target.value)}
-                                        className="bg-transparent text-gray-700 text-xs font-bold py-1.5 px-2 outline-none"
-                                    />
-                                </div>
-                                <span className="text-gray-400 font-bold">-</span>
-                                <div className="relative">
-                                    <input 
-                                        type="date"
-                                        value={customEndDate}
-                                        onChange={(e) => onCustomEndDateChange(e.target.value)}
-                                        className="bg-transparent text-gray-700 text-xs font-bold py-1.5 px-2 outline-none"
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Period Select Desktop */}
-                        <div className="relative">
-                            <select 
-                                value={period} 
-                                onChange={(e) => onPeriodChange(e.target.value)}
-                                className="bg-gray-50 border-none text-gray-700 text-sm rounded-xl focus:ring-2 focus:ring-orange-500 block py-2.5 pl-4 pr-10 font-bold outline-none cursor-pointer hover:bg-gray-100 transition-colors"
-                            >
-                                <option value="Jour">☀️ Jour</option>
-                                <option value="Semaine">📅 Semaine</option>
-                                <option value="Mois">📅 Mois</option>
-                                <option value="Année">📅 Année</option>
-                                <option value="Personnalisé">⚙️ Personnalisé</option>
-                            </select>
-                        </div>
-
-                        {/* Site Select Desktop */}
-                        <div className="relative">
-                            <select 
-                                value={site} 
-                                onChange={(e) => onSiteChange(e.target.value)}
-                                className="bg-gray-50 border-none text-gray-700 text-sm rounded-xl focus:ring-2 focus:ring-orange-500 block py-2.5 pl-4 pr-10 font-bold outline-none cursor-pointer hover:bg-gray-100 transition-colors"
-                            >
-                                <option value="Global">🌍 Global</option>
-                                <option value="Abidjan">📍 Abidjan</option>
-                                <option value="Bouaké">📍 Bouaké</option>
-                                <option value="Korhogo">📍 Korhogo</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* NOTIFICATION BELL & DROPDOWN */}
-                    <div className="relative notification-container">
-                        <button 
-                            onClick={() => setShowNotifications(!showNotifications)}
-                            className={`relative p-2.5 transition-colors bg-gray-50 rounded-xl border border-transparent active:scale-95
-                             ${showNotifications ? 'bg-orange-50 border-orange-200 text-orange-600' : 'text-gray-400 hover:text-orange-500 hover:bg-orange-50 hover:border-orange-200'}`}
-                        >
-                            <Bell size={20} className={notifications.length > 0 ? 'animate-swing' : ''} />
-                            {notifications.length > 0 && (
-                                <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse"></span>
-                            )}
-                        </button>
-
-                        {showNotifications && (
-                            <div className="absolute right-0 top-14 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 z-50 animate-scale-in origin-top-right">
-                                <div className="flex justify-between items-center mb-4 border-b border-gray-50 pb-2">
-                                    <h4 className="font-black text-gray-900 uppercase text-xs tracking-widest flex items-center gap-2">
-                                        <Bell size={14} className="text-orange-500"/> Alertes ({notifications.length})
-                                    </h4>
-                                    <button onClick={() => setShowNotifications(false)} className="text-gray-400 hover:text-gray-600"><X size={16}/></button>
-                                </div>
-                                <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                                    {notifications.length > 0 ? (
-                                        notifications.map((notif) => (
-                                            <div key={notif.id} className="p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors flex gap-3 items-start group cursor-pointer" onClick={() => onTabChange(notif.type === 'stock' ? 'hardware' : notif.type === 'intervention' ? 'technicians' : 'settings')}>
-                                                <div className={`mt-0.5 p-1.5 rounded-lg ${notif.severity === 'high' ? 'bg-red-100' : 'bg-orange-100'}`}>
-                                                    {getNotificationIcon(notif.type)}
-                                                </div>
-                                                <div>
-                                                    <p className={`text-xs font-black uppercase tracking-wide ${notif.severity === 'high' ? 'text-red-600' : 'text-gray-800'}`}>{notif.title}</p>
-                                                    <p className="text-[10px] text-gray-500 leading-tight mt-0.5 font-medium">{notif.message}</p>
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-6 text-gray-400">
-                                            <Bell size={24} className="mx-auto mb-2 opacity-20"/>
-                                            <p className="text-xs font-bold">Aucune alerte</p>
-                                            <p className="text-[10px]">Tout fonctionne correctement</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="md:hidden">
-                         <div className="w-8 h-8 bg-gray-200 rounded-full overflow-hidden border-2 border-white shadow-sm">
-                             <div className="w-full h-full flex items-center justify-center bg-orange-500 text-white font-bold text-xs">A</div>
-                         </div>
-                    </div>
-                </div>
-            </header>
-            
-            {/* Mobile Filters Bar (Sub-header) */}
-            <div className="md:hidden bg-white border-b border-gray-100 px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar items-center">
-                <select 
-                    value={site} 
-                    onChange={(e) => onSiteChange(e.target.value)}
-                    className="bg-gray-50 border border-gray-100 text-gray-600 text-xs rounded-lg py-1.5 px-3 font-bold outline-none shrink-0"
-                >
-                    <option value="Global">🌍 Global</option>
-                    <option value="Abidjan">📍 Abidjan</option>
-                    <option value="Bouaké">📍 Bouaké</option>
-                    <option value="Korhogo">📍 Korhogo</option>
-                </select>
-                <select 
-                    value={period} 
-                    onChange={(e) => onPeriodChange(e.target.value)}
-                    className="bg-gray-50 border border-gray-100 text-gray-600 text-xs rounded-lg py-1.5 px-3 font-bold outline-none shrink-0"
-                >
-                    <option value="Jour">☀️ Jour</option>
-                    <option value="Semaine">📅 Semaine</option>
-                    <option value="Mois">📅 Mois</option>
-                    <option value="Année">📅 Année</option>
-                    <option value="Personnalisé">⚙️ Perso.</option>
-                </select>
-
-                {period === 'Personnalisé' && onCustomStartDateChange && onCustomEndDateChange && (
-                     <div className="flex gap-1 shrink-0">
-                        <input type="date" value={customStartDate} onChange={e => onCustomStartDateChange(e.target.value)} className="bg-gray-50 border border-gray-100 text-[10px] rounded-lg p-1 font-bold w-24" />
-                        <input type="date" value={customEndDate} onChange={e => onCustomEndDateChange(e.target.value)} className="bg-gray-50 border border-gray-100 text-[10px] rounded-lg p-1 font-bold w-24" />
-                     </div>
-                )}
+      {/* Main Container */}
+      <main className="flex-1 flex flex-col min-w-0 relative">
+        <ScrollingTicker messages={tickerMessages} />
+        
+        <header className="bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden p-2 -ml-2 text-gray-800 active:scale-90 transition-transform"
+            >
+              <Menu size={24} />
+            </button>
+            <div className="flex flex-col">
+              <h1 className="text-base font-black text-gray-900 leading-none">
+                {NAV_ITEMS.find(n => n.id === activeTab)?.label}
+              </h1>
+              <div className="flex items-center gap-1.5 mt-1">
+                <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">
+                  {isLive ? 'Direct' : 'Offline'}
+                </span>
+              </div>
             </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="p-2 bg-gray-50 rounded-full text-gray-500 relative active:scale-90 transition-transform"
+            >
+              <Bell size={20} />
+              {notifications.length > 0 && (
+                <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
+              )}
+            </button>
+            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-black text-xs border border-orange-200">
+              EBF
+            </div>
+          </div>
+        </header>
+
+        {/* Mobile Filter Bar */}
+        <div className="bg-white border-b border-gray-50 px-4 py-2 flex gap-2 overflow-x-auto scrollbar-hide">
+          <select 
+            value={site} 
+            onChange={(e) => onSiteChange(e.target.value as any)}
+            className="bg-gray-50 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg border-none outline-none"
+          >
+            <option value="Global">🌍 Global</option>
+            <option value="Abidjan">📍 Abidjan</option>
+            <option value="Bouaké">📍 Bouaké</option>
+          </select>
+          <select 
+            value={period} 
+            onChange={(e) => onPeriodChange(e.target.value as any)}
+            className="bg-gray-50 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg border-none outline-none"
+          >
+            <option value="Jour">Jour</option>
+            <option value="Semaine">Semaine</option>
+            <option value="Mois">Mois</option>
+          </select>
         </div>
 
-        {/* Mobile Menu Overlay (Drawer) */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+          {children}
+        </div>
+
+        {/* Mobile Menu Drawer */}
         {mobileMenuOpen && (
-            <div className="fixed inset-0 z-50 md:hidden">
-                <div 
-                  className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
-                  onClick={() => setMobileMenuOpen(false)}
-                />
-                <div className="absolute top-0 bottom-0 left-0 w-[80%] max-w-sm bg-white shadow-2xl flex flex-col animate-slide-right">
-                    <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-orange-50/50" style={{ paddingTop: 'calc(1.5rem + var(--sat))' }}>
-                        <Logo url={customLogo} />
-                        <button onClick={() => setMobileMenuOpen(false)} className="p-2 bg-white rounded-full shadow-sm text-gray-500 active:scale-90 transition-transform">
-                            <X size={20} />
-                        </button>
-                    </div>
-                    
-                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                        <p className="px-4 text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Menu Principal</p>
-                        {NAV_ITEMS.map((item) => (
-                            <button
-                                key={item.id}
-                                onClick={() => {
-                                    onTabChange(item.id);
-                                    setMobileMenuOpen(false);
-                                }}
-                                className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all border-2
-                                    ${activeTab === item.id 
-                                    ? 'bg-orange-50 border-orange-100 text-orange-600 shadow-sm' 
-                                    : 'bg-white border-transparent text-gray-600 hover:bg-gray-50'}`}
-                            >
-                                <div className="flex items-center gap-4">
-                                    {item.icon}
-                                    <span className="font-bold">{item.label}</span>
-                                </div>
-                                {activeTab === item.id && <ChevronRight size={16} />}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="p-6 bg-gray-50 border-t border-gray-100" style={{ paddingBottom: 'calc(1.5rem + var(--sab))' }}>
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-orange-500 font-black shadow-sm">
-                                AE
-                            </div>
-                            <div>
-                                <p className="font-bold text-gray-900">Admin EBF</p>
-                                <p className="text-xs text-gray-500">admin@ebf.ci</p>
-                            </div>
-                        </div>
-                        <button className="w-full bg-white border border-gray-200 text-gray-600 font-bold py-3 rounded-xl shadow-sm flex items-center justify-center gap-2 active:bg-gray-100">
-                             <LogOut size={16} /> Déconnexion
-                        </button>
-                    </div>
-                </div>
+          <div className="fixed inset-0 z-[100] lg:hidden">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+            <div className="absolute top-0 bottom-0 left-0 w-[80%] max-w-xs bg-white flex flex-col animate-slide-right shadow-2xl">
+              <div className="p-6 border-b border-gray-50 flex justify-between items-center">
+                <Logo />
+                <button onClick={() => setMobileMenuOpen(false)} className="p-2 bg-gray-50 rounded-full text-gray-400">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="flex-1 p-4 space-y-2 overflow-y-auto">
+                {NAV_ITEMS.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => { onTabChange(item.id); setMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-sm transition-all
+                      ${activeTab === item.id ? 'bg-orange-50 text-orange-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <div className="p-6 border-t border-gray-50">
+                <button className="w-full flex items-center justify-center gap-2 text-xs font-black text-red-500 uppercase tracking-widest">
+                  <LogOut size={16} /> Déconnexion
+                </button>
+              </div>
             </div>
+          </div>
         )}
-
-        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50/50">
-            <div className="max-w-7xl mx-auto p-4 md:p-8 pb-24 md:pb-8">
-                 {children}
-            </div>
-        </div>
-
-        <style>{`
-          .animate-slide-right {
-            animation: slideRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          }
-          @keyframes slideRight {
-            from { transform: translateX(-100%); }
-            to { transform: translateX(0); }
-          }
-          .animate-swing {
-             animation: swing 2s ease-in-out infinite;
-          }
-          @keyframes swing {
-            0%, 100% { transform: rotate(0deg); }
-            20% { transform: rotate(15deg); }
-            40% { transform: rotate(-10deg); }
-            60% { transform: rotate(5deg); }
-            80% { transform: rotate(-5deg); }
-          }
-          .no-scrollbar::-webkit-scrollbar {
-            display: none;
-          }
-          .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-          }
-        `}</style>
       </main>
+
+      <style>{`
+        @keyframes slideRight {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(0); }
+        }
+        .animate-slide-right { animation: slideRight 0.3s cubic-bezier(0, 0, 0.2, 1) forwards; }
+      `}</style>
     </div>
   );
 };
