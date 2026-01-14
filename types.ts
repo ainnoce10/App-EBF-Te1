@@ -38,7 +38,6 @@ export interface StockItem {
   quantity: number;
   threshold: number;
   unitPrice: number;
-  regularPrice?: number; // Prix normal (barré)
   supplier: string;
   site: Site | string;
   imageUrls?: string[];
