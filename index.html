@@ -9,7 +9,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>EBF Management</title>
-    <link rel="manifest" href="/public/manifest.json">
+    <!-- Correction du chemin du manifest : on retire /public/ si le fichier est servi à la racine ou on s'assure qu'il est accessible -->
+    <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script type="importmap">
 {
@@ -32,5 +33,17 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
+    <script>
+      // Enregistrement du Service Worker indispensable pour l'installation Android (PWA)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then(reg => {
+            console.log('Service Worker enregistré !', reg);
+          }).catch(err => {
+            console.log('Erreur SW:', err);
+          });
+        });
+      }
+    </script>
   </body>
 </html>
