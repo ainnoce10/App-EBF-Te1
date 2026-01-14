@@ -212,8 +212,12 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
           setIsEditing(false);
           setIsAdding(false);
           setEditForm(null);
-      } catch (error) {
-          alert("Erreur lors de l'enregistrement : " + (error as any).message);
+      } catch (error: any) {
+          let msg = error.message;
+          if (msg.includes("regularPrice") || msg.includes("column")) {
+              msg += "\n\nAstuce : Allez dans Paramètres > Base SQL et exécutez le script pour mettre à jour la base de données.";
+          }
+          alert("Erreur lors de l'enregistrement : " + msg);
       }
     }
   };

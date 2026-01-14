@@ -190,7 +190,126 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
       }
   };
 
-  const sqlScript = "-- Script de structure EBF Management Suite (Supabase)";
+  const sqlScript = `-- EBF Management Suite - Database Structure
+
+-- 1. Table Stock (Mise à jour avec regularPrice)
+CREATE TABLE IF NOT EXISTS public.stock (
+    id text PRIMARY KEY,
+    name text NOT NULL,
+    category text,
+    quantity numeric DEFAULT 0,
+    threshold numeric DEFAULT 5,
+    "unitPrice" numeric DEFAULT 0,
+    "regularPrice" numeric DEFAULT 0, -- Nouveau champ
+    supplier text,
+    site text,
+    "imageUrls" text[],
+    "technicalSheetUrl" text,
+    specs jsonb DEFAULT '{}'::jsonb,
+    created_at timestamptz DEFAULT now()
+);
+
+-- COMMANDE DE CORRECTION SI LA TABLE EXISTE DEJA :
+ALTER TABLE public.stock ADD COLUMN IF NOT EXISTS "regularPrice" numeric DEFAULT 0;
+
+-- 2. Table Interventions
+CREATE TABLE IF NOT EXISTS public.interventions (
+    id text PRIMARY KEY,
+    client text NOT NULL,
+    "clientPhone" text,
+    domain text,
+    "interventionType" text,
+    location text,
+    description text,
+    technician text,
+    status text,
+    has_report boolean DEFAULT false,
+    date date,
+    site text,
+    created_at timestamptz DEFAULT now()
+);
+
+-- 3. Table Employés
+CREATE TABLE IF NOT EXISTS public.employees (
+    id text PRIMARY KEY,
+    name text NOT NULL,
+    "assignedName" text,
+    role text,
+    domain text,
+    site text,
+    status text,
+    "entryDate" date,
+    "photoUrl" text,
+    "photoPosition" text,
+    created_at timestamptz DEFAULT now()
+);
+
+-- 4. Table Transactions (Hardware)
+CREATE TABLE IF NOT EXISTS public.hardware_transactions (
+    id text PRIMARY KEY,
+    type text, -- Recette / Dépense
+    category text,
+    amount numeric,
+    date date,
+    description text,
+    site text,
+    created_at timestamptz DEFAULT now()
+);
+
+-- 5. Table Transactions (Comptabilité)
+CREATE TABLE IF NOT EXISTS public.accounting_transactions (
+    id text PRIMARY KEY,
+    type text,
+    category text,
+    amount numeric,
+    date date,
+    description text,
+    site text,
+    created_at timestamptz DEFAULT now()
+);
+
+-- 6. Table Transactions (Secrétariat)
+CREATE TABLE IF NOT EXISTS public.secretariat_transactions (
+    id text PRIMARY KEY,
+    type text,
+    category text,
+    amount numeric,
+    date date,
+    description text,
+    site text,
+    created_at timestamptz DEFAULT now()
+);
+
+-- 7. Table Ticker Messages (TV)
+CREATE TABLE IF NOT EXISTS public.ticker_messages (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    content text NOT NULL,
+    color text DEFAULT 'neutral',
+    created_at timestamptz DEFAULT now()
+);
+
+-- 8. Table Réalisations (TV)
+CREATE TABLE IF NOT EXISTS public.achievements (
+    id text PRIMARY KEY,
+    title text,
+    description text,
+    "mediaUrl" text,
+    "mediaType" text,
+    position text,
+    date timestamptz DEFAULT now()
+);
+
+-- 9. Table Paramètres TV
+CREATE TABLE IF NOT EXISTS public.tv_settings (
+    key text PRIMARY KEY,
+    value text,
+    updated_at timestamptz DEFAULT now()
+);
+
+-- STORAGE BUCKETS (À configurer dans Storage > Buckets)
+-- 'assets' (Public)
+-- 'voice_reports' (Public)
+`;
 
   return (
     <div className="space-y-6 pb-10">
