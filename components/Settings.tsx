@@ -17,7 +17,8 @@ import {
   Smartphone,
   DownloadCloud,
   Info,
-  MoreVertical
+  MoreVertical,
+  Copy
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { TickerMessage } from '../types';
@@ -39,7 +40,6 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   
   const [musicUrl, setMusicUrl] = useState('');
-  const [isPlayingTest, setIsPlayingTest] = useState(false);
   const [audioLibrary, setAudioLibrary] = useState<{name: string, url: string}[]>([]);
   const audioTestRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,12 +49,16 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
 
   // État pour l'installation PWA
   const [isAlreadyInstalled, setIsAlreadyInstalled] = useState(false);
+  const [isPromptReady, setIsPromptReady] = useState(!!(window as any).deferredPrompt);
 
   useEffect(() => {
     // Vérifier si l'app est déjà installée
     if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
         setIsAlreadyInstalled(true);
     }
+
+    const handlePrompt = () => setIsPromptReady(true);
+    window.addEventListener('pwa-installable', handlePrompt);
 
     const loadSettings = async () => {
         try {
@@ -93,20 +97,21 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
 
     loadSettings();
     loadAudioLibrary();
+
+    return () => window.removeEventListener('pwa-installable', handlePrompt);
   }, []);
 
   const handleInstallClick = async () => {
     const promptEvent = (window as any).deferredPrompt;
     
     if (promptEvent) {
-      // Installation automatique si l'événement est prêt
       promptEvent.prompt();
       const { outcome } = await promptEvent.userChoice;
       if (outcome === 'accepted') {
         (window as any).deferredPrompt = null;
+        setIsPromptReady(false);
       }
     } else {
-      // Sinon, afficher le guide manuel
       setShowInstallGuide(true);
     }
   };
@@ -181,6 +186,8 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
       }
   };
 
+  const sqlScript = "-- Script SQL EBF... Tables: employees, stock, interventions, ticker_messages, tv_settings.";
+
   return (
     <div className="space-y-6 pb-10">
       <div className="flex justify-between items-center">
@@ -201,14 +208,16 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
                     <DownloadCloud size={48} className="text-white" />
                 </div>
                 <div className="flex-1 text-center md:text-left">
-                    <h3 className="text-2xl font-black uppercase tracking-tighter mb-2 italic">Installer EBF sur l'écran d'accueil</h3>
-                    <p className="text-sm font-bold opacity-90 max-w-md">Utilisez l'application en plein écran comme une application native Android ou iOS.</p>
+                    <h3 className="text-2xl font-black uppercase tracking-tighter mb-2 italic">
+                        {isPromptReady ? "Installer EBF" : "Configuration Mobile"}
+                    </h3>
+                    <p className="text-sm font-bold opacity-90 max-w-md">Utilisez l'application en plein écran comme une application native.</p>
                 </div>
                 <button 
                     onClick={handleInstallClick}
                     className="bg-white text-orange-600 px-8 py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-2xl active:scale-95 transition-all whitespace-nowrap"
                 >
-                    Installer maintenant
+                    {isPromptReady ? "Installer maintenant" : "Guide d'installation"}
                 </button>
             </div>
         </div>
@@ -226,17 +235,17 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
                   <Info size={32}/>
                 </div>
                 <h3 className="text-xl font-black uppercase italic text-gray-900">Installation Manuelle</h3>
-                <p className="text-xs text-gray-500 font-bold mt-2">Votre navigateur ne supporte pas l'installation automatique.</p>
+                <p className="text-xs text-gray-500 font-bold mt-2">Le navigateur n'a pas encore proposé l'installation.</p>
              </div>
 
              <div className="space-y-6">
                 <div className="flex items-start gap-4">
                   <div className="w-8 h-8 rounded-full bg-gray-950 text-white flex items-center justify-center font-black shrink-0">1</div>
-                  <p className="text-sm font-bold text-gray-700">Appuyez sur le menu <MoreVertical className="inline text-orange-500" size={16}/> de votre navigateur (Chrome ou Safari).</p>
+                  <p className="text-sm font-bold text-gray-700">Appuyez sur le menu <MoreVertical className="inline text-orange-500" size={16}/> (3 points) de Chrome.</p>
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="w-8 h-8 rounded-full bg-gray-950 text-white flex items-center justify-center font-black shrink-0">2</div>
-                  <p className="text-sm font-bold text-gray-700">Sélectionnez <span className="text-orange-600">"Installer l'application"</span> ou <span className="text-orange-600">"Sur l'écran d'accueil"</span>.</p>
+                  <p className="text-sm font-bold text-gray-700">Sélectionnez <span className="text-orange-600">"Installer l'application"</span> ou <span className="text-orange-600">"Écran d'accueil"</span>.</p>
                 </div>
                 <button onClick={() => setShowInstallGuide(false)} className="w-full py-4 bg-gray-950 text-white rounded-2xl font-black uppercase text-xs tracking-widest mt-4">J'ai compris</button>
              </div>
@@ -269,8 +278,8 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
           <div className="bg-blue-600 rounded-3xl p-6 text-white relative min-h-[180px] overflow-hidden">
               <Database size={80} className="absolute -right-4 -top-4 opacity-10" />
               <h4 className="font-black text-xl mb-2 flex items-center gap-2"><ShieldAlert size={20}/> Mise à jour SQL</h4>
-              <p className="text-xs opacity-80 mb-6">Ajoute les nouvelles fonctionnalités sans effacer vos données.</p>
-              <button onClick={() => setShowSql(true)} className="w-full py-3 bg-white text-blue-700 rounded-xl font-black text-xs uppercase">Voir le script</button>
+              <p className="text-xs opacity-80 mb-6">Optimisation des tables et relations.</p>
+              <button onClick={() => setShowSql(true)} className="w-full py-3 bg-white text-blue-700 rounded-xl font-black text-xs uppercase">Script SQL</button>
           </div>
           <div className="bg-purple-700 rounded-3xl p-6 text-white min-h-[180px]">
               <h4 className="font-black text-xl mb-4 flex items-center gap-2"><Music size={20}/> Musique TV</h4>
@@ -296,6 +305,27 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
               <input type="file" ref={logoInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'logo')} />
           </div>
       </div>
+
+      {/* SQL MODAL */}
+      {showSql && (
+          <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/80 p-4">
+              <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 animate-scale-in">
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="font-black uppercase italic">Structure SQL</h3>
+                      <button onClick={() => setShowSql(false)}><X/></button>
+                  </div>
+                  <pre className="bg-gray-900 text-green-400 p-4 rounded-xl text-[10px] overflow-x-auto mb-6">
+                      {sqlScript}
+                  </pre>
+                  <button 
+                    onClick={() => { navigator.clipboard.writeText(sqlScript); alert("Copié !"); }}
+                    className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2"
+                  >
+                      <Copy size={16}/> Copier le script
+                  </button>
+              </div>
+          </div>
+      )}
 
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8">
            <h3 className="font-black text-xl mb-6 flex items-center gap-2 uppercase italic"><Megaphone size={24} className="text-orange-500"/> Flash Info TV</h3>
