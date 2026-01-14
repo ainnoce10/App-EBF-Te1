@@ -322,8 +322,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                   </div>
               </div>
 
-              {/* HORLOGE CENTRÉE EN TEMPS RÉEL */}
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+              {/* HORLOGE CENTRÉE DANS LE FLUX (ENTRE GAUCHE ET DROITE) */}
+              <div className="flex flex-col items-center justify-center mx-auto">
                   <span className="text-4xl font-black text-white tracking-widest tabular-nums leading-none flex items-center">
                       {currentTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                       <span className="text-lg text-orange-500 ml-1 font-bold pt-1">
