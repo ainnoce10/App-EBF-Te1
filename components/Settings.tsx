@@ -15,7 +15,9 @@ import {
   Trophy,
   ArrowRightCircle,
   Smartphone,
-  DownloadCloud
+  DownloadCloud,
+  Info,
+  MoreVertical
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { TickerMessage } from '../types';
@@ -34,6 +36,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
   const [isSavingLogo, setIsSavingLogo] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showSql, setShowSql] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
   
   const [musicUrl, setMusicUrl] = useState('');
   const [isPlayingTest, setIsPlayingTest] = useState(false);
@@ -45,15 +48,12 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   // État pour l'installation PWA
-  const [isInstallable, setIsInstallable] = useState(!!(window as any).deferredPrompt);
+  const [isAlreadyInstalled, setIsAlreadyInstalled] = useState(false);
 
   useEffect(() => {
-    const handleInstallable = () => setIsInstallable(true);
-    window.addEventListener('pwa-installable', handleInstallable);
-    
-    // Vérifier si l'app est déjà en mode "standalone" (installée)
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-        setIsInstallable(false);
+    // Vérifier si l'app est déjà installée
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
+        setIsAlreadyInstalled(true);
     }
 
     const loadSettings = async () => {
@@ -93,32 +93,23 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
 
     loadSettings();
     loadAudioLibrary();
-
-    return () => window.removeEventListener('pwa-installable', handleInstallable);
   }, []);
 
   const handleInstallClick = async () => {
     const promptEvent = (window as any).deferredPrompt;
-    if (!promptEvent) return;
-
-    // Affiche l'invitation d'installation native de Chrome
-    promptEvent.prompt();
-
-    // Attend la réponse de l'utilisateur
-    const { outcome } = await promptEvent.userChoice;
-    console.log(`Résultat installation: ${outcome}`);
-
-    // On nettoie l'événement car il ne peut être utilisé qu'une fois
-    (window as any).deferredPrompt = null;
-    setIsInstallable(false);
-  };
-
-  useEffect(() => {
-    if (audioTestRef.current) {
-        if (isPlayingTest) audioTestRef.current.play().catch(() => setIsPlayingTest(false));
-        else { audioTestRef.current.pause(); audioTestRef.current.currentTime = 0; }
+    
+    if (promptEvent) {
+      // Installation automatique si l'événement est prêt
+      promptEvent.prompt();
+      const { outcome } = await promptEvent.userChoice;
+      if (outcome === 'accepted') {
+        (window as any).deferredPrompt = null;
+      }
+    } else {
+      // Sinon, afficher le guide manuel
+      setShowInstallGuide(true);
     }
-  }, [isPlayingTest, musicUrl]);
+  };
 
   const handleSaveMusic = async () => {
     if (!musicUrl) return;
@@ -190,10 +181,6 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
       }
   };
 
-  const getFullSchemaScript = () => `
--- Script de configuration SQL EBF... (identique au précédent)
-`;
-
   return (
     <div className="space-y-6 pb-10">
       <div className="flex justify-between items-center">
@@ -205,17 +192,17 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
       </div>
       <audio ref={audioTestRef} src={musicUrl} />
 
-      {/* INSTALLATION MOBILE (PWA) SECTION */}
-      {isInstallable && (
-        <div className="bg-orange-500 rounded-[2.5rem] p-8 text-white shadow-xl shadow-orange-200 animate-scale-in relative overflow-hidden group">
+      {/* BOUTON INSTALLATION PERMANENT */}
+      {!isAlreadyInstalled && (
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-orange-200 animate-scale-in relative overflow-hidden group">
             <Smartphone size={120} className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-700" />
             <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
-                <div className="bg-white/20 p-5 rounded-3xl">
+                <div className="bg-white/20 p-5 rounded-3xl backdrop-blur-sm">
                     <DownloadCloud size={48} className="text-white" />
                 </div>
                 <div className="flex-1 text-center md:text-left">
-                    <h3 className="text-2xl font-black uppercase tracking-tighter mb-2 italic">Installer EBF sur Android</h3>
-                    <p className="text-sm font-bold opacity-90 max-w-md">Transformez ce site en application installable. Accédez à vos interventions plus rapidement, même avec une connexion faible.</p>
+                    <h3 className="text-2xl font-black uppercase tracking-tighter mb-2 italic">Installer EBF sur l'écran d'accueil</h3>
+                    <p className="text-sm font-bold opacity-90 max-w-md">Utilisez l'application en plein écran comme une application native Android ou iOS.</p>
                 </div>
                 <button 
                     onClick={handleInstallClick}
@@ -227,39 +214,52 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
         </div>
       )}
 
-      {/* RACCOURCIS DE GESTION DU CONTENU TV */}
+      {/* GUIDE INSTALLATION MANUELLE */}
+      {showInstallGuide && (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-white w-full max-w-sm rounded-[3rem] p-8 shadow-2xl relative overflow-hidden">
+             <div className="absolute top-0 left-0 w-full h-2 bg-orange-500"></div>
+             <button onClick={() => setShowInstallGuide(false)} className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full"><X size={20}/></button>
+             
+             <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Info size={32}/>
+                </div>
+                <h3 className="text-xl font-black uppercase italic text-gray-900">Installation Manuelle</h3>
+                <p className="text-xs text-gray-500 font-bold mt-2">Votre navigateur ne supporte pas l'installation automatique.</p>
+             </div>
+
+             <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-8 h-8 rounded-full bg-gray-950 text-white flex items-center justify-center font-black shrink-0">1</div>
+                  <p className="text-sm font-bold text-gray-700">Appuyez sur le menu <MoreVertical className="inline text-orange-500" size={16}/> de votre navigateur (Chrome ou Safari).</p>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-8 h-8 rounded-full bg-gray-950 text-white flex items-center justify-center font-black shrink-0">2</div>
+                  <p className="text-sm font-bold text-gray-700">Sélectionnez <span className="text-orange-600">"Installer l'application"</span> ou <span className="text-orange-600">"Sur l'écran d'accueil"</span>.</p>
+                </div>
+                <button onClick={() => setShowInstallGuide(false)} className="w-full py-4 bg-gray-950 text-white rounded-2xl font-black uppercase text-xs tracking-widest mt-4">J'ai compris</button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* RACCOURCIS DE GESTION */}
       <div className="mb-4">
           <h3 className="font-black text-gray-800 uppercase text-xs tracking-widest mb-4 flex items-center gap-2">
               <ArrowRightCircle size={14} className="text-orange-600"/> Raccourcis Gestion Contenu TV
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button 
-                onClick={() => onNavigate('hardware')}
-                className="bg-white p-6 rounded-2xl border-2 border-transparent hover:border-orange-500 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95"
-              >
-                  <div className="bg-orange-50 p-3 rounded-full text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-colors">
-                      <LayoutGrid size={24} />
-                  </div>
+              <button onClick={() => onNavigate('hardware')} className="bg-white p-6 rounded-2xl border-2 border-transparent hover:border-orange-500 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95">
+                  <div className="bg-orange-50 p-3 rounded-full text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-colors"><LayoutGrid size={24} /></div>
                   <span className="font-black uppercase text-sm text-gray-700 group-hover:text-orange-600">Éditer Nos Produits</span>
               </button>
-
-              <button 
-                onClick={() => onNavigate('technicians')}
-                className="bg-white p-6 rounded-2xl border-2 border-transparent hover:border-blue-500 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95"
-              >
-                  <div className="bg-blue-50 p-3 rounded-full text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                      <ClipboardList size={24} />
-                  </div>
+              <button onClick={() => onNavigate('technicians')} className="bg-white p-6 rounded-2xl border-2 border-transparent hover:border-blue-500 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95">
+                  <div className="bg-blue-50 p-3 rounded-full text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors"><ClipboardList size={24} /></div>
                   <span className="font-black uppercase text-sm text-gray-700 group-hover:text-blue-600">Éditer Chantiers</span>
               </button>
-
-              <button 
-                onClick={() => onNavigate('achievements')}
-                className="bg-white p-6 rounded-2xl border-2 border-transparent hover:border-purple-500 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95"
-              >
-                  <div className="bg-purple-50 p-3 rounded-full text-purple-600 group-hover:bg-purple-500 group-hover:text-white transition-colors">
-                      <Trophy size={24} />
-                  </div>
+              <button onClick={() => onNavigate('achievements')} className="bg-white p-6 rounded-2xl border-2 border-transparent hover:border-purple-500 shadow-sm hover:shadow-lg transition-all flex flex-col items-center gap-3 group active:scale-95">
+                  <div className="bg-purple-50 p-3 rounded-full text-purple-600 group-hover:bg-purple-500 group-hover:text-white transition-colors"><Trophy size={24} /></div>
                   <span className="font-black uppercase text-sm text-gray-700 group-hover:text-purple-600">Éditer Réalisations</span>
               </button>
           </div>
@@ -272,7 +272,6 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
               <p className="text-xs opacity-80 mb-6">Ajoute les nouvelles fonctionnalités sans effacer vos données.</p>
               <button onClick={() => setShowSql(true)} className="w-full py-3 bg-white text-blue-700 rounded-xl font-black text-xs uppercase">Voir le script</button>
           </div>
-
           <div className="bg-purple-700 rounded-3xl p-6 text-white min-h-[180px]">
               <h4 className="font-black text-xl mb-4 flex items-center gap-2"><Music size={20}/> Musique TV</h4>
               <select value={musicUrl} onChange={(e) => setMusicUrl(e.target.value)} className="w-full bg-purple-800 p-3 rounded-xl mb-4 text-xs">
@@ -285,7 +284,6 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
               </div>
               <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => handleFileUpload(e, 'music')} />
           </div>
-
           <div className="bg-orange-600 rounded-3xl p-6 text-white min-h-[180px]">
               <h4 className="font-black text-xl mb-4 flex items-center gap-2"><ImageIcon size={20}/> Logo</h4>
               <div className="flex gap-4">
@@ -301,21 +299,10 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
 
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8">
            <h3 className="font-black text-xl mb-6 flex items-center gap-2 uppercase italic"><Megaphone size={24} className="text-orange-500"/> Flash Info TV</h3>
-           
            <div className="flex flex-col md:flex-row gap-3 mb-6">
                 <div className="flex-1 flex gap-3">
-                    <input 
-                        type="text" 
-                        value={newMessage} 
-                        onChange={e => setNewMessage(e.target.value)} 
-                        placeholder="Texte à diffuser..." 
-                        className="flex-1 p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-orange-500 transition-colors" 
-                    />
-                    <select 
-                        value={newColor} 
-                        onChange={(e) => setNewColor(e.target.value as any)}
-                        className="p-4 bg-gray-50 rounded-2xl font-bold outline-none uppercase text-xs border-r-8 border-transparent cursor-pointer"
-                    >
+                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Texte à diffuser..." className="flex-1 p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-orange-500 transition-colors" />
+                    <select value={newColor} onChange={(e) => setNewColor(e.target.value as any)} className="p-4 bg-gray-50 rounded-2xl font-bold outline-none uppercase text-xs border-r-8 border-transparent cursor-pointer">
                         <option value="neutral">⚪ Standard</option>
                         <option value="green">🟢 Info</option>
                         <option value="yellow">🟡 Important</option>
@@ -326,18 +313,13 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
                     {isUpdating ? <Loader2 className="animate-spin" /> : 'Ajouter'}
                 </button>
            </div>
-
            <div className="space-y-2">
                {tickerMessages.map((m, i) => (
                    <div key={m.id || i} className={`p-4 rounded-xl flex justify-between items-center border ${getColorClass(m.color)}`}>
                        <span className="font-bold mr-4 flex-1">{m.content}</span>
                        <div className="flex items-center gap-2">
                            <div className="relative group">
-                                <select 
-                                    value={m.color}
-                                    onChange={(e) => handleUpdateMessageColor(m, e.target.value as any)}
-                                    className="appearance-none bg-white/50 pl-2 pr-6 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border border-transparent hover:border-black/10 cursor-pointer outline-none transition-all hover:bg-white"
-                                >
+                                <select value={m.color} onChange={(e) => handleUpdateMessageColor(m, e.target.value as any)} className="appearance-none bg-white/50 pl-2 pr-6 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border border-transparent hover:border-black/10 cursor-pointer outline-none transition-all hover:bg-white">
                                     <option value="neutral">Std</option>
                                     <option value="green">Info</option>
                                     <option value="yellow">Imp</option>
@@ -351,21 +333,6 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
                ))}
            </div>
       </div>
-
-      {showSql && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
-           <div className="bg-white w-full max-w-2xl rounded-[3rem] overflow-hidden flex flex-col shadow-2xl animate-scale-in">
-              <div className="p-8 border-b bg-blue-50 flex justify-between items-center">
-                  <h3 className="font-black text-xl text-blue-900">Script SQL Consolidé</h3>
-                  <button onClick={() => setShowSql(false)} className="p-2 bg-white rounded-full"><X/></button>
-              </div>
-              <div className="p-8 overflow-y-auto">
-                  <pre className="bg-gray-900 text-green-400 p-6 rounded-2xl text-xs overflow-auto max-h-60 mb-8">{getFullSchemaScript()}</pre>
-                  <button onClick={() => { navigator.clipboard.writeText(getFullSchemaScript()); alert("Script SQL copié !"); }} className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black uppercase shadow-xl active:scale-95 transition-all">Copier pour Supabase</button>
-              </div>
-           </div>
-        </div>
-      )}
     </div>
   );
 };
