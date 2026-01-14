@@ -9,7 +9,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>EBF Management</title>
-    <!-- Correction du chemin du manifest : on retire /public/ si le fichier est servi à la racine ou on s'assure qu'il est accessible -->
     <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script type="importmap">
@@ -34,7 +33,23 @@
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
     <script>
-      // Enregistrement du Service Worker indispensable pour l'installation Android (PWA)
+      // Gestion de l'installation PWA
+      window.deferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // Empêche Chrome d'afficher sa bannière automatique
+        e.preventDefault();
+        // Stocke l'événement pour le déclencher plus tard via le bouton dans Settings
+        window.deferredPrompt = e;
+        // Déclenche un événement personnalisé pour notifier React que l'installation est possible
+        window.dispatchEvent(new CustomEvent('pwa-installable'));
+      });
+
+      window.addEventListener('appinstalled', () => {
+        window.deferredPrompt = null;
+        console.log('Application EBF installée avec succès !');
+      });
+
+      // Enregistrement du Service Worker
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js').then(reg => {
