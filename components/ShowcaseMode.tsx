@@ -148,9 +148,14 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
   // --- DONNEES ---
   const products = liveStock.length > 0 ? liveStock : [];
+  
+  // TRI PAR DATE CROISSANTE (PLUS PROCHE -> PLUS ELOIGNÉE)
   const planning = liveInterventions.length > 0 
-    ? liveInterventions.filter(i => i.status === 'En cours' || i.status === 'En attente') 
+    ? liveInterventions
+        .filter(i => i.status === 'En cours' || i.status === 'En attente')
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     : [];
+
   const achievements = liveAchievements.length > 0 ? liveAchievements : [];
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
