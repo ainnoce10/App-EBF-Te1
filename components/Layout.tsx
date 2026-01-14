@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NAV_ITEMS, Logo } from '../constants';
 import ScrollingTicker from './ScrollingTicker';
 import { TickerMessage, AppNotification } from '../types';
-import { Menu, X, LogOut, Bell, LogIn } from 'lucide-react';
+import { Menu, X, LogOut, Bell } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;

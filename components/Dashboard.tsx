@@ -6,6 +6,8 @@ import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip } from 'recharts';
 interface DashboardProps {
   site: Site;
   period: Period;
+  customStartDate?: string;
+  customEndDate?: string;
   liveTransactions?: Transaction[];
   liveInterventions?: Intervention[];
 }
