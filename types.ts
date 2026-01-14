@@ -60,6 +60,7 @@ export interface Employee {
   name: string;
   assignedName?: string;
   role: string;
+  domain?: string; // Ajout du domaine
   site: Site | string;
   status: 'Actif' | 'Congés' | 'Inactif';
   entryDate: string;

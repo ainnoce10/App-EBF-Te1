@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_EMPLOYEES } from '../constants';
 import { Transaction, Employee, Site } from '../types';
@@ -22,13 +23,38 @@ import {
   ArrowRight,
   Calendar,
   Printer,
-  CheckCircle2
+  CheckCircle2,
+  Clock
 } from 'lucide-react';
 
 interface AccountingProps {
   liveTransactions?: Transaction[];
   liveEmployees?: Employee[];
 }
+
+// Listes prédéfinies selon le cahier des charges
+const JOB_TITLES = [
+  "Directeur Général",
+  "Technicien en froid",
+  "Technicien en bâtiment",
+  "Technicien en électricité",
+  "Technicien en plomberie",
+  "Technicien polyvalent",
+  "Responsable technique électricité",
+  "Responsable technique bâtiment",
+  "Responsable technique froid",
+  "Responsable technique plomberie",
+  "Responsable technique polyvalent"
+];
+
+const ACTIVITY_DOMAINS = [
+  "Administration",
+  "Électricité",
+  "Plomberie",
+  "Froid",
+  "Bâtiment",
+  "Polyvalent"
+];
 
 const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmployees = [] }) => {
   const [showAllTransactions, setShowAllTransactions] = useState(false);
@@ -48,7 +74,8 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
       civility: 'M',
       name: '', 
       assignedName: '', 
-      role: '', 
+      role: JOB_TITLES[5], // Default: Technicien polyvalent
+      domain: 'Polyvalent',
       site: 'Abidjan', 
       entryDate: new Date().toISOString().split('T')[0] 
   });
@@ -136,6 +163,29 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
 
   // --- ACTIONS RH ---
 
+  // Calcul Ancienneté
+  const calculateSeniority = (dateString: string) => {
+      if (!dateString) return "0 jour";
+      const start = new Date(dateString);
+      const now = new Date();
+      
+      let years = now.getFullYear() - start.getFullYear();
+      let months = now.getMonth() - start.getMonth();
+      
+      if (months < 0 || (months === 0 && now.getDate() < start.getDate())) {
+          years--;
+          months += 12;
+      }
+      
+      if (now.getDate() < start.getDate()) {
+          months--;
+      }
+
+      if (years > 0) return `${years} an(s)${months > 0 ? ` et ${months} mois` : ''}`;
+      if (months > 0) return `${months} mois`;
+      return "Moins d'un mois";
+  };
+
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -188,6 +238,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
           name: cleanName,
           assignedName: emp.assignedName || '',
           role: emp.role,
+          domain: emp.domain || 'Polyvalent',
           site: emp.site as string,
           entryDate: emp.entryDate
       });
@@ -237,6 +288,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
             name: fullName, 
             assignedName: employeeFormData.assignedName, 
             role: employeeFormData.role, 
+            domain: employeeFormData.domain,
             site: employeeFormData.site, 
             status: 'Actif', 
             entryDate: employeeFormData.entryDate,
@@ -258,7 +310,15 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
         // Reset form
         setIsAddingEmployee(false);
         setEditingEmployeeId(null);
-        setEmployeeFormData({ civility: 'M', name: '', assignedName: '', role: '', site: 'Abidjan', entryDate: new Date().toISOString().split('T')[0] });
+        setEmployeeFormData({ 
+            civility: 'M', 
+            name: '', 
+            assignedName: '', 
+            role: JOB_TITLES[5], 
+            domain: 'Polyvalent', 
+            site: 'Abidjan', 
+            entryDate: new Date().toISOString().split('T')[0] 
+        });
         setNewEmployeePhoto(null);
         setNewEmployeePhotoPreview(null);
         setPhotoPos({ x: 50, y: 50 });
@@ -863,7 +923,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
       {/* --- MODAL EMPLOYES --- */}
       {showEmployeeModal && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 backdrop-blur-sm">
-           <div className="bg-white w-full h-[90vh] md:h-auto md:max-h-[85vh] md:max-w-3xl rounded-t-[2.5rem] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-slide-up">
+           <div className="bg-white w-full h-[90vh] md:h-auto md:max-h-[90vh] md:max-w-3xl rounded-t-[2.5rem] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-slide-up">
              <div className="p-6 md:p-8 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
                 <div>
                     <h3 className="text-2xl font-black text-gray-900 tracking-tight">{isAddingEmployee ? (editingEmployeeId ? 'Modifier Employé' : 'Nouvel Employé') : 'Effectif EBF'}</h3>
@@ -970,11 +1030,36 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                           </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4">
+                      {/* Ligne POSTE et DOMAINE */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Poste</label>
-                              <input type="text" placeholder="Ex: Technicien" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all" value={employeeFormData.role} onChange={e => setEmployeeFormData({...employeeFormData, role: e.target.value})}/>
+                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Poste Occupé</label>
+                              <select 
+                                value={employeeFormData.role} 
+                                onChange={e => setEmployeeFormData({...employeeFormData, role: e.target.value})}
+                                className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all appearance-none cursor-pointer"
+                              >
+                                  {JOB_TITLES.map(title => (
+                                      <option key={title} value={title}>{title}</option>
+                                  ))}
+                              </select>
                           </div>
+                          <div className="space-y-2">
+                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Domaine d'activité</label>
+                              <select 
+                                value={employeeFormData.domain} 
+                                onChange={e => setEmployeeFormData({...employeeFormData, domain: e.target.value})}
+                                className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all appearance-none cursor-pointer"
+                              >
+                                  {ACTIVITY_DOMAINS.map(domain => (
+                                      <option key={domain} value={domain}>{domain}</option>
+                                  ))}
+                              </select>
+                          </div>
+                      </div>
+
+                      {/* Ligne SITE et DATE */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Site</label>
                               <select className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all appearance-none" value={employeeFormData.site} onChange={e => setEmployeeFormData({...employeeFormData, site: e.target.value})}>
@@ -982,6 +1067,20 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                                   <option value="Bouaké">Bouaké</option>
                                   <option value="Korhogo">Korhogo</option>
                               </select>
+                          </div>
+                          <div className="space-y-2">
+                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Date d'entrée</label>
+                              <div className="relative">
+                                  <input 
+                                    type="date" 
+                                    className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all" 
+                                    value={employeeFormData.entryDate} 
+                                    onChange={e => setEmployeeFormData({...employeeFormData, entryDate: e.target.value})}
+                                  />
+                                  <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-blue-100 text-blue-700 px-3 py-1 rounded-lg text-[10px] font-black uppercase flex items-center gap-1">
+                                      <Clock size={12}/> {calculateSeniority(employeeFormData.entryDate)}
+                                  </div>
+                              </div>
                           </div>
                       </div>
 

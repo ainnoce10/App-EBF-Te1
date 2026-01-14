@@ -62,7 +62,7 @@ const App: React.FC = () => {
         }
     });
 
-    // 2. Alertes Interventions "En attente" depuis trop longtemps (simulé par statut simple)
+    // 2. Alertes Interventions "En attente" depuis trop longtemps
     interventions.forEach(inter => {
         if (inter.status === 'En attente') {
             alerts.push({
@@ -103,7 +103,7 @@ const App: React.FC = () => {
     // 2. Détection via User Agent (Pour Smart TV & Android TV)
     const ua = navigator.userAgent.toLowerCase();
     const isSmartTV = /smart-tv|smarttv|googletv|appletv|hbbtv|pov_tv|netcast|webos|tizen/.test(ua);
-    const isAndroidTV = /android/.test(ua) && !/mobile/.test(ua); // Android sans "Mobile" est souvent une TV/Tablette
+    const isAndroidTV = /android/.test(ua) && !/mobile/.test(ua); 
 
     // Si URL explicite (/tv ou ?mode=tv) OU détection Smart TV => Mode Showcase
     if (modeParam === 'tv' || pathName.startsWith('/tv') || isSmartTV || isAndroidTV) {
@@ -113,52 +113,62 @@ const App: React.FC = () => {
     // Chargement initial des données
     fetchData();
 
-    // Configuration Realtime (Écoute globale des changements sur toutes les tables)
-    // IMPORTANT: Nous écoutons '*' pour capturer INSERT, UPDATE et DELETE.
-    // La stratégie "fetch on event" est utilisée pour garantir que la TV a toujours les données complètes et à jour.
+    // Configuration Realtime OPTIMISÉE (Mise à jour locale sans re-fetch complet)
     const channel = supabase.channel('global-app-updates')
-        .on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
-            console.log('Update reçu:', payload.table, payload.eventType);
-            const table = payload.table;
+        .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+            const { table, eventType, new: newRecord, old: oldRecord } = payload;
+            console.log(`Realtime Update: ${table} [${eventType}]`);
 
-            if (table === 'ticker_messages') {
-                 const { data } = await supabase.from('ticker_messages').select('id, content, color').order('created_at', { ascending: false });
-                 if (data) setTickerMessages(data.map(t => ({ id: t.id, content: t.content, color: t.color || 'neutral' })));
-            
-            } else if (table === 'stock') {
-                 const { data } = await supabase.from('stock').select('*').order('name');
-                 if (data) setStock(data as StockItem[]);
-            
-            } else if (table === 'interventions') {
-                 const { data } = await supabase.from('interventions').select('*').order('date', { ascending: false });
-                 if (data) setInterventions(data as Intervention[]);
-            
-            } else if (table === 'hardware_transactions') {
-                 const { data } = await supabase.from('hardware_transactions').select('*').order('date', { ascending: false });
-                 if (data) setHardwareTransactions(data as Transaction[]);
-            
-            } else if (table === 'secretariat_transactions') {
-                 const { data } = await supabase.from('secretariat_transactions').select('*').order('date', { ascending: false });
-                 if (data) setSecretariatTransactions(data as Transaction[]);
-            
-            } else if (table === 'accounting_transactions') {
-                 const { data } = await supabase.from('accounting_transactions').select('*').order('date', { ascending: false });
-                 if (data) setAccountingTransactions(data as Transaction[]);
-            
-            } else if (table === 'employees') {
-                 const { data } = await supabase.from('employees').select('*').order('name');
-                 if (data) setEmployees(data as Employee[]);
-            
-            } else if (table === 'achievements') {
-                 const { data } = await supabase.from('achievements').select('*').order('date', { ascending: false });
-                 if (data) setAchievements(data as Achievement[]);
-            
-            } else if (table === 'tv_settings') {
-                 // Pour les settings, on peut utiliser le payload directement car c'est du clé/valeur
-                 const newKey = (payload.new as any)?.key;
-                 const newValue = (payload.new as any)?.value;
-                 if (newKey === 'company_logo') setCustomLogo(newValue);
-                 if (newKey === 'background_music') setBackgroundMusic(newValue);
+            // Helper générique pour mettre à jour une liste
+            const handleListUpdate = (
+                setter: React.Dispatch<React.SetStateAction<any[]>>, 
+                sortFunc?: (a: any, b: any) => number
+            ) => {
+                setter(prev => {
+                    let next = [...prev];
+                    if (eventType === 'INSERT') {
+                        next = [newRecord, ...next];
+                    } else if (eventType === 'UPDATE') {
+                        next = next.map(item => item.id === newRecord.id ? newRecord : item);
+                    } else if (eventType === 'DELETE') {
+                        next = next.filter(item => item.id !== oldRecord.id);
+                    }
+                    if (sortFunc) next.sort(sortFunc);
+                    return next;
+                });
+            };
+
+            switch(table) {
+                case 'ticker_messages':
+                    // Pour les messages, on recharge car la structure est légère et l'ordre important
+                    fetchTickerMessages();
+                    break;
+                case 'stock':
+                    handleListUpdate(setStock, (a, b) => a.name.localeCompare(b.name));
+                    break;
+                case 'interventions':
+                    handleListUpdate(setInterventions, (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                    break;
+                case 'hardware_transactions':
+                    handleListUpdate(setHardwareTransactions, (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                    break;
+                case 'secretariat_transactions':
+                    handleListUpdate(setSecretariatTransactions, (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                    break;
+                case 'accounting_transactions':
+                    handleListUpdate(setAccountingTransactions, (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                    break;
+                case 'employees':
+                    handleListUpdate(setEmployees, (a, b) => a.name.localeCompare(b.name));
+                    break;
+                case 'achievements':
+                    handleListUpdate(setAchievements, (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                    break;
+                case 'tv_settings':
+                    // Settings : mise à jour directe des états simples
+                    if (newRecord && newRecord.key === 'company_logo') setCustomLogo(newRecord.value);
+                    if (newRecord && newRecord.key === 'background_music') setBackgroundMusic(newRecord.value);
+                    break;
             }
         })
         .subscribe();
@@ -168,55 +178,49 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Fonction générique pour charger les données au démarrage
+  // Fonction spécifique légère pour recharger les messages
+  const fetchTickerMessages = async () => {
+      const { data } = await supabase.from('ticker_messages').select('id, content, color').order('created_at', { ascending: false });
+      if (data) setTickerMessages(data.map(t => ({ id: t.id, content: t.content, color: t.color || 'neutral' })));
+  };
+
+  // Chargement initial PARALLÈLE (Promise.all) pour réduire le temps d'attente
   const fetchData = async () => {
     try {
+        const promises = [
+            supabase.from('ticker_messages').select('id, content, color').order('created_at', { ascending: false }),
+            supabase.from('stock').select('*').order('name'),
+            supabase.from('interventions').select('*').order('date', { ascending: false }),
+            supabase.from('hardware_transactions').select('*').order('date', { ascending: false }),
+            supabase.from('secretariat_transactions').select('*').order('date', { ascending: false }),
+            supabase.from('accounting_transactions').select('*').order('date', { ascending: false }),
+            supabase.from('employees').select('*').order('name'),
+            supabase.from('achievements').select('*').order('date', { ascending: false }),
+            supabase.from('tv_settings').select('key, value').in('key', ['company_logo', 'background_music'])
+        ];
+
+        const [
+            tickerRes, stockRes, intervRes, hardTrxRes, secTrxRes, accTrxRes, empRes, achRes, settingsRes
+        ] = await Promise.all(promises);
+
         // 1. Messages
-        const { data: tickerData } = await supabase
-            .from('ticker_messages')
-            .select('id, content, color')
-            .order('created_at', { ascending: false });
-            
-        if (tickerData) {
-            const formattedMessages: TickerMessage[] = tickerData.map(t => ({
-                id: t.id,
-                content: t.content,
-                color: t.color || 'neutral'
-            }));
-            setTickerMessages(formattedMessages);
+        if (tickerRes.data) {
+            setTickerMessages(tickerRes.data.map(t => ({ id: t.id, content: t.content, color: t.color || 'neutral' })));
         }
 
-        // 2. Stock
-        const { data: stockData } = await supabase.from('stock').select('*').order('name');
-        if (stockData) setStock(stockData as StockItem[]);
-
-        // 3. Interventions
-        const { data: intervData } = await supabase.from('interventions').select('*').order('date', { ascending: false });
-        if (intervData) setInterventions(intervData as Intervention[]);
-
-        // 4. Transactions (CHARGEMENT SÉPARÉ)
-        const { data: hardTrx } = await supabase.from('hardware_transactions').select('*').order('date', { ascending: false });
-        if (hardTrx) setHardwareTransactions(hardTrx as Transaction[]);
-
-        const { data: secTrx } = await supabase.from('secretariat_transactions').select('*').order('date', { ascending: false });
-        if (secTrx) setSecretariatTransactions(secTrx as Transaction[]);
-
-        const { data: accTrx } = await supabase.from('accounting_transactions').select('*').order('date', { ascending: false });
-        if (accTrx) setAccountingTransactions(accTrx as Transaction[]);
-
-        // 5. Employés
-        const { data: empData } = await supabase.from('employees').select('*').order('name');
-        if (empData) setEmployees(empData as Employee[]);
-
-        // 6. Réalisations
-        const { data: achData } = await supabase.from('achievements').select('*').order('date', { ascending: false });
-        if (achData) setAchievements(achData as Achievement[]);
+        // 2. Data Lists
+        if (stockRes.data) setStock(stockRes.data as StockItem[]);
+        if (intervRes.data) setInterventions(intervRes.data as Intervention[]);
+        if (hardTrxRes.data) setHardwareTransactions(hardTrxRes.data as Transaction[]);
+        if (secTrxRes.data) setSecretariatTransactions(secTrxRes.data as Transaction[]);
+        if (accTrxRes.data) setAccountingTransactions(accTrxRes.data as Transaction[]);
+        if (empRes.data) setEmployees(empRes.data as Employee[]);
+        if (achRes.data) setAchievements(achRes.data as Achievement[]);
         
-        // 7. Settings
-        const { data: settingsData } = await supabase.from('tv_settings').select('key, value').in('key', ['company_logo', 'background_music']);
-        if (settingsData) {
-             const logo = settingsData.find(s => s.key === 'company_logo');
-             const music = settingsData.find(s => s.key === 'background_music');
+        // 3. Settings
+        if (settingsRes.data) {
+             const logo = settingsRes.data.find(s => s.key === 'company_logo');
+             const music = settingsRes.data.find(s => s.key === 'background_music');
              if (logo?.value) setCustomLogo(logo.value);
              if (music?.value) setBackgroundMusic(music.value);
         }
@@ -228,8 +232,10 @@ const App: React.FC = () => {
     }
   };
 
-  // Pour le Dashboard, on combine tout, mais en gardant la trace de l'origine si besoin via la catégorie ou un champ custom si on voulait
-  const allTransactions = [...hardwareTransactions, ...secretariatTransactions, ...accountingTransactions];
+  // Pour le Dashboard, on combine tout
+  const allTransactions = useMemo(() => {
+      return [...hardwareTransactions, ...secretariatTransactions, ...accountingTransactions];
+  }, [hardwareTransactions, secretariatTransactions, accountingTransactions]);
 
   if (activeTab === 'showcase') {
     return (
