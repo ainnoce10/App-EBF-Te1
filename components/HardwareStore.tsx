@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { StockItem, Transaction } from '../types';
 import { supabase } from '../lib/supabase';
@@ -99,6 +100,7 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
         quantity: 0, 
         threshold: 5, 
         unitPrice: 0, 
+        regularPrice: 0, // Init
         supplier: '', 
         site: 'Abidjan', 
         imageUrls: ['', '', '', ''],
@@ -471,14 +473,28 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
                                     <option value="Outillage">🛠️ Outil</option>
                                </select>
                            </div>
-                            <div className="space-y-2">
-                               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Prix (FCFA)</label>
-                               <input 
-                                 type="number" 
-                                 value={editForm.unitPrice} 
-                                 onChange={(e) => setEditForm({...editForm, unitPrice: parseInt(e.target.value) || 0})}
-                                 className="w-full p-4 bg-orange-50 text-orange-600 rounded-2xl font-black text-lg outline-none focus:ring-2 focus:ring-orange-500"
-                               />
+                           
+                           {/* PRIX (Avec champ barré) */}
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 col-span-1 md:col-span-1">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Prix Promo (FCFA)</label>
+                                    <input 
+                                        type="number" 
+                                        value={editForm.unitPrice} 
+                                        onChange={(e) => setEditForm({...editForm, unitPrice: parseInt(e.target.value) || 0})}
+                                        className="w-full p-4 bg-orange-50 text-orange-600 rounded-2xl font-black text-lg outline-none focus:ring-2 focus:ring-orange-500"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Prix Normal (Barré)</label>
+                                    <input 
+                                        type="number" 
+                                        value={editForm.regularPrice || ''} 
+                                        onChange={(e) => setEditForm({...editForm, regularPrice: parseInt(e.target.value) || 0})}
+                                        placeholder="Optionnel"
+                                        className="w-full p-4 bg-gray-50 text-gray-500 rounded-2xl font-bold text-lg outline-none focus:ring-2 focus:ring-gray-300"
+                                    />
+                                </div>
                            </div>
                        </div>
 
