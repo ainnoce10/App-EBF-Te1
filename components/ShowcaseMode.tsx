@@ -406,17 +406,10 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                   className="w-[90%] h-[90%] object-contain animate-float"
                                 />
                                 
-                                {/* Badge promo dynamique */}
-                                {currentProduct.name.trim().toUpperCase().startsWith('CLIMATISEUR') ? (
-                                    <div className="absolute -top-10 -right-10 bg-[#E3001B] text-white px-8 py-6 rounded-tr-[3rem] rounded-bl-[3rem] shadow-2xl z-30 flex flex-col items-center justify-center rotate-12 border-4 border-white/20">
-                                        <span className="text-2xl font-bold italic leading-none drop-shadow-md">Installation</span>
-                                        <span className="text-5xl font-black uppercase leading-[0.85] tracking-tighter drop-shadow-md mt-1">OFFERTE*</span>
-                                    </div>
-                                ) : (
-                                    <div className="absolute -top-6 -right-6 bg-red-600 text-white w-24 h-24 rounded-full flex items-center justify-center font-black text-xl rotate-12 shadow-lg border-4 border-gray-900 z-20">
-                                        PROMO
-                                    </div>
-                                )}
+                                {/* Badge PROMO Standard toujours affiché sur l'image */}
+                                <div className="absolute -top-6 -right-6 bg-red-600 text-white w-24 h-24 rounded-full flex items-center justify-center font-black text-xl rotate-12 shadow-lg border-4 border-gray-900 z-20">
+                                    PROMO
+                                </div>
                             </div>
                         </div>
                         
@@ -448,6 +441,15 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                     {currentProduct.unitPrice.toLocaleString()} <span className="text-3xl text-gray-500 font-bold ml-1">F</span>
                                 </p>
                             </div>
+
+                            {/* BADGE INSTALLATION OFFERTE (UNIQUEMENT CLIMATISEURS) - PLACÉ ICI */}
+                            {currentProduct.name.trim().toUpperCase().startsWith('CLIMATISEUR') && (
+                                <div className="mt-8 bg-[#E3001B] text-white px-10 py-6 rounded-tr-[3rem] rounded-bl-[3rem] shadow-[0_20px_50px_rgba(227,0,27,0.3)] self-start flex flex-col items-center justify-center -rotate-2 border-4 border-white/20 transform origin-left hover:scale-105 transition-transform cursor-default animate-bounce-slow">
+                                    <span className="text-2xl font-bold italic leading-none drop-shadow-sm">Installation</span>
+                                    <span className="text-5xl font-black uppercase leading-[0.85] tracking-tighter drop-shadow-md mt-1">OFFERTE*</span>
+                                    <span className="text-sm font-bold mt-2 opacity-90 tracking-widest bg-black/20 px-3 py-1 rounded-full">OFFRE LIMITÉE</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                   ) : <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-white" size={80}/></div>
