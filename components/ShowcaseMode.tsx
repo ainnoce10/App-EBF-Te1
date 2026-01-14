@@ -405,10 +405,18 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                   src={currentProduct.imageUrls?.[0] || 'https://placehold.co/800x800/1a1a1a/ffffff?text=EBF'} 
                                   className="w-[90%] h-[90%] object-contain animate-float"
                                 />
-                                {/* Badge promo flottant */}
-                                <div className="absolute -top-6 -right-6 bg-red-600 text-white w-24 h-24 rounded-full flex items-center justify-center font-black text-xl rotate-12 shadow-lg border-4 border-gray-900 z-20">
-                                    PROMO
-                                </div>
+                                
+                                {/* Badge promo dynamique */}
+                                {currentProduct.name.trim().toUpperCase().startsWith('CLIMATISEUR') ? (
+                                    <div className="absolute -top-10 -right-10 bg-[#E3001B] text-white px-8 py-6 rounded-tr-[3rem] rounded-bl-[3rem] shadow-2xl z-30 flex flex-col items-center justify-center rotate-12 border-4 border-white/20">
+                                        <span className="text-2xl font-bold italic leading-none drop-shadow-md">Installation</span>
+                                        <span className="text-5xl font-black uppercase leading-[0.85] tracking-tighter drop-shadow-md mt-1">OFFERTE*</span>
+                                    </div>
+                                ) : (
+                                    <div className="absolute -top-6 -right-6 bg-red-600 text-white w-24 h-24 rounded-full flex items-center justify-center font-black text-xl rotate-12 shadow-lg border-4 border-gray-900 z-20">
+                                        PROMO
+                                    </div>
+                                )}
                             </div>
                         </div>
                         
