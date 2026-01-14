@@ -33,29 +33,29 @@
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
     <script>
-      // Stockage de l'événement d'installation pour utilisation ultérieure
+      // Stockage global de l'événement d'installation
       window.deferredPrompt = null;
 
       window.addEventListener('beforeinstallprompt', (e) => {
-        // Empêche la bannière par défaut du navigateur
+        // Empêche la bannière automatique pour laisser le contrôle au bouton dans les paramètres
         e.preventDefault();
         window.deferredPrompt = e;
-        // Déclenche un événement personnalisé pour informer React que l'installation est possible
-        window.dispatchEvent(new CustomEvent('pwa-install-ready'));
-        console.log('✅ Application prête pour installation native');
+        console.log('✅ PWA prête à être installée');
+        // Notifier les composants React
+        window.dispatchEvent(new CustomEvent('ebf-pwa-ready'));
       });
 
       window.addEventListener('appinstalled', () => {
         window.deferredPrompt = null;
-        console.log('🚀 Application EBF installée avec succès !');
+        console.log('🚀 Application installée !');
       });
 
-      // Enregistrement du Service Worker
+      // Enregistrement forcé du Service Worker
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('SW enregistré'))
-            .catch(err => console.log('Erreur SW', err));
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(reg => console.log('SW enregistré:', reg.scope))
+            .catch(err => console.error('Erreur SW:', err));
         });
       }
     </script>

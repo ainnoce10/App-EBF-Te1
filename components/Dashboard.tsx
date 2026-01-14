@@ -7,14 +7,10 @@ import {
   ArrowDown, 
   ArrowUp, 
   Briefcase, 
-  Users, 
   Activity, 
-  DollarSign, 
-  Calendar 
+  DollarSign
 } from 'lucide-react';
 import { 
-  BarChart, 
-  Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -171,7 +167,7 @@ const Dashboard: React.FC<DashboardProps> = ({ period, liveTransactions = [], li
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="font-bold text-gray-800 flex items-center gap-2">
                         <Activity className="text-orange-500" size={20}/>
-                        Analyse Financière
+                        Analyse Financière ({period})
                     </h3>
                     <select className="bg-gray-50 border-none text-xs font-bold text-gray-600 rounded-lg px-3 py-2 outline-none">
                         <option>Cette Semaine</option>

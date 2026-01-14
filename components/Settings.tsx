@@ -47,18 +47,21 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
   const [logoUrl, setLogoUrl] = useState('');
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // États PWA
-  const [isInstalled, setIsInstalled] = useState(false);
-  const [canInstall, setCanInstall] = useState(!!(window as any).deferredPrompt);
+  // État pour l'installation PWA
+  const [isAlreadyInstalled, setIsAlreadyInstalled] = useState(false);
+  const [isPromptAvailable, setIsPromptAvailable] = useState(!!(window as any).deferredPrompt);
 
   useEffect(() => {
-    // Vérifier si déjà installée
+    // Vérifier si l'app est déjà lancée en mode "app installée"
     if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
-        setIsInstalled(true);
+        setIsAlreadyInstalled(true);
     }
 
-    const handleInstallReady = () => setCanInstall(true);
-    window.addEventListener('pwa-install-ready', handleInstallReady);
+    const handlePwaReady = () => {
+      setIsPromptAvailable(true);
+    };
+
+    window.addEventListener('ebf-pwa-ready', handlePwaReady);
 
     const loadSettings = async () => {
         try {
@@ -74,7 +77,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
                 if (logo && logo.value) setLogoUrl(logo.value);
             }
         } catch (error) {
-            console.error("Erreur réglages:", error);
+            console.error("Erreur chargement réglages:", error);
         }
     };
 
@@ -91,29 +94,27 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
                 setAudioLibrary(uploadedTracks);
             }
         } catch (error) {
-            console.warn("Erreur audio library");
+            console.warn("Erreur chargement bibliothèque audio.");
         }
     };
 
     loadSettings();
     loadAudioLibrary();
 
-    return () => window.removeEventListener('pwa-install-ready', handleInstallReady);
+    return () => window.removeEventListener('ebf-pwa-ready', handlePwaReady);
   }, []);
 
   const handleInstallClick = async () => {
     const promptEvent = (window as any).deferredPrompt;
     
     if (promptEvent) {
-      // Déclenche la fenêtre d'installation native Android
       promptEvent.prompt();
       const { outcome } = await promptEvent.userChoice;
       if (outcome === 'accepted') {
         (window as any).deferredPrompt = null;
-        setCanInstall(false);
+        setIsPromptAvailable(false);
       }
     } else {
-      // Si l'événement n'est pas encore là, on affiche le guide
       setShowInstallGuide(true);
     }
   };
@@ -122,18 +123,20 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
     if (!musicUrl) return;
     setIsSavingMusic(true);
     try {
-        await supabase.from('tv_settings').upsert({ key: 'background_music', value: musicUrl }, { onConflict: 'key' });
+        const { error } = await supabase.from('tv_settings').upsert({ key: 'background_music', value: musicUrl }, { onConflict: 'key' });
+        if (error) throw error;
         alert("Musique TV sauvegardée !");
-    } catch (e) { alert("Erreur sauvegarde musique"); } finally { setIsSavingMusic(false); }
+    } catch (e: any) { alert("Erreur : " + e.message); } finally { setIsSavingMusic(false); }
   };
 
   const handleSaveLogo = async () => {
     if (!logoUrl) return;
     setIsSavingLogo(true);
     try {
-        await supabase.from('tv_settings').upsert({ key: 'company_logo', value: logoUrl }, { onConflict: 'key' });
+        const { error } = await supabase.from('tv_settings').upsert({ key: 'company_logo', value: logoUrl }, { onConflict: 'key' });
+        if (error) throw error;
         alert("Logo mis à jour !");
-    } catch (e) { alert("Erreur sauvegarde logo"); } finally { setIsSavingLogo(false); }
+    } catch (e: any) { alert("Erreur : " + e.message); } finally { setIsSavingLogo(false); }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'music' | 'logo') => {
@@ -142,34 +145,39 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
     setIsUploading(true);
     try {
         const fileName = `${type}_${Date.now()}.${file.name.split('.').pop()}`;
-        await supabase.storage.from('assets').upload(fileName, file);
+        const { error: uploadError } = await supabase.storage.from('assets').upload(fileName, file);
+        if (uploadError) throw uploadError;
         const { data: { publicUrl } } = supabase.storage.from('assets').getPublicUrl(fileName);
         if (type === 'music') { setMusicUrl(publicUrl); setAudioLibrary(prev => [{ name: file.name, url: publicUrl }, ...prev]); }
         else setLogoUrl(publicUrl);
-    } catch (error) { alert("Erreur upload"); } finally { setIsUploading(false); }
+    } catch (error: any) { alert("Erreur upload: " + error.message); } finally { setIsUploading(false); }
   };
 
   const handleAddMessage = async () => {
     if (!newMessage.trim()) return;
     setIsUpdating(true);
     try {
-      await supabase.from('ticker_messages').insert([{ content: newMessage.trim(), color: newColor }]);
+      const { error } = await supabase.from('ticker_messages').insert([{ content: newMessage.trim(), color: newColor }]);
+      if (error) throw error;
       setNewMessage('');
       setNewColor('neutral');
-    } catch (error) { alert(`Erreur ajout message`); } finally { setIsUpdating(false); }
+    } catch (error: any) { alert(`Erreur : ${error.message}`); } finally { setIsUpdating(false); }
   };
 
   const handleDeleteMessage = async (msg: TickerMessage) => {
     if (!window.confirm("Supprimer ?")) return;
     setIsUpdating(true);
     try { if (msg.id) await supabase.from('ticker_messages').delete().eq('id', msg.id); } 
-    catch (error) { alert(`Erreur suppression`); } finally { setIsUpdating(false); }
+    catch (error: any) { alert(`Erreur : ${error.message}`); } finally { setIsUpdating(false); }
   };
 
-  const handleUpdateMessageColor = async (msg: TickerMessage, c: 'neutral' | 'green' | 'yellow' | 'red') => {
+  const handleUpdateMessageColor = async (msg: TickerMessage, newColor: 'neutral' | 'green' | 'yellow' | 'red') => {
     if (!msg.id) return;
-    try { await supabase.from('ticker_messages').update({ color: c }).eq('id', msg.id); } 
-    catch (error) { alert(`Erreur couleur`); } 
+    try { 
+        const { error } = await supabase.from('ticker_messages').update({ color: newColor }).eq('id', msg.id); 
+        if (error) throw error; 
+    } 
+    catch (error: any) { alert(`Erreur : ${error.message}`); } 
   };
 
   const getColorClass = (c: string) => {
@@ -195,8 +203,8 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
       
       <audio ref={audioTestRef} src={musicUrl} />
 
-      {/* BOUTON D'INSTALLATION ANDROID RÉEL */}
-      {!isInstalled && (
+      {/* SECTION INSTALLATION ANDROID / IOS */}
+      {!isAlreadyInstalled && (
         <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-orange-200 animate-scale-in relative overflow-hidden group">
             <Smartphone size={150} className="absolute -right-6 -bottom-10 opacity-10 group-hover:scale-110 transition-transform duration-700" />
             <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
@@ -204,52 +212,52 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
                     <DownloadCloud size={48} className="text-white" />
                 </div>
                 <div className="flex-1 text-center md:text-left">
-                    <h3 className="text-2xl font-black uppercase tracking-tighter mb-1 italic">Installer EBF sur Android</h3>
+                    <h3 className="text-2xl font-black uppercase tracking-tighter mb-1 italic">Installer l'Application Android</h3>
                     <p className="text-sm font-bold opacity-90 max-w-sm">
-                        Téléchargez l'application complète pour une utilisation fluide en plein écran et un accès direct.
+                        Installez l'application native pour une utilisation plein écran et un accès rapide depuis votre tiroir d'applications.
                     </p>
                 </div>
                 <button 
                     onClick={handleInstallClick}
                     className="bg-white text-orange-600 px-8 py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-2xl active:scale-95 transition-all whitespace-nowrap hover:bg-orange-50"
                 >
-                    {canInstall ? "Télécharger l'App" : "Guide d'installation"}
+                    {isPromptAvailable ? "Installer maintenant" : "Guide d'installation"}
                 </button>
             </div>
         </div>
       )}
 
-      {/* GUIDE MANUEL SI LE PROMPT N'EST PAS ENCORE DISPONIBLE */}
+      {/* GUIDE POUR INSTALLATION MANUELLE */}
       {showInstallGuide && (
         <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-          <div className="bg-white w-full max-w-sm rounded-[3rem] p-8 shadow-2xl relative overflow-hidden text-gray-900">
+          <div className="bg-white w-full max-w-sm rounded-[3rem] p-8 shadow-2xl relative overflow-hidden">
              <div className="absolute top-0 left-0 w-full h-2 bg-orange-500"></div>
-             <button onClick={() => setShowInstallGuide(false)} className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full"><X size={20}/></button>
+             <button onClick={() => setShowInstallGuide(false)} className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all"><X size={20}/></button>
              
              <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Info size={32}/>
                 </div>
-                <h3 className="text-xl font-black uppercase italic tracking-tighter">Installation Manuelle</h3>
-                <p className="text-[10px] text-gray-400 font-bold uppercase mt-2 tracking-widest">Si le téléchargement auto ne démarre pas</p>
+                <h3 className="text-xl font-black uppercase italic text-gray-900">Installation Android</h3>
+                <p className="text-[10px] text-gray-400 font-bold uppercase mt-2 tracking-widest">Suivez ces étapes simples</p>
              </div>
 
              <div className="space-y-6">
                 <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-2xl">
-                  <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-black shrink-0 shadow-lg shadow-orange-100 text-xs">1</div>
-                  <p className="text-sm font-bold text-gray-700">Appuyez sur les 3 points <MoreVertical className="inline text-orange-500" size={16}/> de Chrome (en haut à droite).</p>
+                  <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-black shrink-0 shadow-lg shadow-orange-100">1</div>
+                  <p className="text-sm font-bold text-gray-700">Appuyez sur les 3 points <MoreVertical className="inline text-orange-500" size={16}/> en haut à droite de Chrome.</p>
                 </div>
                 <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-2xl">
-                  <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-black shrink-0 shadow-lg shadow-orange-100 text-xs">2</div>
-                  <p className="text-sm font-bold text-gray-700">Sélectionnez <span className="text-orange-600 font-black">"Installer l'application"</span> dans le menu.</p>
+                  <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-black shrink-0 shadow-lg shadow-orange-100">2</div>
+                  <p className="text-sm font-bold text-gray-700">Sélectionnez <span className="text-orange-600 font-black">"Installer l'application"</span> (et non pas "Ajouter à l'écran d'accueil").</p>
                 </div>
-                <button onClick={() => setShowInstallGuide(false)} className="w-full py-5 bg-gray-950 text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] mt-2 shadow-xl active:scale-95">J'ai compris</button>
+                <button onClick={() => setShowInstallGuide(false)} className="w-full py-5 bg-gray-950 text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] mt-2 shadow-xl active:scale-95 transition-all">J'ai compris</button>
              </div>
           </div>
         </div>
       )}
 
-      {/* NAVIGATION RAPIDE */}
+      {/* RACCOURCIS RAPIDES */}
       <div className="mb-4">
           <h3 className="font-black text-gray-400 uppercase text-[10px] tracking-[0.2em] mb-4 flex items-center gap-2 px-1">
               <ArrowRightCircle size={14} className="text-orange-600"/> Navigation rapide
@@ -318,10 +326,10 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
                       {sqlScript}
                   </pre>
                   <button 
-                    onClick={() => { navigator.clipboard.writeText(sqlScript); alert("Script SQL copié !"); }}
+                    onClick={() => { navigator.clipboard.writeText(sqlScript); alert("Script SQL copié dans le presse-papier !"); }}
                     className="w-full py-5 bg-orange-600 text-white rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all tracking-[0.2em]"
                   >
-                      <Copy size={18}/> Copier le script
+                      <Copy size={18}/> Copier pour SQL Editor
                   </button>
               </div>
           </div>
