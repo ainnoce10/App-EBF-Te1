@@ -53,6 +53,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const [planningPage, setPlanningPage] = useState(0);
   const [achievementIdx, setAchievementIdx] = useState(0);
   
+  // Time State
+  const [currentTime, setCurrentTime] = useState(new Date());
+
   // Audio state
   const [isMuted, setIsMuted] = useState(false);
   const [audioSrc, setAudioSrc] = useState(initialMusicUrl || '');
@@ -78,8 +81,11 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   // Clé de stockage distincte pour ne pas mélanger les réglages PC et TV
   const storageKey = isTvRoute ? 'ebf_tv_scale_v5' : 'ebf_desktop_scale_v5';
 
-  // Initialisation Dimensions & Settings
+  // Initialisation Dimensions & Settings & Time
   useEffect(() => {
+    // Timer Horloge
+    const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000);
+
     const handleResize = () => {
         setWindowSize({ w: window.innerWidth, h: window.innerHeight });
     };
@@ -115,6 +121,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     }
 
     return () => {
+        clearInterval(clockInterval);
         window.removeEventListener('resize', handleResize);
         window.removeEventListener('orientationchange', handleResize);
         document.removeEventListener('fullscreenchange', handleFsChange);
@@ -313,6 +320,19 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                         </button>
                       ))}
                   </div>
+              </div>
+
+              {/* HORLOGE CENTRÉE EN TEMPS RÉEL */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+                  <span className="text-4xl font-black text-white tracking-widest tabular-nums leading-none flex items-center">
+                      {currentTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      <span className="text-lg text-orange-500 ml-1 font-bold pt-1">
+                          {currentTime.getSeconds().toString().padStart(2, '0')}
+                      </span>
+                  </span>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-1">
+                      {currentTime.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })}
+                  </span>
               </div>
 
               {/* Controls */}
