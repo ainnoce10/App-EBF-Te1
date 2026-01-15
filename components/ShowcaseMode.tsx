@@ -492,7 +492,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                         <div className="flex items-start gap-4">
                                             <div className="flex flex-col items-end pt-1">
                                                 {/* Label */}
-                                                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Technicien</p>
+                                                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Technicien (Chef de groupe)</p>
                                                 {/* Name - Now under the label but left of photo */}
                                                 <p className="text-orange-400 font-black text-2xl uppercase text-right leading-tight max-w-[150px]">{inter.technician}</p>
                                             </div>
@@ -549,7 +549,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                     
                                     {/* Site Badge Bottom */}
                                     {inter.site && (
-                                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 opacity-30">
+                                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-30">
                                             <span className="text-4xl font-black text-white uppercase tracking-[0.5em]">{inter.site}</span>
                                         </div>
                                     )}
