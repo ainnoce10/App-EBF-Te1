@@ -543,7 +543,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                         
                                         {/* Description Box Centered */}
                                         <div className="w-full bg-black/40 p-6 rounded-3xl border border-white/10 backdrop-blur-sm flex items-center justify-center min-h-[120px]">
-                                            <p className="text-white text-3xl font-bold leading-tight">{inter.description}</p>
+                                            <p className="text-white text-2xl font-bold leading-tight">{inter.description}</p>
                                         </div>
                                     </div>
                                     
@@ -578,11 +578,11 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                    </span>
                               </div>
                               
-                              <h2 className="text-7xl font-black text-gray-950 uppercase tracking-tighter mb-8 leading-[0.9]">
+                              <h2 className="text-5xl font-black text-gray-950 uppercase tracking-tighter mb-8 leading-normal text-center">
                                   {currentAchievement.title}
                               </h2>
                               
-                              <div className="w-24 h-4 bg-orange-600 mb-8 rounded-full"></div>
+                              <div className="w-24 h-4 bg-orange-600 mb-8 rounded-full mx-auto"></div>
 
                               {currentAchievement.description && (
                                   <p className="text-4xl text-gray-500 font-bold leading-snug">
