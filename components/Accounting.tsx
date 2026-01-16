@@ -24,7 +24,8 @@ import {
   Calendar, 
   Printer, 
   CheckCircle2, 
-  Clock 
+  Clock,
+  Trash2
 } from 'lucide-react';
 
 interface AccountingProps {
@@ -219,6 +220,20 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
     } catch (error) {
         setEmployees(employees.map(e => e.id === empId ? { ...e, status: emp.status } : e));
     }
+  };
+
+  const handleDeleteEmployee = async (id: string) => {
+      if (window.confirm("Êtes-vous sûr de vouloir supprimer définitivement ce collaborateur ?")) {
+          try {
+              const { error } = await supabase.from('employees').delete().eq('id', id);
+              if (error) throw error;
+              
+              // Mise à jour locale
+              setEmployees(prev => prev.filter(e => e.id !== id));
+          } catch (error: any) {
+              alert("Erreur lors de la suppression : " + error.message);
+          }
+      }
   };
 
   // Réinitialise complètement le formulaire
@@ -979,6 +994,12 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
                                         className={`text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider border ${emp.status === 'Actif' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}
                                      >
                                          {emp.status}
+                                     </button>
+                                     <button 
+                                        onClick={() => handleDeleteEmployee(emp.id)} 
+                                        className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors"
+                                     >
+                                         <Trash2 size={16} />
                                      </button>
                                  </div>
                              </div>
