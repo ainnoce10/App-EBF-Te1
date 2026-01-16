@@ -36,6 +36,10 @@ interface AccountingProps {
 // Listes prédéfinies selon le cahier des charges
 const JOB_TITLES = [
   "Directeur Général",
+  "Superviseur",
+  "Secrétaire",
+  "Comptable",
+  "Commercial",
   "Technicien en froid",
   "Technicien en bâtiment",
   "Technicien en électricité",
