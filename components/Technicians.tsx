@@ -567,112 +567,109 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       {/* Modal Planification */}
       {showNewInterventionModal && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-           <div className="bg-white w-full max-w-2xl rounded-[3rem] p-6 md:p-10 shadow-2xl max-h-[92vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
+           <div className="bg-white w-full max-w-4xl rounded-[2.5rem] p-6 shadow-2xl max-h-[95vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xl font-black uppercase italic tracking-tight text-gray-950">Nouvelle Mission</h3>
-                  <button onClick={() => setShowNewInterventionModal(false)} className="p-3 bg-gray-100 rounded-full text-gray-500"><X size={20}/></button>
+                  <button onClick={() => setShowNewInterventionModal(false)} className="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-500"><X size={20}/></button>
               </div>
               
-              <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Client</label>
-                        <div className="flex gap-2">
-                            <select 
-                                value={newCivility}
-                                onChange={(e) => setNewCivility(e.target.value as Civility)}
-                                className="bg-white rounded-xl font-bold text-xs px-2 outline-none border border-transparent focus:border-orange-500"
-                            >
-                                {civilityOptions.map(opt => (
-                                    <option key={opt} value={opt}>{opt}</option>
-                                ))}
-                            </select>
-                            <input 
-                                type="text" 
-                                placeholder="Nom du client / raison sociale" 
-                                className="w-full bg-transparent font-bold text-sm outline-none" 
-                                value={newClientName} 
-                                onChange={e => setNewClientName(e.target.value)}
-                            />
-                        </div>
-                      </div>
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Téléphone</label>
-                        <input type="text" placeholder="+225 XX XX XX XX" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.clientPhone} onChange={e => setNewIntervention({...newIntervention, clientPhone: e.target.value})}/>
-                      </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-1 block">Technicien (Chef de groupe)</label>
-                        <select className="w-full bg-transparent font-black text-sm outline-none" value={newIntervention.technician} onChange={e => setNewIntervention({...newIntervention, technician: e.target.value})}>
-                            <option value="">Choisir un technicien...</option>
-                            {techniciansList.map(t => (
-                              <option key={t.id} value={t.assignedName || t.name}>
-                                {t.assignedName || t.name}
-                              </option>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                  {/* Row 1 */}
+                  <div className="md:col-span-8 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Client</label>
+                    <div className="flex gap-2">
+                        <select 
+                            value={newCivility}
+                            onChange={(e) => setNewCivility(e.target.value as Civility)}
+                            className="bg-white rounded-xl font-bold text-xs px-2 py-1 outline-none border border-transparent focus:border-orange-500"
+                        >
+                            {civilityOptions.map(opt => (
+                                <option key={opt} value={opt}>{opt}</option>
                             ))}
                         </select>
-                      </div>
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Date Intervention</label>
-                        <input type="date" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.date} onChange={e => setNewIntervention({...newIntervention, date: e.target.value})}/>
-                      </div>
+                        <input 
+                            type="text" 
+                            placeholder="Nom du client" 
+                            className="w-full bg-transparent font-bold text-sm outline-none" 
+                            value={newClientName} 
+                            onChange={e => setNewClientName(e.target.value)}
+                        />
+                    </div>
+                  </div>
+                  <div className="md:col-span-4 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Téléphone</label>
+                    <input type="text" placeholder="+225..." className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.clientPhone} onChange={e => setNewIntervention({...newIntervention, clientPhone: e.target.value})}/>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Domaine</label>
-                        <select className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.domain} onChange={e => setNewIntervention({...newIntervention, domain: e.target.value as any})}>
-                            <option value="Électricité">Électricité</option>
-                            <option value="Plomberie">Plomberie</option>
-                            <option value="Froid">Froid</option>
-                            <option value="Bâtiment">Bâtiment</option>
-                        </select>
-                      </div>
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Type de mission</label>
-                        <select className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.interventionType} onChange={e => setNewIntervention({...newIntervention, interventionType: e.target.value as any})}>
-                            <option value="Dépannage">Dépannage</option>
-                            <option value="Installation">Installation</option>
-                            <option value="Désinstallation">Désinstallation</option>
-                            <option value="Entretien">Entretien</option>
-                            <option value="Maintenance">Maintenance</option>
-                            <option value="Tuyauterie">Tuyauterie</option>
-                            <option value="Appareillage">Appareillage</option>
-                            <option value="Fillerie">Fillerie</option>
-                            <option value="Rénovation">Rénovation</option>
-                            <option value="Réhabilitation">Réhabilitation</option>
-                            <option value="Expertise">Expertise</option>
-                            <option value="Devis">Devis</option>
-                        </select>
-                      </div>
+                  {/* Row 2 */}
+                  <div className="md:col-span-5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+                    <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-1 block">Technicien</label>
+                    <select className="w-full bg-transparent font-black text-sm outline-none" value={newIntervention.technician} onChange={e => setNewIntervention({...newIntervention, technician: e.target.value})}>
+                        <option value="">Choisir...</option>
+                        {techniciansList.map(t => (
+                          <option key={t.id} value={t.assignedName || t.name}>
+                            {t.assignedName || t.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div className="md:col-span-3 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Date</label>
+                    <input type="date" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.date} onChange={e => setNewIntervention({...newIntervention, date: e.target.value})}/>
+                  </div>
+                  <div className="md:col-span-4 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Site</label>
+                    <select className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.site} onChange={e => setNewIntervention({...newIntervention, site: e.target.value as any})}>
+                        <option value="Abidjan">Abidjan</option>
+                        <option value="Bouaké">Bouaké</option>
+                        <option value="Korhogo">Korhogo</option>
+                    </select>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Site / Ville</label>
-                        <select className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.site} onChange={e => setNewIntervention({...newIntervention, site: e.target.value as any})}>
-                            <option value="Abidjan">Abidjan</option>
-                            <option value="Bouaké">Bouaké</option>
-                            <option value="Korhogo">Korhogo</option>
-                        </select>
-                      </div>
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Lieu précis / Adresse</label>
-                        <input type="text" placeholder="Ex: Cocody Riviera 3" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.location} onChange={e => setNewIntervention({...newIntervention, location: e.target.value})}/>
-                      </div>
+                  {/* Row 3 */}
+                  <div className="md:col-span-4 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Domaine</label>
+                    <select className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.domain} onChange={e => setNewIntervention({...newIntervention, domain: e.target.value as any})}>
+                        <option value="Électricité">Électricité</option>
+                        <option value="Plomberie">Plomberie</option>
+                        <option value="Froid">Froid</option>
+                        <option value="Bâtiment">Bâtiment</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-4 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Type</label>
+                    <select className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.interventionType} onChange={e => setNewIntervention({...newIntervention, interventionType: e.target.value as any})}>
+                        <option value="Dépannage">Dépannage</option>
+                        <option value="Installation">Installation</option>
+                        <option value="Désinstallation">Désinstallation</option>
+                        <option value="Entretien">Entretien</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Tuyauterie">Tuyauterie</option>
+                        <option value="Appareillage">Appareillage</option>
+                        <option value="Fillerie">Fillerie</option>
+                        <option value="Rénovation">Rénovation</option>
+                        <option value="Réhabilitation">Réhabilitation</option>
+                        <option value="Expertise">Expertise</option>
+                        <option value="Devis">Devis</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-4 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Lieu précis</label>
+                    <input type="text" placeholder="Ex: Cocody" className="w-full bg-transparent font-bold text-sm outline-none" value={newIntervention.location} onChange={e => setNewIntervention({...newIntervention, location: e.target.value})}/>
                   </div>
 
-                  <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                  {/* Row 4 */}
+                  <div className="md:col-span-12 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Instructions / Description</label>
-                    <textarea placeholder="Détails de la mission..." className="w-full bg-transparent font-bold text-sm h-24 outline-none resize-none" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
+                    <textarea placeholder="Détails de la mission..." className="w-full bg-transparent font-bold text-sm h-16 outline-none resize-none" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
                   </div>
 
-                  <button onClick={handleCreateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-950 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-widest shadow-xl flex justify-center items-center gap-2 active:scale-95 transition-all disabled:opacity-50 mt-2">
-                    {isSaving ? <Loader2 className="animate-spin" size={16} /> : <CalendarPlus size={18}/>}
-                    {isSaving ? 'EN COURS...' : 'CONFIRMER LA MISSION'}
-                  </button>
+                  <div className="md:col-span-12 mt-1">
+                    <button onClick={handleCreateIntervention} disabled={isSaving} className="w-full py-3 bg-gray-950 text-white rounded-[1.25rem] font-black uppercase text-xs tracking-widest shadow-xl flex justify-center items-center gap-2 active:scale-95 transition-all disabled:opacity-50 hover:bg-orange-600">
+                        {isSaving ? <Loader2 className="animate-spin" size={16} /> : <CalendarPlus size={18}/>}
+                        {isSaving ? 'EN COURS...' : 'CONFIRMER LA MISSION'}
+                    </button>
+                  </div>
               </div>
            </div>
         </div>
@@ -704,14 +701,15 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       {/* Édition Complète */}
       {editIntervention && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 p-4 animate-fade-in backdrop-blur-sm">
-           <div className="bg-white w-full max-w-2xl rounded-[3rem] p-6 md:p-10 shadow-2xl animate-scale-in max-h-[92vh] overflow-y-auto">
-               <div className="flex justify-between items-center mb-6">
+           <div className="bg-white w-full max-w-4xl rounded-[2.5rem] p-6 shadow-2xl animate-scale-in max-h-[95vh] overflow-y-auto">
+               <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xl font-black uppercase italic tracking-tighter text-gray-950">Modifier Mission</h3>
-                  <button onClick={() => setEditIntervention(null)} className="p-3 bg-gray-100 rounded-full hover:bg-gray-200"><X size={20}/></button>
+                  <button onClick={() => setEditIntervention(null)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200"><X size={20}/></button>
                </div>
                
-               <div className="space-y-4">
-                   <div className="bg-gray-900 p-4 rounded-2xl flex justify-between items-center">
+               <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                   {/* Row 0: Status */}
+                   <div className="md:col-span-12 bg-gray-900 p-3 rounded-2xl flex justify-between items-center">
                        <label className="text-white font-black uppercase text-xs tracking-widest">Statut Actuel</label>
                        <select 
                          value={editIntervention.status}
@@ -724,14 +722,14 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                        </select>
                    </div>
 
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                   {/* Row 1 */}
+                   <div className="md:col-span-8 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Client</label>
                         <div className="flex gap-2">
                              <select 
                                 value={editCivility}
                                 onChange={(e) => setEditCivility(e.target.value as Civility)}
-                                className="bg-white rounded-xl font-bold text-xs px-2 outline-none border border-transparent focus:border-orange-500"
+                                className="bg-white rounded-xl font-bold text-xs px-2 py-1 outline-none border border-transparent focus:border-orange-500"
                             >
                                 {civilityOptions.map(opt => (
                                     <option key={opt} value={opt}>{opt}</option>
@@ -744,15 +742,14 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                                 onChange={e => setEditClientName(e.target.value)}
                             />
                         </div>
-                      </div>
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                   </div>
+                   <div className="md:col-span-4 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Téléphone</label>
                         <input type="text" className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.clientPhone || ''} onChange={e => setEditIntervention({...editIntervention, clientPhone: e.target.value})}/>
-                      </div>
                    </div>
 
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                   {/* Row 2 */}
+                   <div className="md:col-span-5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-1 block">Technicien</label>
                         <select className="w-full bg-transparent font-black text-sm outline-none" value={editIntervention.technician} onChange={e => setEditIntervention({...editIntervention, technician: e.target.value})}>
                             <option value="">Choisir...</option>
@@ -762,15 +759,22 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                               </option>
                             ))}
                         </select>
-                      </div>
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                   </div>
+                   <div className="md:col-span-3 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Date</label>
                         <input type="date" className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.date} onChange={e => setEditIntervention({...editIntervention, date: e.target.value})}/>
-                      </div>
+                   </div>
+                   <div className="md:col-span-4 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Site</label>
+                        <select className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.site} onChange={e => setEditIntervention({...editIntervention, site: e.target.value as any})}>
+                            <option value="Abidjan">Abidjan</option>
+                            <option value="Bouaké">Bouaké</option>
+                            <option value="Korhogo">Korhogo</option>
+                        </select>
                    </div>
 
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                   {/* Row 3 */}
+                   <div className="md:col-span-4 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Domaine</label>
                         <select className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.domain || 'Électricité'} onChange={e => setEditIntervention({...editIntervention, domain: e.target.value as any})}>
                             <option value="Électricité">Électricité</option>
@@ -778,8 +782,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                             <option value="Froid">Froid</option>
                             <option value="Bâtiment">Bâtiment</option>
                         </select>
-                      </div>
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                   </div>
+                   <div className="md:col-span-4 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Type</label>
                         <select className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.interventionType || 'Dépannage'} onChange={e => setEditIntervention({...editIntervention, interventionType: e.target.value as any})}>
                             <option value="Dépannage">Dépannage</option>
@@ -795,33 +799,24 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                             <option value="Expertise">Expertise</option>
                             <option value="Devis">Devis</option>
                         </select>
-                      </div>
                    </div>
-
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Site</label>
-                        <select className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.site} onChange={e => setEditIntervention({...editIntervention, site: e.target.value as any})}>
-                            <option value="Abidjan">Abidjan</option>
-                            <option value="Bouaké">Bouaké</option>
-                            <option value="Korhogo">Korhogo</option>
-                        </select>
-                      </div>
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                   <div className="md:col-span-4 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Lieu précis</label>
                         <input type="text" className="w-full bg-transparent font-bold text-sm outline-none" value={editIntervention.location || ''} onChange={e => setEditIntervention({...editIntervention, location: e.target.value})}/>
-                      </div>
                    </div>
 
-                   <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                   {/* Row 4 */}
+                   <div className="md:col-span-12 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Description</label>
-                        <textarea className="w-full bg-transparent font-bold text-sm h-24 outline-none resize-none" value={editIntervention.description} onChange={e => setEditIntervention({...editIntervention, description: e.target.value})}/>
+                        <textarea className="w-full bg-transparent font-bold text-sm h-16 outline-none resize-none" value={editIntervention.description} onChange={e => setEditIntervention({...editIntervention, description: e.target.value})}/>
                    </div>
 
-                   <button onClick={handleUpdateIntervention} disabled={isSaving} className="w-full py-4 bg-gray-950 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-widest mt-4 shadow-xl flex items-center justify-center gap-2">
-                     {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18}/>}
-                     {isSaving ? 'ENREGISTREMENT...' : 'SAUVEGARDER LES MODIFICATIONS'}
-                   </button>
+                   <div className="md:col-span-12 mt-1">
+                     <button onClick={handleUpdateIntervention} disabled={isSaving} className="w-full py-3 bg-gray-950 text-white rounded-[1.25rem] font-black uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors">
+                        {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18}/>}
+                        {isSaving ? 'ENREGISTREMENT...' : 'SAUVEGARDER LES MODIFICATIONS'}
+                     </button>
+                   </div>
                </div>
            </div>
         </div>
