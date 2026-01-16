@@ -29,7 +29,7 @@ interface TechniciansProps {
 }
 
 type StatusFilterType = 'Tous' | 'En attente' | 'En cours' | 'Terminé avec rapport' | 'Terminé sans rapport';
-type Civility = 'M' | 'Mme' | 'Mlle' | 'Société' | 'ONG' | 'Entreprise';
+type Civility = 'M' | 'Mme' | 'Mlle' | 'Sté' | 'ONG' | 'Ets';
 
 const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -90,13 +90,19 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const civilityOptions: Civility[] = ['M', 'Mme', 'Mlle', 'Société', 'ONG', 'Entreprise'];
+  const civilityOptions: Civility[] = ['M', 'Mme', 'Mlle', 'Sté', 'ONG', 'Ets'];
 
   // Helper pour parser le nom lors de l'ouverture de l'édition
   const parseClientName = (fullName: string) => {
       const parts = fullName.split(' ');
-      if (civilityOptions.includes(parts[0] as Civility)) {
-          return { civ: parts[0] as Civility, name: parts.slice(1).join(' ') };
+      let potentialCiv = parts[0];
+
+      // Mapping de compatibilité pour les anciennes entrées
+      if (potentialCiv === 'Société') potentialCiv = 'Sté';
+      if (potentialCiv === 'Entreprise') potentialCiv = 'Ets';
+
+      if (civilityOptions.includes(potentialCiv as Civility)) {
+          return { civ: potentialCiv as Civility, name: parts.slice(1).join(' ') };
       }
       return { civ: 'M' as Civility, name: fullName };
   };
