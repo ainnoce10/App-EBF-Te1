@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Intervention, Employee } from '../types';
 import { supabase } from '../lib/supabase';
@@ -28,7 +29,7 @@ interface TechniciansProps {
 }
 
 type StatusFilterType = 'Tous' | 'En attente' | 'En cours' | 'Terminé avec rapport' | 'Terminé sans rapport';
-type Civility = 'M' | 'Mme' | 'Mlle';
+type Civility = 'M' | 'Mme' | 'Mlle' | 'Société' | 'ONG' | 'Entreprise';
 
 const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,7 +58,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   
   const [formReport, setFormReport] = useState({ client: '', workDone: '' });
   
-  // États séparés pour la création (Civilité + Nom)
+  // États séparés pour la création
   const [newCivility, setNewCivility] = useState<Civility>('M');
   const [newClientName, setNewClientName] = useState('');
   const [newIntervention, setNewIntervention] = useState({
@@ -71,7 +72,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     date: new Date().toISOString().split('T')[0]
   });
 
-  // États séparés pour l'édition (Civilité + Nom)
+  // États séparés pour l'édition
   const [editCivility, setEditCivility] = useState<Civility>('M');
   const [editClientName, setEditClientName] = useState('');
 
@@ -89,10 +90,12 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  const civilityOptions: Civility[] = ['M', 'Mme', 'Mlle', 'Société', 'ONG', 'Entreprise'];
+
   // Helper pour parser le nom lors de l'ouverture de l'édition
   const parseClientName = (fullName: string) => {
       const parts = fullName.split(' ');
-      if (['M', 'Mme', 'Mlle'].includes(parts[0])) {
+      if (civilityOptions.includes(parts[0] as Civility)) {
           return { civ: parts[0] as Civility, name: parts.slice(1).join(' ') };
       }
       return { civ: 'M' as Civility, name: fullName };
@@ -105,7 +108,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       setEditIntervention(inter);
   };
 
-  // Nettoyage au démontage ou fermeture
   useEffect(() => {
     return () => {
       cleanupRecording();
@@ -126,7 +128,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
   const handleStartRecording = async () => {
     try {
-      // Reset états précédents
       cleanupRecording();
       setAudioBlob(null);
       setAudioUrl(null);
@@ -137,7 +138,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       
-      // Détection MIME Type (MP4 pour iOS/Safari, WebM pour Chrome/FF)
       let mimeType = '';
       if (MediaRecorder.isTypeSupported('audio/mp4')) {
         mimeType = 'audio/mp4';
@@ -169,7 +169,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
             setRecordingState('idle');
         }
         
-        // Arrêt des pistes micro
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
@@ -182,7 +181,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
           handleStopRecording();
       };
 
-      // Démarrage avec timeslice pour garantir des chunks réguliers
       mediaRecorder.start(200);
       setRecordingState('recording');
       setRecordingDuration(0);
@@ -202,7 +200,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     } else {
-        // Fallback si l'état est incohérent
         setRecordingState('idle');
     }
     
@@ -219,7 +216,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     if (isPlaying) {
       audioPreviewRef.current.pause();
     } else {
-      // On remet au début si fini
       if (audioPreviewRef.current.ended) {
           audioPreviewRef.current.currentTime = 0;
       }
@@ -297,7 +293,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
     
     setIsSaving(true);
     try {
-      // 1. Upload vers le bucket 'voice_reports'
       const timestamp = Date.now();
       const fileExt = audioBlob.type.includes('mp4') ? 'mp4' : 'webm';
       const fileName = `report_${target.id}_${timestamp}.${fileExt}`;
@@ -308,10 +303,9 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       
       if (uploadError) {
           console.error("Upload error:", uploadError);
-          throw new Error("Échec upload audio. Vérifiez votre connexion ou les paramètres Supabase (Storage).");
+          throw new Error("Échec upload audio.");
       }
 
-      // 2. Mise à jour de l'intervention
       const currentDesc = target.description || "";
       const additionalInfo = formReport.workDone ? `\nNote: ${formReport.workDone}` : "";
       const newDescription = `${currentDesc}${additionalInfo}\n\n[Rapport Vocal: ${fileName}]`.trim();
@@ -335,7 +329,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       setFormReport({ client: '', workDone: '' });
       cleanupRecording();
 
-      // Mise à jour optimiste de l'UI
       setInterventions(prev => prev.map(i => i.id === target.id ? { 
           ...i, 
           status: 'Terminé', 
@@ -370,7 +363,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       if (error) throw error;
       triggerCelebration();
       setShowNewInterventionModal(false);
-      // Reset
       setNewClientName('');
       setNewCivility('M');
       setNewIntervention({ ...newIntervention, description: '', location: '', clientPhone: '' });
@@ -472,7 +464,7 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
         ))}
       </div>
 
-      {/* INTERFACE ENREGISTREMENT - CENTRÉE ET FLOTTANTE SANS FOND NOIR */}
+      {/* MODAL RAPPORT VOCAL */}
       {showReportModal && (
         <div className="fixed inset-0 z-[600] pointer-events-none flex items-center justify-center p-6">
            <div className="bg-white/95 backdrop-blur-3xl w-full max-w-sm rounded-[3.5rem] p-8 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.3)] relative border-b-[10px] border-orange-500 flex flex-col items-center animate-scale-in pointer-events-auto ring-1 ring-black/5">
@@ -526,12 +518,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       <p className="text-6xl font-black font-mono text-gray-950 tabular-nums tracking-tighter leading-none">
                           {formatTime(recordingState === 'review' ? playbackTime : recordingDuration)}
                       </p>
-                      <div className="flex items-center justify-center gap-2 mt-4 bg-gray-50 px-4 py-2 rounded-full border border-gray-100">
-                        {recordingState === 'recording' && <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>}
-                        <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em]">
-                            {recordingState === 'recording' ? 'En direct...' : recordingState === 'review' ? 'Audio prêt' : 'Appuyer pour parler'}
-                        </p>
-                      </div>
                   </div>
               </div>
 
@@ -557,7 +543,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                    </div>
                 </div>
               )}
-              {/* Balise audio cachée pour la lecture */}
               {audioUrl && (
                   <audio 
                     ref={audioPreviewRef} 
@@ -583,7 +568,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
               </div>
               
               <div className="space-y-4">
-                  {/* Ligne 1 : Client & Tel (MODIFIÉ POUR CIVILTÉ) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Client</label>
@@ -593,13 +577,13 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                                 onChange={(e) => setNewCivility(e.target.value as Civility)}
                                 className="bg-white rounded-xl font-bold text-xs px-2 outline-none border border-transparent focus:border-orange-500"
                             >
-                                <option value="M">M</option>
-                                <option value="Mme">Mme</option>
-                                <option value="Mlle">Mlle</option>
+                                {civilityOptions.map(opt => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                ))}
                             </select>
                             <input 
                                 type="text" 
-                                placeholder="Nom du client" 
+                                placeholder="Nom du client / raison sociale" 
                                 className="w-full bg-transparent font-bold text-sm outline-none" 
                                 value={newClientName} 
                                 onChange={e => setNewClientName(e.target.value)}
@@ -612,10 +596,9 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       </div>
                   </div>
 
-                  {/* Ligne 2 : Technicien & Date */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-1 block">Technicien (Nom Assigné)</label>
+                        <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-1 block">Technicien (Chef de groupe)</label>
                         <select className="w-full bg-transparent font-black text-sm outline-none" value={newIntervention.technician} onChange={e => setNewIntervention({...newIntervention, technician: e.target.value})}>
                             <option value="">Choisir un technicien...</option>
                             {techniciansList.map(t => (
@@ -631,7 +614,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       </div>
                   </div>
 
-                  {/* Ligne 3 : Domaine & Type */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Domaine</label>
@@ -661,7 +643,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       </div>
                   </div>
 
-                  {/* Ligne 4 : Site & Lieu */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Site / Ville</label>
@@ -677,7 +658,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       </div>
                   </div>
 
-                  {/* Ligne 5 : Description */}
                   <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Instructions / Description</label>
                     <textarea placeholder="Détails de la mission..." className="w-full bg-transparent font-bold text-sm h-24 outline-none resize-none" value={newIntervention.description} onChange={e => setNewIntervention({...newIntervention, description: e.target.value})}/>
@@ -725,7 +705,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                </div>
                
                <div className="space-y-4">
-                   {/* Statut - Mis en avant */}
                    <div className="bg-gray-900 p-4 rounded-2xl flex justify-between items-center">
                        <label className="text-white font-black uppercase text-xs tracking-widest">Statut Actuel</label>
                        <select 
@@ -739,7 +718,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                        </select>
                    </div>
 
-                   {/* Ligne 1 : Client & Tel (MODIFIÉ POUR CIVILTÉ) */}
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Client</label>
@@ -749,9 +727,9 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                                 onChange={(e) => setEditCivility(e.target.value as Civility)}
                                 className="bg-white rounded-xl font-bold text-xs px-2 outline-none border border-transparent focus:border-orange-500"
                             >
-                                <option value="M">M</option>
-                                <option value="Mme">Mme</option>
-                                <option value="Mlle">Mlle</option>
+                                {civilityOptions.map(opt => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                ))}
                             </select>
                             <input 
                                 type="text" 
@@ -767,7 +745,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       </div>
                    </div>
 
-                   {/* Ligne 2 : Technicien & Date */}
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-1 block">Technicien</label>
@@ -786,7 +763,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       </div>
                    </div>
 
-                   {/* Ligne 3 : Domaine & Type */}
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Domaine</label>
@@ -816,7 +792,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       </div>
                    </div>
 
-                   {/* Ligne 4 : Site & Lieu */}
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Site</label>
@@ -832,7 +807,6 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                       </div>
                    </div>
 
-                   {/* Description */}
                    <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Description</label>
                         <textarea className="w-full bg-transparent font-bold text-sm h-24 outline-none resize-none" value={editIntervention.description} onChange={e => setEditIntervention({...editIntervention, description: e.target.value})}/>
