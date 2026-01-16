@@ -12,7 +12,8 @@ import {
   X,
   Play,
   Move,
-  Edit
+  Edit,
+  Save
 } from 'lucide-react';
 
 interface AchievementsProps {
@@ -265,20 +266,26 @@ const Achievements: React.FC<AchievementsProps> = ({ initialData = [] }) => {
 
       {/* MODAL AJOUT / EDIT */}
       {isAdding && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 pt-12 md:pt-24 animate-fade-in overflow-y-auto">
-              <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl animate-scale-in max-h-[90vh] overflow-y-auto relative mb-10">
-                  <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-black uppercase text-gray-900">
-                          {editingId ? 'Modifier Réalisation' : 'Nouvelle Réalisation'}
-                      </h3>
-                      <button onClick={() => setIsAdding(false)}><X size={24} className="text-gray-400"/></button>
+          <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-12 md:pt-24 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+              <div className="bg-white w-full max-h-[90vh] md:max-w-xl rounded-[2.5rem] md:rounded-[3.5rem] flex flex-col shadow-2xl overflow-hidden animate-slide-up relative mb-10">
+                  
+                  {/* Header */}
+                  <div className="px-6 py-6 md:px-10 md:py-8 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                      <div>
+                          <h3 className="text-2xl font-black text-gray-900 tracking-tight uppercase">
+                              {editingId ? 'Modifier' : 'Ajouter'}
+                          </h3>
+                          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Réalisation TV</p>
+                      </div>
+                      <button onClick={() => setIsAdding(false)} className="p-3 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"><X size={20} className="text-gray-500"/></button>
                   </div>
 
-                  <div className="space-y-6">
+                  {/* Body */}
+                  <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-6 bg-white custom-scrollbar">
                       {/* Upload Area */}
                       <div 
-                        className={`w-full aspect-video rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-colors overflow-hidden relative
-                            ${newAchievement.previewUrl ? 'border-orange-500 bg-black' : 'border-gray-300 bg-gray-50 hover:bg-gray-100 cursor-pointer'}`}
+                        className={`w-full aspect-video rounded-3xl border-4 border-dashed flex flex-col items-center justify-center transition-all overflow-hidden relative group
+                            ${newAchievement.previewUrl ? 'border-orange-500 bg-black' : 'border-gray-200 bg-gray-50 hover:border-orange-300 hover:bg-orange-50 cursor-pointer'}`}
                       >
                           <input 
                             ref={fileInputRef}
@@ -300,32 +307,32 @@ const Achievements: React.FC<AchievementsProps> = ({ initialData = [] }) => {
                               )
                           ) : (
                               <div className="text-center text-gray-400" onClick={() => fileInputRef.current?.click()}>
-                                  <div className="flex justify-center gap-2 mb-2">
-                                      <ImageIcon size={24}/> <Video size={24}/>
+                                  <div className="flex justify-center gap-2 mb-2 group-hover:scale-110 transition-transform">
+                                      <ImageIcon size={32}/> <Video size={32}/>
                                   </div>
-                                  <span className="text-xs font-black uppercase tracking-wide">Cliquez pour ajouter (Image/Vidéo)</span>
+                                  <span className="text-xs font-black uppercase tracking-wide">Cliquez pour ajouter</span>
                               </div>
                           )}
 
                           {newAchievement.previewUrl && (
                               <button 
                                 onClick={() => fileInputRef.current?.click()}
-                                className="absolute top-2 right-2 bg-black/50 p-2 rounded-full text-white hover:bg-red-500 transition-colors"
+                                className="absolute top-4 right-4 bg-black/60 backdrop-blur p-3 rounded-full text-white hover:bg-red-500 transition-colors shadow-lg"
                               >
-                                  <Move size={16} />
+                                  <Move size={18} />
                               </button>
                           )}
                       </div>
 
                       {/* Position Controls (Only for images) */}
                       {newAchievement.previewUrl && newAchievement.mediaType === 'image' && (
-                          <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3">
+                          <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 space-y-4">
                               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                  <Move size={12}/> Position de l'image
+                                  <Move size={12}/> Cadrage de l'image
                               </p>
-                              <div className="grid grid-cols-2 gap-4">
+                              <div className="grid grid-cols-2 gap-6">
                                   <div>
-                                      <label className="text-[10px] font-bold text-gray-500 mb-1 block">Horizontal (X)</label>
+                                      <label className="text-[10px] font-bold text-gray-500 mb-2 block">Horizontal (X)</label>
                                       <input 
                                         type="range" min="0" max="100" 
                                         value={newAchievement.posX} 
@@ -334,7 +341,7 @@ const Achievements: React.FC<AchievementsProps> = ({ initialData = [] }) => {
                                       />
                                   </div>
                                   <div>
-                                      <label className="text-[10px] font-bold text-gray-500 mb-1 block">Vertical (Y)</label>
+                                      <label className="text-[10px] font-bold text-gray-500 mb-2 block">Vertical (Y)</label>
                                       <input 
                                         type="range" min="0" max="100" 
                                         value={newAchievement.posY} 
@@ -347,28 +354,43 @@ const Achievements: React.FC<AchievementsProps> = ({ initialData = [] }) => {
                       )}
 
                       <div className="space-y-4">
-                          <input 
-                            type="text" 
-                            placeholder="Titre de la réalisation"
-                            className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-orange-500"
-                            value={newAchievement.title}
-                            onChange={(e) => setNewAchievement({...newAchievement, title: e.target.value})}
-                          />
-                          <textarea 
-                            placeholder="Description courte (optionnel)"
-                            className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-orange-500 resize-none h-24"
-                            value={newAchievement.description}
-                            onChange={(e) => setNewAchievement({...newAchievement, description: e.target.value})}
-                          />
+                          <div>
+                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Titre</label>
+                              <input 
+                                type="text" 
+                                placeholder="Titre de la réalisation"
+                                className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-orange-500 transition-all text-gray-900"
+                                value={newAchievement.title}
+                                onChange={(e) => setNewAchievement({...newAchievement, title: e.target.value})}
+                              />
+                          </div>
+                          <div>
+                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Description</label>
+                              <textarea 
+                                placeholder="Description courte (optionnel)"
+                                className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-orange-500 resize-none h-28 transition-all text-gray-900"
+                                value={newAchievement.description}
+                                onChange={(e) => setNewAchievement({...newAchievement, description: e.target.value})}
+                              />
+                          </div>
                       </div>
+                  </div>
 
+                  {/* Footer */}
+                  <div className="p-6 md:p-8 border-t border-gray-100 bg-white sticky bottom-0 z-10 flex gap-4">
+                      <button 
+                        onClick={() => setIsAdding(false)}
+                        className="flex-1 py-4 font-black text-gray-400 bg-gray-100 rounded-2xl hover:bg-gray-200 uppercase text-xs tracking-widest transition-colors"
+                      >
+                          Annuler
+                      </button>
                       <button 
                         onClick={handleSave} 
                         disabled={isUploading}
-                        className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="flex-[2] py-4 bg-gray-900 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-orange-600 transition-all active:scale-95"
                       >
-                          {isUploading ? <Loader2 className="animate-spin" /> : (editingId ? <Edit size={20}/> : <Plus size={20} />)}
-                          {isUploading ? 'Traitement...' : (editingId ? 'Mettre à jour' : 'Enregistrer')}
+                          {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+                          {isUploading ? 'Sauvegarde...' : 'Enregistrer'}
                       </button>
                   </div>
               </div>

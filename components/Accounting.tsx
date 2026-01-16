@@ -8,23 +8,23 @@ import {
   FileText, 
   Users, 
   X, 
-  Loader2,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  PlusCircle,
-  Briefcase,
-  TrendingUp,
-  Wallet,
-  Camera,
-  Edit,
-  ArrowUp,
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  Calendar,
-  Printer,
-  CheckCircle2,
-  Clock
+  Loader2, 
+  ArrowUpCircle, 
+  ArrowDownCircle, 
+  PlusCircle, 
+  Briefcase, 
+  TrendingUp, 
+  Wallet, 
+  Camera, 
+  Edit, 
+  ArrowUp, 
+  ArrowDown, 
+  ArrowLeft, 
+  ArrowRight, 
+  Calendar, 
+  Printer, 
+  CheckCircle2, 
+  Clock 
 } from 'lucide-react';
 
 interface AccountingProps {
@@ -221,7 +221,30 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
     }
   };
 
+  // Réinitialise complètement le formulaire
+  const resetEmployeeForm = () => {
+      setEmployeeFormData({
+          civility: 'M',
+          name: '',
+          assignedName: '',
+          role: JOB_TITLES[5],
+          domain: 'Polyvalent',
+          site: 'Abidjan',
+          entryDate: new Date().toISOString().split('T')[0]
+      });
+      setNewEmployeePhoto(null);
+      setNewEmployeePhotoPreview(null);
+      setPhotoPos({ x: 50, y: 50 });
+      setEditingEmployeeId(null);
+  };
+
+  const handleAddNewEmployee = () => {
+      resetEmployeeForm();
+      setIsAddingEmployee(true);
+  };
+
   const handleEditEmployee = (emp: Employee) => {
+      resetEmployeeForm(); // Reset first to clear any potential trash
       setEditingEmployeeId(emp.id);
       
       // Extraction civilité
@@ -256,7 +279,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
       }
       setPhotoPos({ x, y });
       
-      setIsAddingEmployee(true); // Reuse the adding form logic
+      setIsAddingEmployee(true);
   };
 
   const handleSaveEmployee = async () => {
@@ -292,7 +315,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
             site: employeeFormData.site, 
             status: 'Actif', 
             entryDate: employeeFormData.entryDate,
-            photoUrl: photoUrl || undefined,
+            photoUrl: photoUrl || null,
             photoPosition: `${photoPos.x}% ${photoPos.y}%`
         };
 
@@ -302,29 +325,22 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
             if (error) throw error;
         } else {
             // INSERT
-            const newId = `EMP-${Math.floor(Math.random() * 10000)}`;
+            const newId = `EMP-${Date.now()}`; // Utilisation Date.now() pour éviter doublons
             const { error } = await supabase.from('employees').insert([{ id: newId, ...employeePayload }]);
             if (error) throw error;
         }
 
-        // Reset form
+        // Reset and close
         setIsAddingEmployee(false);
         setEditingEmployeeId(null);
-        setEmployeeFormData({ 
-            civility: 'M', 
-            name: '', 
-            assignedName: '', 
-            role: JOB_TITLES[5], 
-            domain: 'Polyvalent', 
-            site: 'Abidjan', 
-            entryDate: new Date().toISOString().split('T')[0] 
-        });
-        setNewEmployeePhoto(null);
-        setNewEmployeePhotoPreview(null);
-        setPhotoPos({ x: 50, y: 50 });
+        resetEmployeeForm();
 
     } catch (error: any) { 
-        alert("Erreur sauvegarde employé: " + error.message);
+        let msg = error.message;
+        if (msg.includes('domain') || msg.includes('column')) {
+            msg += "\n\nAstuce : Allez dans 'Paramètres > Base SQL' et copiez le script pour mettre à jour la base de données.";
+        }
+        alert("Erreur sauvegarde employé: " + msg);
     } finally {
         setIsSaving(false);
     }
@@ -767,7 +783,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
       {/* --- MODAL PAIE COMPLETE (Calcul & Impression) --- */}
       {showPayrollModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-12 md:pt-24 bg-black/50 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-[2.5rem] shadow-xl w-full max-w-4xl flex flex-col overflow-hidden animate-slide-up max-h-[90vh] relative mb-10">
+          <div className="bg-white w-full max-w-4xl rounded-[2.5rem] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-slide-up max-h-[90vh] relative mb-10">
             
             {/* Header Modal */}
             <div className="p-8 bg-orange-50 border-b border-orange-100 flex justify-between items-center">
@@ -922,8 +938,8 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
 
       {/* --- MODAL EMPLOYES --- */}
       {showEmployeeModal && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-start justify-center p-0 md:p-4 md:pt-24 bg-black/50 backdrop-blur-sm overflow-y-auto">
-           <div className="bg-white w-full h-[90vh] md:h-auto md:max-h-[90vh] md:max-w-3xl rounded-t-[2.5rem] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-slide-up relative md:mb-10">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-12 md:pt-24 bg-black/50 backdrop-blur-sm overflow-y-auto">
+           <div className="bg-white w-full max-h-[90vh] md:max-w-3xl rounded-[2.5rem] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-slide-up relative mb-10">
              <div className="p-6 md:p-8 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
                 <div>
                     <h3 className="text-2xl font-black text-gray-900 tracking-tight">{isAddingEmployee ? (editingEmployeeId ? 'Modifier Employé' : 'Nouvel Employé') : 'Effectif EBF'}</h3>
@@ -935,7 +951,7 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
              <div className="p-6 md:p-8 flex-1 overflow-y-auto custom-scrollbar bg-white">
                  {!isAddingEmployee ? (
                    <>
-                     <button onClick={() => { setEditingEmployeeId(null); setIsAddingEmployee(true); }} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs mb-6 shadow-lg flex items-center justify-center gap-2 transition-all">
+                     <button onClick={handleAddNewEmployee} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs mb-6 shadow-lg flex items-center justify-center gap-2 transition-all">
                         <PlusCircle size={18} /> Ajouter un collaborateur
                      </button>
                      <div className="space-y-3">

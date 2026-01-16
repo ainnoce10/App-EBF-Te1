@@ -466,8 +466,8 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
 
       {/* MODAL AJOUT/MODIFICATION MOBILE OPTIMIZED */}
       {(isAdding || isEditing) && editForm && (
-         <div className="fixed inset-0 z-50 flex items-end md:items-start justify-center md:pt-12 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-            <div className="bg-white w-full h-[90vh] md:h-auto md:max-h-[90vh] md:max-w-4xl rounded-t-[2.5rem] md:rounded-[3.5rem] flex flex-col shadow-2xl overflow-hidden animate-slide-up relative md:mb-10">
+         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-12 md:pt-24 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+            <div className="bg-white w-full max-h-[90vh] md:max-w-4xl rounded-[2.5rem] md:rounded-[3.5rem] flex flex-col shadow-2xl overflow-hidden animate-slide-up relative mb-10">
                
                {/* Header Modal */}
                <div className="px-6 py-6 md:px-12 md:py-10 border-b border-gray-100 flex justify-between items-center bg-gray-50/80 sticky top-0 z-10 backdrop-blur">

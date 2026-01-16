@@ -192,7 +192,7 @@ const Settings: React.FC<SettingsProps> = ({ tickerMessages = [], onNavigate }) 
 
   const sqlScript = `-- EBF Management Suite - Database Structure
 
--- 1. Table Stock (Mise à jour avec regularPrice)
+-- 1. Table Stock
 CREATE TABLE IF NOT EXISTS public.stock (
     id text PRIMARY KEY,
     name text NOT NULL,
@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS public.stock (
     quantity numeric DEFAULT 0,
     threshold numeric DEFAULT 5,
     "unitPrice" numeric DEFAULT 0,
-    "regularPrice" numeric DEFAULT 0, -- Nouveau champ
+    "regularPrice" numeric DEFAULT 0,
     supplier text,
     site text,
     "imageUrls" text[],
@@ -208,8 +208,6 @@ CREATE TABLE IF NOT EXISTS public.stock (
     specs jsonb DEFAULT '{}'::jsonb,
     created_at timestamptz DEFAULT now()
 );
-
--- COMMANDE DE CORRECTION SI LA TABLE EXISTE DEJA :
 ALTER TABLE public.stock ADD COLUMN IF NOT EXISTS "regularPrice" numeric DEFAULT 0;
 
 -- 2. Table Interventions
@@ -229,13 +227,13 @@ CREATE TABLE IF NOT EXISTS public.interventions (
     created_at timestamptz DEFAULT now()
 );
 
--- 3. Table Employés
+-- 3. Table Employés (Mise à jour pour inclure le domaine)
 CREATE TABLE IF NOT EXISTS public.employees (
     id text PRIMARY KEY,
     name text NOT NULL,
     "assignedName" text,
     role text,
-    domain text,
+    domain text, -- Nouveau champ
     site text,
     status text,
     "entryDate" date,
@@ -243,6 +241,7 @@ CREATE TABLE IF NOT EXISTS public.employees (
     "photoPosition" text,
     created_at timestamptz DEFAULT now()
 );
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS domain text;
 
 -- 4. Table Transactions (Hardware)
 CREATE TABLE IF NOT EXISTS public.hardware_transactions (
