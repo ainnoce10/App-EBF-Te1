@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Achievement } from '../types';
@@ -264,8 +265,8 @@ const Achievements: React.FC<AchievementsProps> = ({ initialData = [] }) => {
 
       {/* MODAL AJOUT / EDIT */}
       {isAdding && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-              <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl animate-scale-in max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 pt-12 md:pt-24 animate-fade-in overflow-y-auto">
+              <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl animate-scale-in max-h-[90vh] overflow-y-auto relative mb-10">
                   <div className="flex justify-between items-center mb-6">
                       <h3 className="text-xl font-black uppercase text-gray-900">
                           {editingId ? 'Modifier Réalisation' : 'Nouvelle Réalisation'}

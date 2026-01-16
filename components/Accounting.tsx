@@ -666,8 +666,8 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
 
       {/* --- MODAL TRANSACTION (RECETTE/DEPENSE) --- */}
       {showTransactionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 md:p-10 animate-scale-in shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-12 md:pt-24 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 md:p-10 animate-scale-in shadow-2xl relative mb-10">
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h3 className={`text-2xl font-black uppercase tracking-tighter ${transactionType === 'Recette' ? 'text-green-600' : 'text-red-600'}`}>
@@ -766,8 +766,8 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
 
       {/* --- MODAL PAIE COMPLETE (Calcul & Impression) --- */}
       {showPayrollModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-[2.5rem] shadow-xl w-full max-w-4xl flex flex-col overflow-hidden animate-slide-up max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-12 md:pt-24 bg-black/50 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-[2.5rem] shadow-xl w-full max-w-4xl flex flex-col overflow-hidden animate-slide-up max-h-[90vh] relative mb-10">
             
             {/* Header Modal */}
             <div className="p-8 bg-orange-50 border-b border-orange-100 flex justify-between items-center">
@@ -922,8 +922,8 @@ const Accounting: React.FC<AccountingProps> = ({ liveTransactions = [], liveEmpl
 
       {/* --- MODAL EMPLOYES --- */}
       {showEmployeeModal && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 backdrop-blur-sm">
-           <div className="bg-white w-full h-[90vh] md:h-auto md:max-h-[90vh] md:max-w-3xl rounded-t-[2.5rem] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-slide-up">
+        <div className="fixed inset-0 z-50 flex items-end md:items-start justify-center p-0 md:p-4 md:pt-24 bg-black/50 backdrop-blur-sm overflow-y-auto">
+           <div className="bg-white w-full h-[90vh] md:h-auto md:max-h-[90vh] md:max-w-3xl rounded-t-[2.5rem] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-slide-up relative md:mb-10">
              <div className="p-6 md:p-8 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
                 <div>
                     <h3 className="text-2xl font-black text-gray-900 tracking-tight">{isAddingEmployee ? (editingEmployeeId ? 'Modifier Employé' : 'Nouvel Employé') : 'Effectif EBF'}</h3>

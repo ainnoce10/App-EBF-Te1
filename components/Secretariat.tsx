@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Intervention, Transaction } from '../types';
 import { supabase } from '../lib/supabase';
@@ -212,8 +213,8 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
 
        {/* --- MODAL CAISSE --- */}
        {showCaisseModal && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="bg-white w-full rounded-t-[2rem] md:rounded-3xl p-6 animate-slide-up max-w-sm mx-auto">
+        <div className="fixed inset-0 z-50 flex items-end md:items-start justify-center md:pt-24 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-white w-full rounded-t-[2rem] md:rounded-[2.5rem] p-6 animate-slide-up max-w-sm mx-auto shadow-2xl relative md:mb-10">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="font-black text-gray-800 text-lg">Mouvement Caisse</h3>
                     <button onClick={() => setShowCaisseModal(false)}><X/></button>
@@ -248,8 +249,8 @@ const Secretariat: React.FC<SecretariatProps> = ({ liveInterventions = [], liveT
 
        {/* --- MODAL CLIENTS --- */}
        {showClientModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white w-full h-full md:h-[80vh] md:max-w-2xl rounded-3xl flex flex-col overflow-hidden animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm p-4 pt-12 md:pt-24 overflow-y-auto">
+            <div className="bg-white w-full h-full md:h-[80vh] md:max-w-2xl rounded-3xl flex flex-col overflow-hidden animate-fade-in shadow-2xl relative mb-10">
                 <div className="p-4 border-b border-gray-100 flex items-center gap-2">
                     <Search className="text-gray-400"/>
                     <input type="text" placeholder="Chercher client..." className="flex-1 outline-none font-bold text-lg" value={clientSearch} onChange={e => setClientSearch(e.target.value)}/>

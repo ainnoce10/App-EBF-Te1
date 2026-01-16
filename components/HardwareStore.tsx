@@ -13,7 +13,8 @@ import {
   Camera,
   Package,
   Wallet,
-  Mic
+  Mic,
+  Trash2
 } from 'lucide-react';
 
 interface HardwareStoreProps {
@@ -89,6 +90,27 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
     setEditForm({ ...item, imageUrls });
     setIsEditing(true);
     setIsAdding(false);
+  };
+
+  const handleDeleteItem = async (item: StockItem) => {
+    if (window.confirm(`Voulez-vous vraiment supprimer "${item.name}" ?`)) {
+        try {
+            const { error } = await supabase.from('stock').delete().eq('id', item.id);
+            if (error) throw error;
+            
+            // Mise à jour optimiste
+            setInventory(prev => prev.filter(i => i.id !== item.id));
+            
+            // Si l'élément supprimé était en cours d'édition, fermer la modale
+            if (editForm?.id === item.id) {
+                setIsEditing(false);
+                setIsAdding(false);
+                setEditForm(null);
+            }
+        } catch (error: any) {
+            alert("Erreur lors de la suppression : " + error.message);
+        }
+    }
   };
 
   const handleAddNew = () => {
@@ -309,12 +331,20 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
             <div key={item.id} className="bg-white rounded-[2rem] md:rounded-[2.5rem] border border-gray-100 overflow-hidden hover:shadow-xl transition-all group flex flex-col relative animate-fade-in border-b-4 md:border-b-8 border-b-transparent hover:border-b-orange-500">
                
                {isManagementMode && (
-                   <button 
-                      onClick={(e) => handleEditClick(e, item)}
-                      className="absolute top-3 right-3 z-20 p-2.5 bg-white/90 backdrop-blur rounded-full shadow-lg text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition-all active:scale-90"
-                   >
-                       <Edit size={18} />
-                   </button>
+                   <div className="absolute top-3 right-3 z-20 flex gap-2">
+                       <button 
+                          onClick={(e) => handleEditClick(e, item)}
+                          className="p-2.5 bg-white/90 backdrop-blur rounded-full shadow-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all active:scale-90"
+                       >
+                           <Edit size={18} />
+                       </button>
+                       <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteItem(item); }}
+                          className="p-2.5 bg-white/90 backdrop-blur rounded-full shadow-lg text-gray-700 hover:text-red-600 hover:bg-red-50 transition-all active:scale-90"
+                       >
+                           <Trash2 size={18} />
+                       </button>
+                   </div>
                )}
 
                <div 
@@ -386,8 +416,8 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
 
       {/* --- MODAL CAISSE --- */}
        {showCaisseModal && (
-        <div className="fixed inset-0 z-[80] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="bg-white w-full rounded-t-[2rem] md:rounded-3xl p-6 animate-slide-up max-w-sm mx-auto">
+        <div className="fixed inset-0 z-[80] flex items-end md:items-start justify-center md:pt-24 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-white w-full rounded-t-[2rem] md:rounded-[2.5rem] p-6 animate-slide-up max-w-sm mx-auto shadow-2xl relative md:mb-10">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="font-black text-gray-800 text-lg">Mouvement Caisse Magasin</h3>
                     <button onClick={() => setShowCaisseModal(false)}><X/></button>
@@ -436,8 +466,8 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
 
       {/* MODAL AJOUT/MODIFICATION MOBILE OPTIMIZED */}
       {(isAdding || isEditing) && editForm && (
-         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white w-full h-[90vh] md:h-auto md:max-h-[90vh] md:max-w-4xl rounded-t-[2.5rem] md:rounded-[3.5rem] flex flex-col shadow-2xl overflow-hidden animate-slide-up">
+         <div className="fixed inset-0 z-50 flex items-end md:items-start justify-center md:pt-12 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+            <div className="bg-white w-full h-[90vh] md:h-auto md:max-h-[90vh] md:max-w-4xl rounded-t-[2.5rem] md:rounded-[3.5rem] flex flex-col shadow-2xl overflow-hidden animate-slide-up relative md:mb-10">
                
                {/* Header Modal */}
                <div className="px-6 py-6 md:px-12 md:py-10 border-b border-gray-100 flex justify-between items-center bg-gray-50/80 sticky top-0 z-10 backdrop-blur">
@@ -565,6 +595,14 @@ const HardwareStore: React.FC<HardwareStoreProps> = ({ initialData = [], liveTra
 
                {/* Footer Sticky */}
                <div className="p-6 md:p-10 border-t border-gray-100 bg-white sticky bottom-0 z-10 flex gap-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+                   {isEditing && (
+                       <button 
+                         onClick={() => editForm && handleDeleteItem(editForm)}
+                         className="p-4 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition-colors shadow-sm active:scale-95"
+                       >
+                           <Trash2 size={20} />
+                       </button>
+                   )}
                    <button 
                      onClick={() => { setIsAdding(false); setIsEditing(false); }}
                      className="flex-1 py-4 font-black text-gray-400 bg-gray-100 rounded-2xl hover:bg-gray-200 uppercase text-xs tracking-widest"

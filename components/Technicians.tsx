@@ -472,8 +472,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
       {/* MODAL RAPPORT VOCAL */}
       {showReportModal && (
-        <div className="fixed inset-0 z-[600] pointer-events-none flex items-center justify-center p-6">
-           <div className="bg-white/95 backdrop-blur-3xl w-full max-w-sm rounded-[3.5rem] p-8 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.3)] relative border-b-[10px] border-orange-500 flex flex-col items-center animate-scale-in pointer-events-auto ring-1 ring-black/5">
+        <div className="fixed inset-0 z-[600] pointer-events-none flex items-start justify-center p-6 pt-12 md:pt-24 overflow-y-auto">
+           <div className="bg-white/95 backdrop-blur-3xl w-full max-w-sm rounded-[3.5rem] p-8 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.3)] relative border-b-[10px] border-orange-500 flex flex-col items-center animate-scale-in pointer-events-auto ring-1 ring-black/5 mb-10">
               
               <button 
                 onClick={() => { setShowReportModal(false); cleanupRecording(); setRecordingState('idle'); }} 
@@ -677,8 +677,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
       {/* Vue dossier */}
       {viewIntervention && (
-          <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
-              <div className="bg-white w-full max-w-xl rounded-[3rem] p-8 md:p-10 shadow-2xl relative animate-slide-up">
+          <div className="fixed inset-0 z-[400] flex items-start justify-center bg-black/60 backdrop-blur-md p-4 pt-12 md:pt-24 animate-fade-in overflow-y-auto">
+              <div className="bg-white w-full max-w-xl rounded-[3rem] p-8 md:p-10 shadow-2xl relative animate-slide-up mb-10">
                   <div className="flex justify-between items-start mb-6 text-gray-950">
                       <div>
                         <h2 className="text-2xl font-black uppercase italic tracking-tighter">{viewIntervention.client}</h2>

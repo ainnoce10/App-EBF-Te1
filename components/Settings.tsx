@@ -349,8 +349,8 @@ CREATE TABLE IF NOT EXISTS public.tv_settings (
 
       {/* GUIDE POUR INSTALLATION MANUELLE (SI AUTO ECHOUE) */}
       {showInstallGuide && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-          <div className="bg-white w-full max-w-sm rounded-[3rem] p-8 shadow-2xl relative overflow-hidden">
+        <div className="fixed inset-0 z-[500] flex items-start justify-center p-4 pt-24 bg-black/60 backdrop-blur-md animate-fade-in overflow-y-auto">
+          <div className="bg-white w-full max-w-sm rounded-[3rem] p-8 shadow-2xl relative overflow-hidden mb-10">
              <div className="absolute top-0 left-0 w-full h-2 bg-orange-500"></div>
              <button onClick={() => setShowInstallGuide(false)} className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all"><X size={20}/></button>
              
@@ -436,8 +436,8 @@ CREATE TABLE IF NOT EXISTS public.tv_settings (
 
       {/* SQL MODAL */}
       {showSql && (
-          <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
-              <div className="bg-white w-full max-w-lg rounded-[3rem] p-10 animate-scale-in shadow-2xl relative">
+          <div className="fixed inset-0 z-[600] flex items-start justify-center bg-black/80 backdrop-blur-md p-4 pt-24 animate-fade-in overflow-y-auto">
+              <div className="bg-white w-full max-w-lg rounded-[3rem] p-10 animate-scale-in shadow-2xl relative mb-10">
                   <div className="flex justify-between items-center mb-6">
                       <h3 className="font-black uppercase italic text-gray-900 tracking-tighter text-xl">Script SQL Supabase</h3>
                       <button onClick={() => setShowSql(false)} className="p-2 bg-gray-100 rounded-full"><X/></button>
