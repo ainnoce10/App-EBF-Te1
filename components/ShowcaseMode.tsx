@@ -527,7 +527,9 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                         )}
 
                                         <div>
-                                            <h4 className="text-white text-5xl font-black uppercase leading-none tracking-tighter mb-3 drop-shadow-lg">{inter.client}</h4>
+                                            <h4 className="text-white text-5xl font-black uppercase leading-none tracking-tighter mb-3 drop-shadow-lg">
+                                                {inter.client.replace(/Société/g, 'Sté').replace(/Entreprise/g, 'Ets')}
+                                            </h4>
                                             {inter.clientPhone ? (
                                                 <span className="text-blue-300 text-2xl font-bold tracking-widest block bg-blue-900/30 px-4 py-1 rounded-lg border border-blue-500/30 mx-auto w-fit">{inter.clientPhone}</span>
                                             ) : (
