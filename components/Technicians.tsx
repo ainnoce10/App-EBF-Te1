@@ -9,7 +9,7 @@ import {
   X, 
   Square, 
   Play, 
-  Pause,
+  Pause, 
   PartyPopper,
   CalendarPlus,
   Loader2,
@@ -566,8 +566,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
       {/* Modal Planification */}
       {showNewInterventionModal && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-           <div className="bg-white w-full max-w-4xl rounded-[2.5rem] p-6 shadow-2xl max-h-[95vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[400] flex items-start justify-center p-4 pt-12 md:pt-24 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+           <div className="bg-white w-full max-w-4xl rounded-[2.5rem] p-6 shadow-2xl relative mb-10">
               <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xl font-black uppercase italic tracking-tight text-gray-950">Nouvelle Mission</h3>
                   <button onClick={() => setShowNewInterventionModal(false)} className="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-500"><X size={20}/></button>
@@ -700,8 +700,8 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
 
       {/* Édition Complète */}
       {editIntervention && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 p-4 animate-fade-in backdrop-blur-sm">
-           <div className="bg-white w-full max-w-4xl rounded-[2.5rem] p-6 shadow-2xl animate-scale-in max-h-[95vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[400] flex items-start justify-center bg-black/60 p-4 pt-12 md:pt-24 animate-fade-in backdrop-blur-sm overflow-y-auto">
+           <div className="bg-white w-full max-w-4xl rounded-[2.5rem] p-6 shadow-2xl animate-scale-in relative mb-10">
                <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xl font-black uppercase italic tracking-tighter text-gray-950">Modifier Mission</h3>
                   <button onClick={() => setEditIntervention(null)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200"><X size={20}/></button>
