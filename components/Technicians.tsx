@@ -21,7 +21,8 @@ import {
   User,
   RotateCcw,
   SendHorizontal,
-  Save
+  Save,
+  Trash2
 } from 'lucide-react';
 
 interface TechniciansProps {
@@ -252,6 +253,24 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
       setAudioBlob(null);
       setAudioUrl(null);
       setShowReportModal(true);
+  };
+
+  const handleDeleteIntervention = async (id: string) => {
+    if (window.confirm("Voulez-vous vraiment supprimer cette mission ?")) {
+      try {
+        const { error } = await supabase.from('interventions').delete().eq('id', id);
+        if (error) throw error;
+        
+        // Mise à jour optimiste locale
+        setInterventions(prev => prev.filter(i => i.id !== id));
+        
+        // Fermeture des modales si ouvertes
+        setEditIntervention(null);
+        setViewIntervention(null);
+      } catch (err: any) {
+        alert("Erreur suppression : " + err.message);
+      }
+    }
   };
 
   const handleUpdateIntervention = async () => {
@@ -684,7 +703,10 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                         <h2 className="text-2xl font-black uppercase italic tracking-tighter">{viewIntervention.client}</h2>
                         <p className="text-orange-500 font-black uppercase text-[10px] mt-1 tracking-widest italic flex items-center gap-1"><User size={12}/> {viewIntervention.technician}</p>
                       </div>
-                      <button onClick={() => setViewIntervention(null)} className="p-3 bg-gray-100 rounded-full active:bg-gray-200 transition-colors"><X size={20} /></button>
+                      <div className="flex gap-2">
+                          <button onClick={() => handleDeleteIntervention(viewIntervention.id)} className="p-3 bg-red-50 text-red-500 rounded-full hover:bg-red-100 transition-colors"><Trash2 size={20} /></button>
+                          <button onClick={() => setViewIntervention(null)} className="p-3 bg-gray-100 rounded-full active:bg-gray-200 transition-colors"><X size={20} /></button>
+                      </div>
                   </div>
                   <div className="space-y-4">
                       <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 font-bold text-blue-700 text-sm flex items-center gap-3"><Phone size={18}/> {viewIntervention.clientPhone || "Inconnu"}</div>
@@ -811,8 +833,11 @@ const Technicians: React.FC<TechniciansProps> = ({ initialData = [] }) => {
                         <textarea className="w-full bg-transparent font-bold text-sm h-16 outline-none resize-none" value={editIntervention.description} onChange={e => setEditIntervention({...editIntervention, description: e.target.value})}/>
                    </div>
 
-                   <div className="md:col-span-12 mt-1">
-                     <button onClick={handleUpdateIntervention} disabled={isSaving} className="w-full py-3 bg-gray-950 text-white rounded-[1.25rem] font-black uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors">
+                   <div className="md:col-span-12 mt-1 flex gap-3">
+                     <button onClick={() => handleDeleteIntervention(editIntervention.id)} className="p-4 bg-red-50 text-red-500 rounded-[1.25rem] hover:bg-red-100 transition-colors shadow-sm active:scale-95">
+                        <Trash2 size={20} />
+                     </button>
+                     <button onClick={handleUpdateIntervention} disabled={isSaving} className="flex-1 py-3 bg-gray-950 text-white rounded-[1.25rem] font-black uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors">
                         {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18}/>}
                         {isSaving ? 'ENREGISTREMENT...' : 'SAUVEGARDER LES MODIFICATIONS'}
                      </button>
