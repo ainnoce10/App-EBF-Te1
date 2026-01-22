@@ -170,7 +170,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   // Synchronisation immédiate quand App.tsx met à jour initialMusicUrl
   useEffect(() => {
     if (initialMusicUrl && initialMusicUrl !== audioSrc) {
-        console.log("Mise à jour musique détectée:", initialMusicUrl);
         setAudioSrc(initialMusicUrl);
     }
   }, [initialMusicUrl]);
@@ -178,7 +177,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   // Gestion Audio Principale (Background Music)
   useEffect(() => {
     if (audioRef.current && audioSrc) {
-        // Logique simplifiée : si pas muet, on tente de jouer
         if (!isMuted) {
             setAudioLoading(true);
             audioRef.current.volume = 0.5;
@@ -188,7 +186,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                 playPromise
                 .catch((e) => {
                     console.log("Autoplay audio bloqué par le navigateur", e);
-                    setIsMuted(true); // On mute silencieusement si ça bloque pour garantir le lancement auto visuel
+                    setIsMuted(true); 
                 })
                 .finally(() => setAudioLoading(false));
             }
@@ -208,42 +206,109 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       }
   };
 
-  // --- CYCLES ---
-  useEffect(() => {
-    const modeInterval = setInterval(() => {
+  // --- LOGIQUE DE ROTATION DES MODULES ---
+  
+  // Helper pour passer au module suivant
+  const goToNextMode = () => {
       setActiveMode((prev) => {
           if (prev === 'PUBLICITE') return 'PLANNING';
           if (prev === 'PLANNING') return 'REALISATIONS';
           return 'PUBLICITE';
       });
-    }, 60000); 
-    return () => clearInterval(modeInterval);
-  }, []);
+      // Reset des compteurs pour le prochain module
+      setProductIdx(0);
+      setPlanningPage(0);
+      setAchievementIdx(0);
+  };
 
+  // 1. CYCLE PRODUITS (PUBLICITE)
   useEffect(() => {
-    if (activeMode !== 'PUBLICITE' || products.length === 0) return;
-    const interval = setInterval(() => setProductIdx((prev) => (prev + 1) % products.length), 10000); 
+    if (activeMode !== 'PUBLICITE') return;
+    
+    // Si vide, on passe tout de suite
+    if (products.length === 0) {
+        const skipTimer = setTimeout(goToNextMode, 2000); // Petit délai pour éviter flash
+        return () => clearTimeout(skipTimer);
+    }
+
+    const interval = setInterval(() => {
+        setProductIdx((prev) => {
+            if (prev >= products.length - 1) {
+                // Fin de la liste des produits -> Module suivant
+                goToNextMode();
+                return 0;
+            }
+            return prev + 1;
+        });
+    }, 10000); // 10 secondes par produit
+
     return () => clearInterval(interval);
   }, [activeMode, products.length]);
 
+  // 2. CYCLE PLANNING
   const itemsPerPage = 3;
   const totalPlanningPages = Math.ceil(planning.length / itemsPerPage) || 1;
+  
   useEffect(() => {
-    if (activeMode !== 'PLANNING' || planning.length === 0) { setPlanningPage(0); return; }
-    const interval = setInterval(() => setPlanningPage((prev) => (prev + 1) % totalPlanningPages), 20000); 
+    if (activeMode !== 'PLANNING') return;
+
+    if (planning.length === 0) {
+        const skipTimer = setTimeout(goToNextMode, 2000);
+        return () => clearTimeout(skipTimer);
+    }
+
+    const interval = setInterval(() => {
+        setPlanningPage((prev) => {
+            if (prev >= totalPlanningPages - 1) {
+                // Fin des pages de planning -> Module suivant
+                goToNextMode();
+                return 0;
+            }
+            return prev + 1;
+        });
+    }, 15000); // 15 secondes par page de planning
+
     return () => clearInterval(interval);
   }, [activeMode, planning.length, totalPlanningPages]);
 
+  // 3. CYCLE REALISATIONS (IMAGES)
   useEffect(() => {
-      if (activeMode !== 'REALISATIONS' || achievements.length === 0) { setAchievementIdx(0); return; }
+      if (activeMode !== 'REALISATIONS') return;
+      
+      if (achievements.length === 0) {
+          const skipTimer = setTimeout(goToNextMode, 2000);
+          return () => clearTimeout(skipTimer);
+      }
+
       const currentItem = achievements[achievementIdx];
-      if (currentItem.mediaType === 'image') {
-          const timer = window.setTimeout(() => setAchievementIdx(prev => (prev + 1) % achievements.length), 10000);
+      
+      // Si c'est une image, on utilise un timer. Si c'est une vidéo, c'est handleVideoEnded qui gère.
+      if (currentItem && currentItem.mediaType === 'image') {
+          const timer = window.setTimeout(() => {
+              setAchievementIdx((prev) => {
+                  if (prev >= achievements.length - 1) {
+                      // Fin de la liste des réalisations -> Module suivant
+                      goToNextMode();
+                      return 0;
+                  }
+                  return prev + 1;
+              });
+          }, 10000); // 10 secondes par image
           return () => clearTimeout(timer);
       }
   }, [activeMode, achievements, achievementIdx]);
 
-  const handleVideoEnded = () => setAchievementIdx(prev => (prev + 1) % achievements.length);
+  // 3b. CYCLE REALISATIONS (VIDEO ENDED)
+  const handleVideoEnded = () => {
+      setAchievementIdx((prev) => {
+          if (prev >= achievements.length - 1) {
+              // Fin de la liste -> Module suivant
+              goToNextMode();
+              return 0;
+          }
+          return prev + 1;
+      });
+  };
 
   // --- RENDER HELPERS ---
   const currentProduct = products[productIdx];
@@ -309,11 +374,11 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                       {['PUBLICITE', 'PLANNING', 'REALISATIONS'].map((mode) => (
                         <button 
                             key={mode}
-                            onClick={() => setActiveMode(mode as any)}
-                            className={`flex items-center gap-3 px-6 py-2.5 rounded-2xl font-black text-lg uppercase transition-all
+                            // onClick={() => setActiveMode(mode as any)} // Désactivé pour laisser l'auto-cycle faire son travail, ou on peut le garder pour debug
+                            className={`flex items-center gap-3 px-6 py-2.5 rounded-2xl font-black text-lg uppercase transition-all cursor-default
                             ${activeMode === mode 
                                 ? (mode === 'PUBLICITE' ? 'bg-orange-600' : mode === 'PLANNING' ? 'bg-blue-600' : 'bg-purple-600') + ' text-white shadow-lg scale-105' 
-                                : 'text-white/30 hover:text-white'}`}
+                                : 'text-white/30'}`}
                         >
                             {mode === 'PUBLICITE' ? <LayoutGrid size={20}/> : mode === 'PLANNING' ? <ClipboardList size={20}/> : <Trophy size={20}/>}
                             {mode === 'PUBLICITE' ? 'Nos Produits' : mode === 'PLANNING' ? 'Chantiers' : 'Réalisations'}
