@@ -166,6 +166,15 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const achievements = liveAchievements.length > 0 ? liveAchievements : [];
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
+  const itemsPerPage = 3;
+  const totalPlanningPages = Math.ceil(planning.length / itemsPerPage) || 1;
+
+  // --- RENDER HELPERS (Définis avant les effets qui les utilisent) ---
+  const currentProduct = products[productIdx];
+  const currentPlanningSlice = planning.slice(planningPage * itemsPerPage, (planningPage + 1) * itemsPerPage);
+  const currentAchievement = achievements[achievementIdx];
+  const todayDate = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
   // --- AUDIO & DATA SYNC ---
   // Synchronisation immédiate quand App.tsx met à jour initialMusicUrl
   useEffect(() => {
@@ -174,12 +183,11 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     }
   }, [initialMusicUrl]);
 
-  // Gestion Audio Principale (Background Music)
+  // Gestion Play/Pause Audio Principale
   useEffect(() => {
     if (audioRef.current && audioSrc) {
         if (!isMuted) {
             setAudioLoading(true);
-            audioRef.current.volume = 0.5;
             const playPromise = audioRef.current.play();
             
             if (playPromise !== undefined) {
@@ -196,6 +204,19 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
         }
     }
   }, [audioSrc, isMuted, activeMode]);
+
+  // --- GESTION INTELLIGENTE DU VOLUME (DUCKING) ---
+  useEffect(() => {
+    if (audioRef.current && !isMuted) {
+        // Si on est dans le mode réalisations ET que l'élément actuel est une vidéo
+        const isVideoPlaying = activeMode === 'REALISATIONS' && currentAchievement?.mediaType === 'video';
+        
+        // On baisse le son à 10% si vidéo, sinon 50%
+        const targetVolume = isVideoPlaying ? 0.1 : 0.5;
+        audioRef.current.volume = targetVolume;
+    }
+  }, [activeMode, achievementIdx, currentAchievement, isMuted]);
+
 
   const toggleMute = () => {
       if (isMuted) {
@@ -246,8 +267,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   }, [activeMode, products.length]);
 
   // 2. CYCLE PLANNING
-  const itemsPerPage = 3;
-  const totalPlanningPages = Math.ceil(planning.length / itemsPerPage) || 1;
   
   useEffect(() => {
     if (activeMode !== 'PLANNING') return;
@@ -309,12 +328,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           return prev + 1;
       });
   };
-
-  // --- RENDER HELPERS ---
-  const currentProduct = products[productIdx];
-  const currentPlanningSlice = planning.slice(planningPage * itemsPerPage, (planningPage + 1) * itemsPerPage);
-  const currentAchievement = achievements[achievementIdx];
-  const todayDate = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
   const getMessageColorClass = (color: string) => {
     switch(color) {
@@ -677,12 +690,12 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                       src={currentAchievement.mediaUrl}
                                       className="w-full h-full object-contain relative z-10 shadow-2xl"
                                       autoPlay
-                                      muted // IMPORTANT: Vidéo muette pour ne pas clasher avec la musique de fond
-                                      playsInline // Empêche le plein écran natif forcé sur certains navigateurs
+                                      // muted retiré pour entendre le son
+                                      playsInline 
                                       loop={false}
                                       onEnded={handleVideoEnded}
                                       onError={handleVideoEnded}
-                                      style={{ pointerEvents: 'none' }} // Désactive toutes les interactions souris (overlays, boutons)
+                                      style={{ pointerEvents: 'none' }} 
                                   />
                               ) : (
                                   <img 
