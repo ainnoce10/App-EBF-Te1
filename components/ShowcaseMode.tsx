@@ -50,7 +50,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 }) => {
   const [activeMode, setActiveMode] = useState<'PUBLICITE' | 'REALISATIONS'>('PUBLICITE');
   const [productIdx, setProductIdx] = useState(0);
-  const [planningFocusIdx, setPlanningFocusIdx] = useState(0);
+  const [planningPage, setPlanningPage] = useState(0);
   const [achievementIdx, setAchievementIdx] = useState(0);
   
   // Time State
@@ -266,14 +266,16 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     // Le planning tourne en permanence maintenant
     if (planning.length === 0) return;
 
+    const totalPages = Math.ceil(planning.length / 2) || 1;
+
     const interval = setInterval(() => {
-        setPlanningFocusIdx((prev) => {
-            if (prev >= planning.length - 1) {
+        setPlanningPage((prev) => {
+            if (prev >= totalPages - 1) {
                 return 0;
             }
             return prev + 1;
         });
-    }, 5000); // 5 secondes par item pour un cycle plus rapide sur le côté
+    }, 10000); // 10 secondes par page de 2 interventions
 
     return () => clearInterval(interval);
   }, [planning.length]);
@@ -459,23 +461,18 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                             <span className="text-orange-500 font-bold text-sm uppercase tracking-widest">{todayDate}</span>
                         </div>
                         <div className="text-white/30 text-xs font-mono uppercase text-right">
-                            {planning.length} Missions
+                            Page {planningPage + 1}/{Math.ceil(planning.length / 2) || 1}
                         </div>
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto space-y-6 pr-2 scrollbar-hide mask-gradient-bottom pb-20">
-                        {planning.map((inter, idx) => {
+                    <div className="flex-1 flex flex-col gap-6 pb-20">
+                        {planning.slice(planningPage * 2, (planningPage + 1) * 2).map((inter) => {
                             const technician = getTechnician(inter.technician);
-                            const isActive = idx === planningFocusIdx;
-
+                            
                             return (
                                 <div 
                                     key={inter.id}
-                                    className={`p-6 rounded-[2rem] border-2 transition-all duration-500 relative overflow-hidden ${
-                                        isActive 
-                                        ? 'bg-white/10 border-orange-500 shadow-2xl scale-100 z-10' 
-                                        : 'bg-white/5 border-transparent opacity-60 scale-95 hover:opacity-80'
-                                    }`}
+                                    className="p-6 rounded-[2rem] border-2 border-white/10 bg-white/5 shadow-2xl relative overflow-hidden animate-slide-up flex-1 flex flex-col"
                                 >
                                     {/* Status Header */}
                                     <div className="flex justify-between items-start mb-4">
@@ -507,7 +504,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                     </div>
 
                                     {/* Content */}
-                                    <div className="space-y-3">
+                                    <div className="space-y-3 flex-1">
                                         {inter.domain && (
                                             <div className="flex items-center gap-2 text-white/40 font-bold text-[10px] uppercase tracking-wider">
                                                 <Briefcase size={12} /> {inter.domain}
@@ -525,22 +522,23 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                             )}
                                         </div>
 
-                                        <div className="bg-black/20 p-3 rounded-xl border border-white/5">
-                                            <p className="text-gray-200 text-sm font-medium leading-snug line-clamp-3">
+                                        <div className="bg-black/20 p-3 rounded-xl border border-white/5 h-full">
+                                            <p className="text-gray-200 text-sm font-medium leading-snug line-clamp-4">
                                                 {inter.description}
                                             </p>
                                         </div>
                                     </div>
-                                    
-                                    {/* Active Indicator Line */}
-                                    {isActive && (
-                                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-orange-500"></div>
-                                    )}
                                 </div>
                             );
                         })}
                         {planning.length === 0 && (
                             <div className="text-white/20 text-center italic mt-10">Aucune intervention</div>
+                        )}
+                        {/* Fill empty space if only 1 item on page */}
+                        {planning.slice(planningPage * 2, (planningPage + 1) * 2).length === 1 && (
+                             <div className="border-4 border-dashed border-white/5 rounded-[2rem] flex items-center justify-center opacity-10 flex-1">
+                                <span className="text-white font-black text-3xl uppercase">Libre</span>
+                            </div>
                         )}
                     </div>
               </div>
