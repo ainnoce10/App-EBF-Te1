@@ -9,7 +9,6 @@ import {
   Megaphone,
   LayoutGrid,
   ClipboardList,
-  MapPin,
   Volume2,
   VolumeX,
   Maximize2,
@@ -21,9 +20,7 @@ import {
   Loader2,
   Trophy,
   Video,
-  Image as ImageIcon,
-  User,
-  Briefcase
+  Image as ImageIcon
 } from 'lucide-react';
 import { Logo } from '../constants';
 
@@ -44,11 +41,10 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   liveInterventions = [], 
   liveMessages = [],
   liveAchievements = [],
-  liveEmployees = [],
   customLogo,
   initialMusicUrl
 }) => {
-  const [activeMode, setActiveMode] = useState<'PUBLICITE' | 'PLANNING' | 'REALISATIONS'>('PUBLICITE');
+  const [activeMode, setActiveMode] = useState<'PUBLICITE' | 'REALISATIONS'>('PUBLICITE');
   const [productIdx, setProductIdx] = useState(0);
   const [planningFocusIdx, setPlanningFocusIdx] = useState(0);
   const [achievementIdx, setAchievementIdx] = useState(0);
@@ -228,13 +224,11 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   // Helper pour passer au module suivant
   const goToNextMode = () => {
       setActiveMode((prev) => {
-          if (prev === 'PUBLICITE') return 'PLANNING';
-          if (prev === 'PLANNING') return 'REALISATIONS';
+          if (prev === 'PUBLICITE') return 'REALISATIONS';
           return 'PUBLICITE';
       });
       // Reset des compteurs pour le prochain module
       setProductIdx(0);
-      setPlanningFocusIdx(0);
       setAchievementIdx(0);
   };
 
@@ -262,29 +256,23 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     return () => clearInterval(interval);
   }, [activeMode, products.length]);
 
-  // 2. CYCLE PLANNING
+  // 2. CYCLE PLANNING (PERMANENT)
   
   useEffect(() => {
-    if (activeMode !== 'PLANNING') return;
-
-    if (planning.length === 0) {
-        const skipTimer = setTimeout(goToNextMode, 2000);
-        return () => clearTimeout(skipTimer);
-    }
+    // Le planning tourne en permanence maintenant
+    if (planning.length === 0) return;
 
     const interval = setInterval(() => {
         setPlanningFocusIdx((prev) => {
             if (prev >= planning.length - 1) {
-                // Fin de la liste des interventions -> Module suivant
-                goToNextMode();
                 return 0;
             }
             return prev + 1;
         });
-    }, 10000); // 10 secondes par intervention détaillée
+    }, 5000); // 5 secondes par item pour un cycle plus rapide sur le côté
 
     return () => clearInterval(interval);
-  }, [activeMode, planning.length]);
+  }, [planning.length]);
 
   // 3. CYCLE REALISATIONS (IMAGES)
   useEffect(() => {
@@ -341,14 +329,6 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       return "text-5xl";
   };
 
-  // Recherche de l'objet employé (avec correspondance sur nom assigné)
-  const getTechnician = (techName: string) => {
-      return liveEmployees.find(e => 
-        (e.assignedName && e.assignedName === techName) || 
-        e.name === techName
-      );
-  };
-
   return (
     <div 
         className="fixed inset-0 bg-black overflow-hidden z-[9999]"
@@ -380,17 +360,17 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                   
                   {/* Tabs */}
                   <div className="flex gap-3 bg-white/5 p-1.5 rounded-3xl border border-white/10">
-                      {['PUBLICITE', 'PLANNING', 'REALISATIONS'].map((mode) => (
+                      {['PUBLICITE', 'REALISATIONS'].map((mode) => (
                         <button 
                             key={mode}
                             onClick={() => setActiveMode(mode as any)} 
                             className={`flex items-center gap-3 px-6 py-2.5 rounded-2xl font-black text-lg uppercase transition-all cursor-pointer hover:bg-white/10
                             ${activeMode === mode 
-                                ? (mode === 'PUBLICITE' ? 'bg-orange-600' : mode === 'PLANNING' ? 'bg-blue-600' : 'bg-purple-600') + ' text-white shadow-lg scale-105' 
+                                ? (mode === 'PUBLICITE' ? 'bg-orange-600' : 'bg-purple-600') + ' text-white shadow-lg scale-105' 
                                 : 'text-white/30'}`}
                         >
-                            {mode === 'PUBLICITE' ? <LayoutGrid size={20}/> : mode === 'PLANNING' ? <ClipboardList size={20}/> : <Trophy size={20}/>}
-                            {mode === 'PUBLICITE' ? 'Nos Produits' : mode === 'PLANNING' ? 'Chantiers' : 'Réalisations'}
+                            {mode === 'PUBLICITE' ? <LayoutGrid size={20}/> : <Trophy size={20}/>}
+                            {mode === 'PUBLICITE' ? 'Nos Produits' : 'Réalisations'}
                         </button>
                       ))}
                   </div>
@@ -455,273 +435,184 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
           {/* === CONTENU PRINCIPAL (Position Absolue Milieu) === */}
           <div 
-             className={`absolute top-24 bottom-32 left-0 right-0 flex flex-col overflow-hidden transition-colors duration-1000 ease-in-out ${activeMode === 'PLANNING' ? 'bg-[#0f172a]' : 'bg-gray-900'}`}
+             className="absolute top-24 bottom-32 left-0 right-0 flex overflow-hidden bg-gray-900"
           >
-              
-              {/* MODE PUBLICITE */}
-              {activeMode === 'PUBLICITE' && (
-                  currentProduct ? (
-                    <div className="flex w-full h-full animate-fade-in">
-                        {/* Image - Section Gauche */}
-                        <div className="w-[45%] h-full relative flex flex-col items-center justify-start bg-gray-950 p-8 pt-20 overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/10 to-transparent opacity-50"></div>
-                            
-                            {/* TITRE AJOUTÉ */}
-                            <div className="relative z-10 mb-8 animate-slide-up">
-                                <h2 className="text-6xl font-black text-white uppercase tracking-widest text-center leading-tight">
-                                    EBF Quincaillerie
-                                </h2>
-                            </div>
-
-                            {/* CONTENEUR CARRE 1:1 */}
-                            <div key={currentProduct.id} className="relative aspect-square h-[75%] bg-white rounded-[3rem] shadow-[0_30px_80px_rgba(0,0,0,0.8)] border-[8px] border-white/10 animate-scale-in flex items-center justify-center z-20">
-                                <img 
-                                  src={currentProduct.imageUrls?.[0] || 'https://placehold.co/800x800/1a1a1a/ffffff?text=EBF'} 
-                                  className="w-[90%] h-[90%] object-contain animate-float"
-                                />
-                                
-                                {/* Badge PROMO Standard toujours affiché sur l'image */}
-                                <div className="absolute -top-6 -right-6 bg-red-600 text-white w-24 h-24 rounded-full flex items-center justify-center font-black text-xl rotate-12 shadow-lg border-4 border-gray-900 z-20">
-                                    PROMO
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {/* Texte - Section Droite */}
-                        <div className="w-[55%] h-full bg-white flex flex-col justify-center p-12 shadow-[-40px_0_120px_rgba(0,0,0,0.5)] relative z-10">
-                            <span className="self-start px-6 py-2 bg-orange-600 text-white rounded-xl text-xl font-black uppercase mb-6 shadow-xl tracking-widest">{currentProduct.category}</span>
-                            <h1 className={`${getTitleSizeClass(currentProduct.name)} font-black leading-none tracking-tighter mb-8 text-gray-950 uppercase italic`}>{currentProduct.name}</h1>
-                            
-                            <div className="flex gap-8 mb-8 border-b border-gray-100 pb-6">
-                                <div className="flex items-center gap-3 text-gray-400 font-black text-xl uppercase tracking-widest">
-                                    <Zap size={24} className="text-orange-600" /> {currentProduct.supplier}
-                                </div>
-                                <div className="flex items-center gap-3 text-gray-400 font-black text-xl uppercase tracking-widest">
-                                    <ShieldCheck size={24} className="text-green-600" /> Certifié EBF
-                                </div>
-                            </div>
-
-                            <div className="bg-gray-950 p-8 rounded-[2.5rem] text-white border-b-[16px] border-orange-600 shadow-2xl self-start min-w-[50%]">
-                                <p className="text-xl font-black uppercase text-orange-500 mb-2 tracking-[0.2em]">Prix Exceptionnel</p>
-                                
-                                {/* AFFICHAGE PRIX NORMAL BARRE */}
-                                {currentProduct.regularPrice && currentProduct.regularPrice > currentProduct.unitPrice && (
-                                    <span className="block text-3xl text-gray-400 line-through decoration-red-500 decoration-4 mb-1">
-                                        {currentProduct.regularPrice.toLocaleString()} F
+              {/* === SIDEBAR PLANNING (PERMANENT - 25%) === */}
+              <div className="w-[25%] h-full bg-gray-950/90 border-r border-white/10 flex flex-col p-6 backdrop-blur-md z-30 relative">
+                    <div className="mb-6 border-b border-white/10 pb-4">
+                        <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-1 flex items-center gap-2">
+                            <ClipboardList className="text-blue-500" /> Chantiers
+                        </h2>
+                        <span className="text-orange-500 font-bold text-sm uppercase tracking-widest">{todayDate}</span>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide mask-gradient-bottom">
+                        {planning.map((inter, idx) => (
+                            <div 
+                                key={inter.id}
+                                className={`p-4 rounded-xl border-l-4 transition-all duration-500 ${
+                                    idx === planningFocusIdx 
+                                    ? 'bg-white/10 border-orange-500 shadow-lg translate-x-2 scale-105' 
+                                    : 'bg-white/5 border-transparent opacity-50'
+                                }`}
+                            >
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
+                                        {inter.status}
                                     </span>
-                                )}
-
-                                <p className="text-6xl font-black tracking-tighter leading-none whitespace-nowrap">
-                                    {currentProduct.unitPrice.toLocaleString()} <span className="text-3xl text-gray-500 font-bold ml-1">F</span>
+                                    <span className="text-white/40 text-[10px] font-mono">
+                                        {new Date(inter.date).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}
+                                    </span>
+                                </div>
+                                <p className={`font-bold leading-tight truncate mb-1 ${idx === planningFocusIdx ? 'text-white text-base' : 'text-gray-400 text-sm'}`}>
+                                    {inter.client}
+                                </p>
+                                <p className="text-white/30 text-[10px] uppercase tracking-wider truncate">
+                                    {inter.technician}
                                 </p>
                             </div>
-
-                            {/* BADGE INSTALLATION OFFERTE (UNIQUEMENT CLIMATISEURS) - PLACÉ ICI */}
-                            {currentProduct.name.trim().toUpperCase().startsWith('CLIMATISEUR') && (
-                                <div className="mt-8 bg-[#E3001B] text-white px-10 py-6 rounded-tr-[3rem] rounded-bl-[3rem] shadow-[0_20px_50px_rgba(227,0,27,0.3)] self-start flex flex-col items-center justify-center -rotate-2 border-4 border-white/20 transform origin-left hover:scale-105 transition-transform cursor-default animate-bounce-slow">
-                                    <span className="text-2xl font-bold italic leading-none drop-shadow-sm">Installation</span>
-                                    <span className="text-5xl font-black uppercase leading-[0.85] tracking-tighter drop-shadow-md mt-1">OFFERTE*</span>
-                                    <span className="text-sm font-bold mt-2 opacity-90 tracking-widest bg-black/20 px-3 py-1 rounded-full">OFFRE LIMITÉE</span>
-                                </div>
-                            )}
-                        </div>
+                        ))}
+                        {planning.length === 0 && (
+                            <div className="text-white/20 text-center italic mt-10">Aucune intervention</div>
+                        )}
                     </div>
-                  ) : <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-white" size={80}/></div>
-              )}
-
-              {/* MODE PLANNING */}
-              {activeMode === 'PLANNING' && (
-                <div className="w-full h-full flex animate-fade-in">
-                    {/* COLONNE GAUCHE : LISTE FIGÉE (SCROLLABLE) */}
-                    <div className="w-[30%] h-full bg-gray-950/80 border-r border-white/10 flex flex-col p-6 backdrop-blur-md z-20">
-                        <div className="mb-6 border-b border-white/10 pb-4">
-                            <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-1">Programme</h2>
-                            <span className="text-orange-500 font-bold text-lg uppercase tracking-widest">{todayDate}</span>
-                        </div>
-                        
-                        <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide mask-gradient-bottom">
-                            {planning.map((inter, idx) => (
-                                <div 
-                                    key={inter.id}
-                                    className={`p-4 rounded-xl border-l-4 transition-all duration-300 ${
-                                        idx === planningFocusIdx 
-                                        ? 'bg-white/10 border-orange-500 shadow-lg translate-x-2' 
-                                        : 'bg-white/5 border-transparent opacity-40 hover:opacity-60'
-                                    }`}
-                                >
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
-                                            {inter.status}
-                                        </span>
-                                        <span className="text-white/40 text-xs font-mono">
-                                            {new Date(inter.date).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}
-                                        </span>
-                                    </div>
-                                    <p className={`font-bold leading-tight truncate mb-1 ${idx === planningFocusIdx ? 'text-white text-lg' : 'text-gray-300'}`}>
-                                        {inter.client}
-                                    </p>
-                                    <p className="text-white/40 text-xs uppercase tracking-wider truncate">
-                                        {inter.technician}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                        
-                        <div className="mt-4 pt-4 border-t border-white/10 text-center">
-                            <span className="text-white/30 text-xs font-mono uppercase">Total: {planning.length} Interventions</span>
-                        </div>
+                    
+                    <div className="mt-4 pt-4 border-t border-white/10 text-center">
+                        <span className="text-white/30 text-[10px] font-mono uppercase">EBF Planning Live</span>
                     </div>
+              </div>
 
-                    {/* COLONNE DROITE : DÉTAIL QUI PASSE */}
-                    <div className="w-[70%] h-full relative p-12 flex flex-col justify-center items-center bg-[#0f172a]">
-                        {/* Background Pattern */}
-                        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
-                        
-                        {planning.length > 0 && (() => {
-                            const activeInter = planning[planningFocusIdx];
-                            const technician = getTechnician(activeInter.technician);
+              {/* === MAIN CONTENT (DYNAMIC - 75%) === */}
+              <div className="w-[75%] h-full relative bg-gray-900">
+                  
+                  {/* MODE PUBLICITE */}
+                  {activeMode === 'PUBLICITE' && (
+                      currentProduct ? (
+                        <div className="flex w-full h-full animate-fade-in">
+                            {/* Image - Section Gauche */}
+                            <div className="w-[45%] h-full relative flex flex-col items-center justify-start bg-gray-950 p-8 pt-12 overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/10 to-transparent opacity-50"></div>
+                                
+                                <div className="relative z-10 mb-6 animate-slide-up">
+                                    <h2 className="text-5xl font-black text-white uppercase tracking-widest text-center leading-tight">
+                                        EBF Store
+                                    </h2>
+                                </div>
 
-                            return (
-                                <div key={activeInter.id} className="w-full max-w-4xl bg-white/5 backdrop-blur-xl border border-white/20 p-10 rounded-[3rem] shadow-2xl relative animate-slide-up">
+                                {/* CONTENEUR CARRE */}
+                                <div key={currentProduct.id} className="relative aspect-square h-[65%] bg-white rounded-[2.5rem] shadow-[0_30px_80px_rgba(0,0,0,0.8)] border-[8px] border-white/10 animate-scale-in flex items-center justify-center z-20">
+                                    <img 
+                                      src={currentProduct.imageUrls?.[0] || 'https://placehold.co/800x800/1a1a1a/ffffff?text=EBF'} 
+                                      className="w-[90%] h-[90%] object-contain animate-float"
+                                    />
                                     
-                                    {/* Header Card */}
-                                    <div className="flex justify-between items-start mb-10">
-                                        <div className="flex flex-col gap-4">
-                                            <span className={`px-6 py-2 rounded-full font-black text-2xl uppercase tracking-widest shadow-lg w-fit ${activeInter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
-                                                {activeInter.status}
-                                            </span>
-                                            {activeInter.domain && (
-                                                <div className="flex items-center gap-3 text-white/60 font-bold text-xl uppercase tracking-widest">
-                                                    <Briefcase size={24} className="text-orange-400" />
-                                                    {activeInter.domain}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Tech Profile */}
-                                        <div className="flex items-center gap-6 bg-black/20 p-4 rounded-full pr-8 border border-white/10">
-                                            {technician?.photoUrl ? (
-                                                <img 
-                                                    src={technician.photoUrl} 
-                                                    className="w-24 h-24 rounded-full object-cover border-4 border-orange-400 shadow-lg" 
-                                                    alt={activeInter.technician}
-                                                    style={{ objectPosition: technician.photoPosition || '50% 50%' }}
-                                                />
-                                            ) : (
-                                                <div className="w-24 h-24 rounded-full bg-gray-700 flex items-center justify-center text-white border-4 border-orange-400 shadow-lg">
-                                                    <User size={40}/>
-                                                </div>
-                                            )}
-                                            <div className="flex flex-col">
-                                                <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">Chef de groupe</span>
-                                                <span className="text-white font-black text-2xl uppercase leading-none">{activeInter.technician}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Main Content */}
-                                    <div className="text-center space-y-8 mb-8">
-                                        <div>
-                                            <h1 className="text-7xl font-black text-white uppercase leading-none tracking-tighter drop-shadow-2xl mb-4">
-                                                {activeInter.client.replace(/Société/g, 'Sté').replace(/Entreprise/g, 'Ets')}
-                                            </h1>
-                                            {activeInter.location && (
-                                                <div className="flex items-center justify-center gap-3 text-gray-300 text-3xl font-bold uppercase tracking-wide">
-                                                    <MapPin size={32} className="text-red-500 animate-bounce"/> {activeInter.location}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="bg-gradient-to-r from-transparent via-white/10 to-transparent p-8 rounded-3xl border-y border-white/10">
-                                            <p className="text-white text-4xl font-bold leading-tight">
-                                                {activeInter.description}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Footer Info */}
-                                    <div className="flex justify-between items-center pt-6 border-t border-white/10">
-                                        <div className="flex items-center gap-3 text-white/40 font-mono text-lg">
-                                            <Calendar size={20} />
-                                            {new Date(activeInter.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                                        </div>
-                                        
-                                        {activeInter.clientPhone && (
-                                            <div className="text-blue-300 text-2xl font-bold tracking-widest bg-blue-900/30 px-6 py-2 rounded-xl border border-blue-500/30">
-                                                {activeInter.clientPhone}
-                                            </div>
-                                        )}
+                                    <div className="absolute -top-4 -right-4 bg-red-600 text-white w-20 h-20 rounded-full flex items-center justify-center font-black text-lg rotate-12 shadow-lg border-4 border-gray-900 z-20">
+                                        PROMO
                                     </div>
                                 </div>
-                            );
-                        })()}
-                    </div>
-                </div>
-              )}
+                            </div>
+                            
+                            {/* Texte - Section Droite */}
+                            <div className="w-[55%] h-full bg-white flex flex-col justify-center p-10 shadow-[-40px_0_120px_rgba(0,0,0,0.5)] relative z-10">
+                                <span className="self-start px-5 py-2 bg-orange-600 text-white rounded-xl text-lg font-black uppercase mb-4 shadow-xl tracking-widest">{currentProduct.category}</span>
+                                <h1 className={`${getTitleSizeClass(currentProduct.name)} font-black leading-none tracking-tighter mb-6 text-gray-950 uppercase italic`}>{currentProduct.name}</h1>
+                                
+                                <div className="flex gap-6 mb-6 border-b border-gray-100 pb-4">
+                                    <div className="flex items-center gap-2 text-gray-400 font-black text-lg uppercase tracking-widest">
+                                        <Zap size={20} className="text-orange-600" /> {currentProduct.supplier}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-gray-400 font-black text-lg uppercase tracking-widest">
+                                        <ShieldCheck size={20} className="text-green-600" /> Certifié
+                                    </div>
+                                </div>
 
-              {/* MODE REALISATIONS */}
-              {activeMode === 'REALISATIONS' && (
-                  currentAchievement ? (
-                      <div key={currentAchievement.id} className="w-full h-full flex animate-fade-slow">
-                          {/* Partie Gauche : Texte & Description */}
-                          <div className="w-[40%] h-full bg-white flex flex-col justify-center p-16 shadow-[40px_0_100px_rgba(0,0,0,0.5)] z-20 relative">
-                              <div className="self-start mb-12">
-                                   <span className="bg-purple-600 text-white px-6 py-3 rounded-2xl text-xl font-black uppercase tracking-widest flex items-center gap-3 shadow-lg">
-                                      {currentAchievement.mediaType === 'video' ? <Video size={28}/> : <ImageIcon size={28}/>} 
-                                      Réalisation
-                                   </span>
+                                <div className="bg-gray-950 p-6 rounded-[2rem] text-white border-b-[12px] border-orange-600 shadow-2xl self-start min-w-[50%]">
+                                    <p className="text-lg font-black uppercase text-orange-500 mb-1 tracking-[0.2em]">Prix EBF</p>
+                                    
+                                    {currentProduct.regularPrice && currentProduct.regularPrice > currentProduct.unitPrice && (
+                                        <span className="block text-2xl text-gray-400 line-through decoration-red-500 decoration-4 mb-1">
+                                            {currentProduct.regularPrice.toLocaleString()} F
+                                        </span>
+                                    )}
+
+                                    <p className="text-5xl font-black tracking-tighter leading-none whitespace-nowrap">
+                                        {currentProduct.unitPrice.toLocaleString()} <span className="text-2xl text-gray-500 font-bold ml-1">F</span>
+                                    </p>
+                                </div>
+
+                                {currentProduct.name.trim().toUpperCase().startsWith('CLIMATISEUR') && (
+                                    <div className="mt-6 bg-[#E3001B] text-white px-8 py-4 rounded-tr-[2.5rem] rounded-bl-[2.5rem] shadow-[0_20px_50px_rgba(227,0,27,0.3)] self-start flex flex-col items-center justify-center -rotate-2 border-4 border-white/20 transform origin-left hover:scale-105 transition-transform cursor-default animate-bounce-slow">
+                                        <span className="text-xl font-bold italic leading-none drop-shadow-sm">Installation</span>
+                                        <span className="text-4xl font-black uppercase leading-[0.85] tracking-tighter drop-shadow-md mt-1">OFFERTE*</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                      ) : <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-white" size={80}/></div>
+                  )}
+
+                  {/* MODE REALISATIONS */}
+                  {activeMode === 'REALISATIONS' && (
+                      currentAchievement ? (
+                          <div key={currentAchievement.id} className="w-full h-full flex animate-fade-slow">
+                              {/* Partie Gauche : Texte & Description */}
+                              <div className="w-[40%] h-full bg-white flex flex-col justify-center p-10 shadow-[40px_0_100px_rgba(0,0,0,0.5)] z-20 relative">
+                                  <div className="self-start mb-8">
+                                       <span className="bg-purple-600 text-white px-5 py-2 rounded-xl text-lg font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
+                                          {currentAchievement.mediaType === 'video' ? <Video size={24}/> : <ImageIcon size={24}/>} 
+                                          Réalisation
+                                       </span>
+                                  </div>
+                                  
+                                  <h2 className="text-4xl font-black text-gray-950 uppercase tracking-tighter mb-6 leading-tight text-center">
+                                      {currentAchievement.title}
+                                  </h2>
+                                  
+                                  <div className="w-20 h-3 bg-orange-600 mb-6 rounded-full mx-auto"></div>
+
+                                  {currentAchievement.description && (
+                                      <p className="text-2xl text-gray-500 font-bold leading-snug text-center">
+                                          {currentAchievement.description}
+                                      </p>
+                                  )}
+                                  
+                                  <div className="mt-8 text-gray-400 font-black text-xl uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+                                      <Calendar size={20} className="text-orange-500"/>
+                                      {new Date(currentAchievement.date).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                                  </div>
                               </div>
-                              
-                              <h2 className="text-5xl font-black text-gray-950 uppercase tracking-tighter mb-8 leading-normal text-center">
-                                  {currentAchievement.title}
-                              </h2>
-                              
-                              <div className="w-24 h-4 bg-orange-600 mb-8 rounded-full mx-auto"></div>
 
-                              {currentAchievement.description && (
-                                  <p className="text-4xl text-gray-500 font-bold leading-snug">
-                                      {currentAchievement.description}
-                                  </p>
-                              )}
-                              
-                              <div className="mt-12 text-gray-400 font-black text-2xl uppercase tracking-[0.2em] flex items-center gap-2">
-                                  <Calendar size={24} className="text-orange-500"/>
-                                  {new Date(currentAchievement.date).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                              {/* Partie Droite : Média (Image/Vidéo) */}
+                              <div className="w-[60%] h-full bg-black relative flex items-center justify-center overflow-hidden">
+                                   <div 
+                                      className="absolute inset-0 opacity-30 bg-cover bg-center blur-3xl scale-110"
+                                      style={{ backgroundImage: `url(${currentAchievement.mediaUrl})` }}
+                                   ></div>
+
+                                  {currentAchievement.mediaType === 'video' ? (
+                                      <video 
+                                          ref={videoRef}
+                                          src={currentAchievement.mediaUrl}
+                                          className="w-full h-full object-contain relative z-10 shadow-2xl"
+                                          autoPlay
+                                          playsInline 
+                                          loop={false}
+                                          onEnded={handleVideoEnded}
+                                          onError={handleVideoEnded}
+                                          style={{ pointerEvents: 'none' }} 
+                                      />
+                                  ) : (
+                                      <img 
+                                          src={currentAchievement.mediaUrl} 
+                                          className="w-full h-full object-cover relative z-10 animate-scale-in shadow-2xl" 
+                                          style={{ objectPosition: currentAchievement.position || '50% 50%' }}
+                                      />
+                                  )}
                               </div>
                           </div>
-
-                          {/* Partie Droite : Média (Image/Vidéo) */}
-                          <div className="w-[60%] h-full bg-black relative flex items-center justify-center overflow-hidden">
-                               {/* Fond flouté pour l'ambiance */}
-                               <div 
-                                  className="absolute inset-0 opacity-30 bg-cover bg-center blur-3xl scale-110"
-                                  style={{ backgroundImage: `url(${currentAchievement.mediaUrl})` }}
-                               ></div>
-
-                              {currentAchievement.mediaType === 'video' ? (
-                                  <video 
-                                      ref={videoRef}
-                                      src={currentAchievement.mediaUrl}
-                                      className="w-full h-full object-contain relative z-10 shadow-2xl"
-                                      autoPlay
-                                      // muted retiré pour entendre le son
-                                      playsInline 
-                                      loop={false}
-                                      onEnded={handleVideoEnded}
-                                      onError={handleVideoEnded}
-                                      style={{ pointerEvents: 'none' }} 
-                                  />
-                              ) : (
-                                  <img 
-                                      src={currentAchievement.mediaUrl} 
-                                      className="w-full h-full object-cover relative z-10 animate-scale-in shadow-2xl" 
-                                      style={{ objectPosition: currentAchievement.position || '50% 50%' }}
-                                  />
-                              )}
-                          </div>
-                      </div>
-                  ) : <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-white" size={80}/></div>
-              )}
+                      ) : <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-white" size={80}/></div>
+                  )}
+              </div>
           </div>
 
           {/* === FOOTER TICKER (Position Absolue Bas) === */}
