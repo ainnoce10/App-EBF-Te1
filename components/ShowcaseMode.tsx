@@ -465,14 +465,14 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                         </div>
                     </div>
                     
-                    <div className="flex-1 flex flex-col gap-8 pb-24">
+                    <div className="flex-1 flex flex-col gap-8 pb-8 h-full overflow-hidden">
                         {planning.slice(planningPage * 2, (planningPage + 1) * 2).map((inter) => {
                             const technician = getTechnician(inter.technician);
                             
                             return (
                                 <div 
                                     key={inter.id}
-                                    className="p-8 rounded-[2.5rem] border-4 border-white/10 bg-white/5 shadow-2xl relative overflow-hidden animate-slide-up flex-1 flex flex-col justify-between"
+                                    className="p-8 rounded-[2.5rem] border-4 border-white/10 bg-white/5 shadow-2xl relative overflow-hidden animate-slide-up flex-1 flex flex-col justify-between min-h-0"
                                 >
                                     {/* Status Header */}
                                     <div className="flex justify-between items-start mb-6">
@@ -523,8 +523,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                             )}
                                         </div>
 
-                                        <div className="bg-black/30 p-5 rounded-2xl border border-white/10 flex-1 flex items-center">
-                                            <p className="text-gray-100 text-2xl font-bold leading-snug line-clamp-4">
+                                        <div className="bg-black/30 p-5 rounded-2xl border border-white/10 flex-1 flex items-center overflow-hidden">
+                                            <p className="text-gray-100 text-2xl font-bold leading-snug line-clamp-6">
                                                 {inter.description}
                                             </p>
                                         </div>
