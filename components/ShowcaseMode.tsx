@@ -387,8 +387,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                       {['PUBLICITE', 'PLANNING', 'REALISATIONS'].map((mode) => (
                         <button 
                             key={mode}
-                            // onClick={() => setActiveMode(mode as any)} // Désactivé pour laisser l'auto-cycle faire son travail, ou on peut le garder pour debug
-                            className={`flex items-center gap-3 px-6 py-2.5 rounded-2xl font-black text-lg uppercase transition-all cursor-default
+                            onClick={() => setActiveMode(mode as any)} 
+                            className={`flex items-center gap-3 px-6 py-2.5 rounded-2xl font-black text-lg uppercase transition-all cursor-pointer hover:bg-white/10
                             ${activeMode === mode 
                                 ? (mode === 'PUBLICITE' ? 'bg-orange-600' : mode === 'PLANNING' ? 'bg-blue-600' : 'bg-purple-600') + ' text-white shadow-lg scale-105' 
                                 : 'text-white/30'}`}
