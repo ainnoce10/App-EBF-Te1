@@ -20,7 +20,10 @@ import {
   Loader2,
   Trophy,
   Video,
-  Image as ImageIcon
+  Image as ImageIcon,
+  User,
+  Briefcase,
+  MapPin
 } from 'lucide-react';
 import { Logo } from '../constants';
 
@@ -41,6 +44,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   liveInterventions = [], 
   liveMessages = [],
   liveAchievements = [],
+  liveEmployees = [],
   customLogo,
   initialMusicUrl
 }) => {
@@ -329,6 +333,14 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       return "text-5xl";
   };
 
+  // Recherche de l'objet employé (avec correspondance sur nom assigné)
+  const getTechnician = (techName: string) => {
+      return liveEmployees.find((e: Employee) => 
+        (e.assignedName && e.assignedName === techName) || 
+        e.name === techName
+      );
+  };
+
   return (
     <div 
         className="fixed inset-0 bg-black overflow-hidden z-[9999]"
@@ -437,53 +449,104 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
           <div 
              className="absolute top-24 bottom-32 left-0 right-0 flex overflow-hidden bg-gray-900"
           >
-              {/* === SIDEBAR PLANNING (PERMANENT - 25%) === */}
-              <div className="w-[25%] h-full bg-gray-950/90 border-r border-white/10 flex flex-col p-6 backdrop-blur-md z-30 relative">
-                    <div className="mb-6 border-b border-white/10 pb-4">
-                        <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-1 flex items-center gap-2">
-                            <ClipboardList className="text-blue-500" /> Chantiers
-                        </h2>
-                        <span className="text-orange-500 font-bold text-sm uppercase tracking-widest">{todayDate}</span>
+              {/* === SIDEBAR PLANNING (PERMANENT - 33%) === */}
+              <div className="w-[33%] h-full bg-gray-950/95 border-r border-white/10 flex flex-col p-6 backdrop-blur-md z-30 relative shadow-2xl">
+                    <div className="mb-6 border-b border-white/10 pb-4 flex justify-between items-end">
+                        <div>
+                            <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-1 flex items-center gap-2">
+                                <ClipboardList className="text-blue-500" /> Chantiers
+                            </h2>
+                            <span className="text-orange-500 font-bold text-sm uppercase tracking-widest">{todayDate}</span>
+                        </div>
+                        <div className="text-white/30 text-xs font-mono uppercase text-right">
+                            {planning.length} Missions
+                        </div>
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide mask-gradient-bottom">
-                        {planning.map((inter, idx) => (
-                            <div 
-                                key={inter.id}
-                                className={`p-4 rounded-xl border-l-4 transition-all duration-500 ${
-                                    idx === planningFocusIdx 
-                                    ? 'bg-white/10 border-orange-500 shadow-lg translate-x-2 scale-105' 
-                                    : 'bg-white/5 border-transparent opacity-50'
-                                }`}
-                            >
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
-                                        {inter.status}
-                                    </span>
-                                    <span className="text-white/40 text-[10px] font-mono">
-                                        {new Date(inter.date).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}
-                                    </span>
+                    <div className="flex-1 overflow-y-auto space-y-6 pr-2 scrollbar-hide mask-gradient-bottom pb-20">
+                        {planning.map((inter, idx) => {
+                            const technician = getTechnician(inter.technician);
+                            const isActive = idx === planningFocusIdx;
+
+                            return (
+                                <div 
+                                    key={inter.id}
+                                    className={`p-6 rounded-[2rem] border-2 transition-all duration-500 relative overflow-hidden ${
+                                        isActive 
+                                        ? 'bg-white/10 border-orange-500 shadow-2xl scale-100 z-10' 
+                                        : 'bg-white/5 border-transparent opacity-60 scale-95 hover:opacity-80'
+                                    }`}
+                                >
+                                    {/* Status Header */}
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex flex-col gap-2">
+                                            <span className={`px-3 py-1 rounded-lg font-black text-xs uppercase tracking-widest shadow-lg w-fit ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
+                                                {inter.status}
+                                            </span>
+                                            <span className="text-white/50 text-[10px] font-black uppercase bg-black/30 px-2 py-0.5 rounded w-fit">
+                                                {new Date(inter.date).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}
+                                            </span>
+                                        </div>
+
+                                        {/* Tech Mini Profile */}
+                                        <div className="flex flex-col items-end">
+                                            {technician?.photoUrl ? (
+                                                <img 
+                                                    src={technician.photoUrl} 
+                                                    className="w-12 h-12 rounded-full object-cover border-2 border-orange-400 shadow-md mb-1" 
+                                                    alt={inter.technician}
+                                                    style={{ objectPosition: technician.photoPosition || '50% 50%' }}
+                                                />
+                                            ) : (
+                                                <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-white border-2 border-orange-400 shadow-md mb-1">
+                                                    <User size={20}/>
+                                                </div>
+                                            )}
+                                            <span className="text-orange-400 font-bold text-[10px] uppercase text-right leading-tight max-w-[100px]">{inter.technician}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="space-y-3">
+                                        {inter.domain && (
+                                            <div className="flex items-center gap-2 text-white/40 font-bold text-[10px] uppercase tracking-wider">
+                                                <Briefcase size={12} /> {inter.domain}
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <h3 className="text-2xl font-black text-white uppercase leading-none tracking-tight mb-1">
+                                                {inter.client.replace(/Société/g, 'Sté').replace(/Entreprise/g, 'Ets')}
+                                            </h3>
+                                            {inter.location && (
+                                                <div className="flex items-center gap-1 text-gray-400 text-xs font-bold uppercase">
+                                                    <MapPin size={12} className="text-red-500"/> {inter.location}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="bg-black/20 p-3 rounded-xl border border-white/5">
+                                            <p className="text-gray-200 text-sm font-medium leading-snug line-clamp-3">
+                                                {inter.description}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Active Indicator Line */}
+                                    {isActive && (
+                                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-orange-500"></div>
+                                    )}
                                 </div>
-                                <p className={`font-bold leading-tight truncate mb-1 ${idx === planningFocusIdx ? 'text-white text-base' : 'text-gray-400 text-sm'}`}>
-                                    {inter.client}
-                                </p>
-                                <p className="text-white/30 text-[10px] uppercase tracking-wider truncate">
-                                    {inter.technician}
-                                </p>
-                            </div>
-                        ))}
+                            );
+                        })}
                         {planning.length === 0 && (
                             <div className="text-white/20 text-center italic mt-10">Aucune intervention</div>
                         )}
                     </div>
-                    
-                    <div className="mt-4 pt-4 border-t border-white/10 text-center">
-                        <span className="text-white/30 text-[10px] font-mono uppercase">EBF Planning Live</span>
-                    </div>
               </div>
 
-              {/* === MAIN CONTENT (DYNAMIC - 75%) === */}
-              <div className="w-[75%] h-full relative bg-gray-900">
+              {/* === MAIN CONTENT (DYNAMIC - 67%) === */}
+              <div className="w-[67%] h-full relative bg-gray-900">
                   
                   {/* MODE PUBLICITE */}
                   {activeMode === 'PUBLICITE' && (
