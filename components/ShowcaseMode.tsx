@@ -50,7 +50,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 }) => {
   const [activeMode, setActiveMode] = useState<'PUBLICITE' | 'PLANNING' | 'REALISATIONS'>('PUBLICITE');
   const [productIdx, setProductIdx] = useState(0);
-  const [planningPage, setPlanningPage] = useState(0);
+  const [planningFocusIdx, setPlanningFocusIdx] = useState(0);
   const [achievementIdx, setAchievementIdx] = useState(0);
   
   // Time State
@@ -166,12 +166,8 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const achievements = liveAchievements.length > 0 ? liveAchievements : [];
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
 
-  const itemsPerPage = 3;
-  const totalPlanningPages = Math.ceil(planning.length / itemsPerPage) || 1;
-
   // --- RENDER HELPERS (Définis avant les effets qui les utilisent) ---
   const currentProduct = products[productIdx];
-  const currentPlanningSlice = planning.slice(planningPage * itemsPerPage, (planningPage + 1) * itemsPerPage);
   const currentAchievement = achievements[achievementIdx];
   const todayDate = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -238,7 +234,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
       });
       // Reset des compteurs pour le prochain module
       setProductIdx(0);
-      setPlanningPage(0);
+      setPlanningFocusIdx(0);
       setAchievementIdx(0);
   };
 
@@ -277,18 +273,18 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
     }
 
     const interval = setInterval(() => {
-        setPlanningPage((prev) => {
-            if (prev >= totalPlanningPages - 1) {
-                // Fin des pages de planning -> Module suivant
+        setPlanningFocusIdx((prev) => {
+            if (prev >= planning.length - 1) {
+                // Fin de la liste des interventions -> Module suivant
                 goToNextMode();
                 return 0;
             }
             return prev + 1;
         });
-    }, 15000); // 15 secondes par page de planning
+    }, 10000); // 10 secondes par intervention détaillée
 
     return () => clearInterval(interval);
-  }, [activeMode, planning.length, totalPlanningPages]);
+  }, [activeMode, planning.length]);
 
   // 3. CYCLE REALISATIONS (IMAGES)
   useEffect(() => {
@@ -535,112 +531,130 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
 
               {/* MODE PLANNING */}
               {activeMode === 'PLANNING' && (
-                <div className="w-full h-full p-12 flex flex-col animate-fade-in">
-                    <div className="flex justify-between items-end mb-8 border-b border-white/10 pb-6">
-                        <div>
-                           <h2 className="text-5xl font-black text-white uppercase italic tracking-tighter mb-2">programmes des interventions en cours...</h2>
-                           <span className="text-orange-500 font-black text-3xl uppercase tracking-widest">{todayDate}</span>
+                <div className="w-full h-full flex animate-fade-in">
+                    {/* COLONNE GAUCHE : LISTE FIGÉE (SCROLLABLE) */}
+                    <div className="w-[30%] h-full bg-gray-950/80 border-r border-white/10 flex flex-col p-6 backdrop-blur-md z-20">
+                        <div className="mb-6 border-b border-white/10 pb-4">
+                            <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-1">Programme</h2>
+                            <span className="text-orange-500 font-bold text-lg uppercase tracking-widest">{todayDate}</span>
                         </div>
-                        <div className="flex items-center gap-4 bg-white/5 px-6 py-3 rounded-2xl border border-white/10">
-                            <span className="text-white/40 font-mono font-bold text-xl">Page {planningPage + 1}/{totalPlanningPages}</span>
-                            <Calendar size={48} className="text-blue-500 animate-pulse" />
+                        
+                        <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide mask-gradient-bottom">
+                            {planning.map((inter, idx) => (
+                                <div 
+                                    key={inter.id}
+                                    className={`p-4 rounded-xl border-l-4 transition-all duration-300 ${
+                                        idx === planningFocusIdx 
+                                        ? 'bg-white/10 border-orange-500 shadow-lg translate-x-2' 
+                                        : 'bg-white/5 border-transparent opacity-40 hover:opacity-60'
+                                    }`}
+                                >
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
+                                            {inter.status}
+                                        </span>
+                                        <span className="text-white/40 text-xs font-mono">
+                                            {new Date(inter.date).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}
+                                        </span>
+                                    </div>
+                                    <p className={`font-bold leading-tight truncate mb-1 ${idx === planningFocusIdx ? 'text-white text-lg' : 'text-gray-300'}`}>
+                                        {inter.client}
+                                    </p>
+                                    <p className="text-white/40 text-xs uppercase tracking-wider truncate">
+                                        {inter.technician}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        <div className="mt-4 pt-4 border-t border-white/10 text-center">
+                            <span className="text-white/30 text-xs font-mono uppercase">Total: {planning.length} Interventions</span>
                         </div>
                     </div>
-                    
-                    <div className="grid grid-cols-3 gap-8 flex-1 min-h-0">
-                        {currentPlanningSlice.map((inter) => {
-                            const technician = getTechnician(inter.technician);
-                            
-                            return (
-                                <div key={inter.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-[2.5rem] flex flex-col shadow-2xl relative overflow-hidden animate-slide-up">
-                                    
-                                    {/* Status & Tech Header */}
-                                    <div className="flex justify-between items-start mb-6">
-                                        <div className="flex flex-col gap-3">
-                                            <span className={`px-5 py-2 rounded-xl font-black text-xl uppercase tracking-widest shadow-lg h-fit w-fit ${inter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
-                                            {inter.status}
-                                            </span>
-                                            {/* DATE AJOUTÉE ICI */}
-                                            <div className="flex items-center gap-2 text-white/50 font-black text-lg uppercase tracking-wider bg-black/20 px-4 py-1 rounded-lg w-fit">
-                                                <Calendar size={20} />
-                                                {new Date(inter.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
-                                            </div>
-                                        </div>
 
-                                        <div className="flex items-start gap-4">
-                                            <div className="flex flex-col items-end pt-1">
-                                                {/* Label */}
-                                                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Technicien (Chef de groupe)</p>
-                                                {/* Name - Now under the label but left of photo */}
-                                                <p className="text-orange-400 font-black text-2xl uppercase text-right leading-tight max-w-[150px]">{inter.technician}</p>
-                                            </div>
-                                            
-                                            {/* Photo - Pushed to the right and stuck to the top of the block */}
-                                            {technician?.photoUrl ? (
-                                                <img 
-                                                  src={technician.photoUrl} 
-                                                  className="w-20 h-20 rounded-full object-cover border-4 border-orange-400 shadow-md" 
-                                                  alt={inter.technician}
-                                                  style={{ objectPosition: technician.photoPosition || '50% 50%' }}
-                                                />
-                                            ) : (
-                                                <div className="w-20 h-20 rounded-full bg-gray-700 flex items-center justify-center text-white border-4 border-orange-400 shadow-md">
-                                                    <User size={32}/>
+                    {/* COLONNE DROITE : DÉTAIL QUI PASSE */}
+                    <div className="w-[70%] h-full relative p-12 flex flex-col justify-center items-center bg-[#0f172a]">
+                        {/* Background Pattern */}
+                        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
+                        
+                        {planning.length > 0 && (() => {
+                            const activeInter = planning[planningFocusIdx];
+                            const technician = getTechnician(activeInter.technician);
+
+                            return (
+                                <div key={activeInter.id} className="w-full max-w-4xl bg-white/5 backdrop-blur-xl border border-white/20 p-10 rounded-[3rem] shadow-2xl relative animate-slide-up">
+                                    
+                                    {/* Header Card */}
+                                    <div className="flex justify-between items-start mb-10">
+                                        <div className="flex flex-col gap-4">
+                                            <span className={`px-6 py-2 rounded-full font-black text-2xl uppercase tracking-widest shadow-lg w-fit ${activeInter.status === 'En cours' ? 'bg-orange-500 text-white' : 'bg-blue-600 text-white'}`}>
+                                                {activeInter.status}
+                                            </span>
+                                            {activeInter.domain && (
+                                                <div className="flex items-center gap-3 text-white/60 font-bold text-xl uppercase tracking-widest">
+                                                    <Briefcase size={24} className="text-orange-400" />
+                                                    {activeInter.domain}
                                                 </div>
                                             )}
                                         </div>
-                                    </div>
-                                    
-                                    {/* Centered Content */}
-                                    <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
-                                        
-                                        {/* Domaine d'activité (Ajout) */}
-                                        {inter.domain && (
-                                            <div className="flex items-center gap-3 bg-white/20 px-5 py-2 rounded-full border border-white/10 shadow-lg mb-2 backdrop-blur-sm">
-                                                <Briefcase size={20} className="text-orange-400" />
-                                                <span className="text-white font-black text-lg uppercase tracking-widest">
-                                                    {inter.domain} {inter.interventionType && <span className="text-white/60 mx-1">•</span>} {inter.interventionType}
-                                                </span>
-                                            </div>
-                                        )}
 
-                                        <div>
-                                            <h4 className="text-white text-5xl font-black uppercase leading-none tracking-tighter mb-3 drop-shadow-lg">
-                                                {inter.client.replace(/Société/g, 'Sté').replace(/Entreprise/g, 'Ets')}
-                                            </h4>
-                                            {inter.clientPhone ? (
-                                                <span className="text-blue-300 text-2xl font-bold tracking-widest block bg-blue-900/30 px-4 py-1 rounded-lg border border-blue-500/30 mx-auto w-fit">{inter.clientPhone}</span>
+                                        {/* Tech Profile */}
+                                        <div className="flex items-center gap-6 bg-black/20 p-4 rounded-full pr-8 border border-white/10">
+                                            {technician?.photoUrl ? (
+                                                <img 
+                                                    src={technician.photoUrl} 
+                                                    className="w-24 h-24 rounded-full object-cover border-4 border-orange-400 shadow-lg" 
+                                                    alt={activeInter.technician}
+                                                    style={{ objectPosition: technician.photoPosition || '50% 50%' }}
+                                                />
                                             ) : (
-                                                <span className="text-gray-500 text-xl font-bold tracking-widest block italic">Numéro masqué</span>
+                                                <div className="w-24 h-24 rounded-full bg-gray-700 flex items-center justify-center text-white border-4 border-orange-400 shadow-lg">
+                                                    <User size={40}/>
+                                                </div>
+                                            )}
+                                            <div className="flex flex-col">
+                                                <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">Chef de groupe</span>
+                                                <span className="text-white font-black text-2xl uppercase leading-none">{activeInter.technician}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Main Content */}
+                                    <div className="text-center space-y-8 mb-8">
+                                        <div>
+                                            <h1 className="text-7xl font-black text-white uppercase leading-none tracking-tighter drop-shadow-2xl mb-4">
+                                                {activeInter.client.replace(/Société/g, 'Sté').replace(/Entreprise/g, 'Ets')}
+                                            </h1>
+                                            {activeInter.location && (
+                                                <div className="flex items-center justify-center gap-3 text-gray-300 text-3xl font-bold uppercase tracking-wide">
+                                                    <MapPin size={32} className="text-red-500 animate-bounce"/> {activeInter.location}
+                                                </div>
                                             )}
                                         </div>
 
-                                        {inter.location && (
-                                            <div className="flex items-center justify-center gap-2 text-gray-200 text-2xl font-bold uppercase tracking-wide">
-                                                <MapPin size={28} className="text-red-500"/> {inter.location}
-                                            </div>
-                                        )}
-                                        
-                                        {/* Description Box Centered */}
-                                        <div className="w-full bg-black/40 p-6 rounded-3xl border border-white/10 backdrop-blur-sm flex items-center justify-center min-h-[120px]">
-                                            <p className="text-white text-2xl font-bold leading-tight">{inter.description}</p>
+                                        <div className="bg-gradient-to-r from-transparent via-white/10 to-transparent p-8 rounded-3xl border-y border-white/10">
+                                            <p className="text-white text-4xl font-bold leading-tight">
+                                                {activeInter.description}
+                                            </p>
                                         </div>
                                     </div>
-                                    
-                                    {/* Site Badge Bottom */}
-                                    {inter.site && (
-                                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-30">
-                                            <span className="text-4xl font-black text-white uppercase tracking-[0.5em]">{inter.site}</span>
+
+                                    {/* Footer Info */}
+                                    <div className="flex justify-between items-center pt-6 border-t border-white/10">
+                                        <div className="flex items-center gap-3 text-white/40 font-mono text-lg">
+                                            <Calendar size={20} />
+                                            {new Date(activeInter.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                                         </div>
-                                    )}
+                                        
+                                        {activeInter.clientPhone && (
+                                            <div className="text-blue-300 text-2xl font-bold tracking-widest bg-blue-900/30 px-6 py-2 rounded-xl border border-blue-500/30">
+                                                {activeInter.clientPhone}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             );
-                        })}
-                         {Array.from({ length: Math.max(0, 3 - currentPlanningSlice.length) }).map((_, i) => (
-                            <div key={`empty-${i}`} className="border-4 border-dashed border-white/5 rounded-[2.5rem] flex items-center justify-center opacity-10">
-                                <span className="text-white font-black text-5xl uppercase">Libre</span>
-                            </div>
-                        ))}
+                        })()}
                     </div>
                 </div>
               )}
