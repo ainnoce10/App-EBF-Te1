@@ -158,11 +158,18 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   
   // TRI PAR DATE CROISSANTE (PLUS PROCHE -> PLUS ELOIGNÉE)
   // MODIFICATION: Tri par date décroissante pour afficher les plus récents en premier (Effet "Temps Réel")
-  const planning = liveInterventions.length > 0 
+  let planning = liveInterventions.length > 0 
     ? liveInterventions
         .filter(i => i.status === 'En cours' || i.status === 'En attente')
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     : [];
+
+  // FALLBACK: Si aucune intervention active, on montre l'historique récent (les 20 dernières)
+  if (planning.length === 0 && liveInterventions.length > 0) {
+      planning = [...liveInterventions]
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 20);
+  }
 
   const achievements = liveAchievements.length > 0 ? liveAchievements : [];
   const flashes = liveMessages.length > 0 ? liveMessages : [{ content: "Bienvenue chez EBF Technical Center", color: 'neutral' } as TickerMessage];
@@ -621,7 +628,12 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                 )}
                             </div>
                         </div>
-                      ) : <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-white" size={80}/></div>
+                      ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center text-white/20">
+                            <LayoutGrid size={80} className="mb-4 opacity-20" />
+                            <p className="text-2xl font-black uppercase tracking-widest">Aucun produit à afficher</p>
+                        </div>
+                      )
                   )}
 
                   {/* MODE REALISATIONS */}
@@ -683,7 +695,12 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                                   )}
                               </div>
                           </div>
-                      ) : <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-white" size={80}/></div>
+                      ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center text-white/20">
+                            <Trophy size={80} className="mb-4 opacity-20" />
+                            <p className="text-2xl font-black uppercase tracking-widest">Aucune réalisation à afficher</p>
+                        </div>
+                      )
                   )}
               </div>
           </div>
