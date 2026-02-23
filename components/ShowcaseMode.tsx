@@ -157,10 +157,11 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
   const products = liveStock.length > 0 ? liveStock : [];
   
   // TRI PAR DATE CROISSANTE (PLUS PROCHE -> PLUS ELOIGNÉE)
+  // MODIFICATION: Tri par date décroissante pour afficher les plus récents en premier (Effet "Temps Réel")
   const planning = liveInterventions.length > 0 
     ? liveInterventions
         .filter(i => i.status === 'En cours' || i.status === 'En attente')
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     : [];
 
   const achievements = liveAchievements.length > 0 ? liveAchievements : [];
@@ -275,7 +276,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
             }
             return prev + 1;
         });
-    }, 10000); // 10 secondes par page de 2 interventions
+    }, 6000); // 6 secondes par page (Rotation plus rapide)
 
     return () => clearInterval(interval);
   }, [planning.length]);
@@ -454,14 +455,24 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
               {/* === SIDEBAR PLANNING (PERMANENT - 35%) === */}
               <div className="w-[35%] h-full bg-gray-950/95 border-r border-white/10 flex flex-col p-8 backdrop-blur-md z-30 relative shadow-2xl">
                     <div className="mb-8 border-b border-white/10 pb-6 flex justify-between items-end">
-                        <div>
-                            <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-2 flex items-center gap-3">
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-3 mb-1">
+                                <div className="flex items-center gap-2 bg-red-500/10 px-2 py-1 rounded-md border border-red-500/20">
+                                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div>
+                                    <span className="text-red-500 font-black text-[10px] tracking-widest leading-none">LIVE</span>
+                                </div>
+                                <span className="text-white/30 text-xs font-mono font-bold">
+                                    {currentTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                </span>
+                            </div>
+                            <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter flex items-center gap-3">
                                 <ClipboardList className="text-blue-500" size={40} /> Chantiers
                             </h2>
                             <span className="text-orange-500 font-bold text-xl uppercase tracking-widest">{todayDate}</span>
                         </div>
-                        <div className="text-white/30 text-sm font-mono uppercase text-right font-bold">
-                            Page {planningPage + 1}/{Math.ceil(planning.length / 2) || 1}
+                        <div className="text-white/30 text-sm font-mono uppercase text-right font-bold flex flex-col items-end justify-end h-full">
+                            <span>{planning.length} Missions</span>
+                            <span>Page {planningPage + 1}/{Math.ceil(planning.length / 2) || 1}</span>
                         </div>
                     </div>
                     
