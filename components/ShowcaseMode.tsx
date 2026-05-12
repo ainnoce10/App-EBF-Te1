@@ -466,7 +466,7 @@ const ShowcaseMode: React.FC<ShowcaseModeProps> = ({
                             <div className="flex items-center gap-3 mb-1">
                                 <div className="flex items-center gap-2 bg-red-500/10 px-2 py-1 rounded-md border border-red-500/20">
                                     <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div>
-                                    <span className="text-red-500 font-black text-[10px] tracking-widest leading-none">LIVE</span>
+                                    <span className="text-red-500 font-black text-[10px] tracking-widest leading-none">EN DIRECT</span>
                                 </div>
                                 <span className="text-white/30 text-xs font-mono font-bold">
                                     {currentTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
